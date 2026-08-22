@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3030",
     "dev:safe": "npm run test:unit && npm run dev",
-    "build": "npx tsx scripts/ensure-db.ts && next build",
+    "build": "next build",
+    "build:full": "npx tsx scripts/ensure-db.ts && next build",
     "start": "next start -p 3030",
     "test": "playwright test",
     "test:iphone-14-plus": "playwright test --project=\"iPhone 14 Plus\"",
@@ -53,7 +54,6 @@
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.0",
     "better-auth": "^1.0.3",
-    "bysquare": "^1.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
