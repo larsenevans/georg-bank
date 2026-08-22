@@ -143,7 +143,7 @@ export function TransferForm({
     field: keyof (PaymentDraft & { accountId: string }),
     value: string | number | null | Date
   ) => {
-    let processedValue: any = value;
+    let processedValue: string | number | null | Date = value;
 
     // Process value based on field type
     switch (field) {
@@ -158,7 +158,7 @@ export function TransferForm({
         }
         break;
       case 'amount':
-        processedValue = normalizeAmount(value);
+        processedValue = normalizeAmount(typeof value === 'string' || typeof value === 'number' ? value : null);
         break;
       case 'currency':
         processedValue = (value as string).toUpperCase();
@@ -552,7 +552,7 @@ export function TransferForm({
             </label>
             <select
               id="currency"
-              value={formData.currency}
+              value={formData.currency || ''}
               onChange={(e) => handleChange('currency', e.target.value)}
               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >

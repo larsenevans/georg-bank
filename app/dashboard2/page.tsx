@@ -87,7 +87,7 @@ function parseMovementDescription(description: string | undefined | null): {
 
   const ibanMatch = raw.match(/IBAN:\s*([A-Za-z0-9 ]+?)(?=\s+(?:VS|CS|SS):|\s*$)/i)
   const vsMatch = raw.match(/VS:\s*([A-Za-z0-9]+)/i)
-  let head = raw
+  const head = raw
     .replace(/\s*IBAN:\s*[A-Za-z0-9 ]+?(?=\s+(?:VS|CS|SS):|\s*$)/i, '')
     .replace(/\s*VS:\s*[A-Za-z0-9]+/i, '')
     .trim()

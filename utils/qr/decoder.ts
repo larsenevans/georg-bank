@@ -4,6 +4,8 @@ import {
   QrErrorType,
   QrDecodingError,
 } from '@/types/payment';
+
+export { QrDecodingError };
 import {
   normalizeIban,
   normalizeBic,
@@ -146,7 +148,7 @@ function tryDecodePayBySquare(qrData: string): QrDecodingResult {
     for (const account of accountEntries) {
       const draft: PaymentDraft = {
         qrFormat: 'pay-by-square',
-        recipientName: normalizeText(pairs['Nazov'] || pairs['Name'] || pairs['Meno'] || null),
+        recipientName: normalizeText(pairs['Nazov'] || pairs['Name'] || pairs['Meno'] || '') || '',
         iban: normalizeIban(account.iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || '',
         bic: normalizeBic(account.bic || pairs['Kod'] || null),
         amount: normalizeAmount(pairs['Sum'] || pairs['Summa'] || pairs['Amount'] || null),
@@ -291,7 +293,7 @@ function tryDecodeEpcSepa(qrData: string): QrDecodingResult {
 
     // BIC pattern (4-11 alphanumeric characters)
     const bicMatch = qrData.match(/([A-Z0-9]{8,11})/i);
-    if (bicMatch && isValidBicPosition(qrData, bicMatch.index)) {
+    if (bicMatch && isValidBicPosition(qrData, bicMatch.index || 0)) {
       draft.bic = normalizeBic(bicMatch[1]) || null;
     }
 

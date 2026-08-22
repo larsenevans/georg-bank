@@ -1,456 +1,358 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { validatePaymentDraft, validateIban, normalizeIban } from '@/utils/qr';
-import { PaymentDraft } from '@/types/payment';
+import { NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { transaction, bankAccount, user } from '@/lib/db/schema'
+import {
+  DEMO_ACCOUNT_NUMBER,
+  DEMO_DEFAULT_USER_EMAIL,
+  DEMO_DEFAULT_USER_ID,
+  DEMO_DEFAULT_USER_LEGACY_IDS,
+  DEMO_DEFAULT_USER_NAME,
+} from '@/lib/demo-user'
+import {
+  DAILY_PAYMENT_LIMIT_EUR,
+  dailyLimitSnapshot,
+  isOutgoingPaymentType,
+  startOfLocalDay,
+} from '@/lib/daily-payment-limit'
+import {
+  createMovementViaSupabase,
+  createServiceSupabase,
+  listMovementsViaSupabase,
+} from '@/lib/demo-transactions-supabase'
+import {
+  MANUAL_TOPUP_BLOCKED_MESSAGE,
+  isManualTopupType,
+} from '@/lib/topup-rules'
+import { desc, eq, inArray } from 'drizzle-orm'
 
-/**
- * POST /api/transactions
- * 
- * Creates a new transaction with server-side validation.
- * 
- * Server-first approach:
- * - All validation happens on the server
- * - Atomic balance check and deduction in a single DB transaction
- * - Idempotency key prevents duplicate submissions
- * 
- * Request Body:
- * - accountId: Source account ID (required)
- * - recipientName: Recipient name (optional for QR payments)
- * - recipientIban: Recipient IBAN (required)
- * - recipientBic: Recipient BIC (optional)
- * - amount: Transaction amount (required, must be positive)
- * - currency: Currency code (optional, defaults to EUR)
- * - variableSymbol: Variable symbol (optional)
- * - constantSymbol: Constant symbol (optional)
- * - specificSymbol: Specific symbol (optional)
- * - note: Payment note (optional, max 140 chars)
- * - paymentReference: Payment reference (optional)
- * - dueDate: Due date (optional)
- * - qrFormat: QR format (optional)
- * - idempotencyKey: Idempotency key (optional)
- * 
- * Authentication: Required (via session)
- */
-export async function POST(request: NextRequest) {
+async function getTodayOutgoingUsedCents(userId: string) {
+  const todayStart = startOfLocalDay()
+  const todayTxns = await db.query.transaction.findMany({
+    where: (fields, { and: andFn, eq: eqFn, gte: gteFn }) =>
+      andFn(eqFn(fields.userId, userId), gteFn(fields.createdAt, todayStart)),
+  })
+  return todayTxns
+    .filter((t) => isOutgoingPaymentType(t.type))
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+}
+
+export async function GET() {
   try {
-    // TODO: Implement proper authentication
-    const userId = request.headers.get('X-User-ID') || 'mock-user-id';
-    const idempotencyKey = request.headers.get('Idempotency-Key') || undefined;
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'User ID is required' },
-        { status: 401 }
-      );
-    }
-
-    // Parse request body
-    const body = await request.json();
-
-    // Validate required fields
-    if (!body.accountId) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'accountId is required' },
-        { status: 400 }
-      );
-    }
-
-    if (body.recipientIban === undefined || body.recipientIban === null || body.recipientIban === '') {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'recipientIban is required' },
-        { status: 400 }
-      );
-    }
-
-    if (body.amount === undefined || body.amount === null || body.amount <= 0) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'amount is required and must be positive' },
-        { status: 400 }
-      );
-    }
-
-    // Normalize and validate IBAN
-    const normalizedIban = normalizeIban(body.recipientIban);
-    if (!normalizedIban) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Invalid IBAN format' },
-        { status: 400 }
-      );
-    }
-
-    const ibanValidation = validateIban(normalizedIban);
-    if (!ibanValidation.valid) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: ibanValidation.errors[0].message },
-        { status: 400 }
-      );
-    }
-
-    // Check if idempotency key was already used
-    if (idempotencyKey) {
-      const existingTransaction = await prisma.transaction.findUnique({
-        where: { idempotencyKey },
-      });
-
-      if (existingTransaction) {
-        return NextResponse.json(
-          {
+    if (createServiceSupabase()) {
+      try {
+        const remote = await listMovementsViaSupabase(100)
+        if (remote) {
+          return NextResponse.json({
             success: true,
-            data: existingTransaction,
-            message: 'Transaction already processed (idempotency)',
-          },
-          { status: 200 }
-        );
+            dailyLimit: remote.dailyLimit,
+            transactions: remote.transactions,
+            accounts: remote.accounts ?? [],
+            topupPolicy: remote.topupPolicy,
+            source: 'supabase',
+          })
+        }
+      } catch (supabaseError) {
+        // Prefer surfacing Supabase failure over falling through to broken localhost Drizzle.
+        console.error('[API /api/transactions GET] Supabase error:', supabaseError)
+        return NextResponse.json(
+          { success: false, error: 'Supabase unavailable', source: 'supabase' },
+          { status: 502 }
+        )
       }
     }
 
-    // Verify user owns the source account
-    const sourceAccount = await prisma.account.findUnique({
-      where: { id: body.accountId },
-    });
+    const records = await db.query.transaction.findMany({
+      orderBy: [desc(transaction.createdAt)],
+      limit: 100,
+    })
 
-    if (!sourceAccount) {
-      return NextResponse.json(
-        { error: 'Not Found', message: 'Source account not found' },
-        { status: 404 }
-      );
-    }
-
-    if (sourceAccount.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Forbidden', message: 'You can only make transactions from your own accounts' },
-        { status: 403 }
-      );
-    }
-
-    // Validate currency
-    const currency = (body.currency as string)?.toUpperCase() || 'EUR';
-    const supportedCurrencies = new Set(['EUR', 'SKK', 'USD', 'GBP', 'CZK', 'PLN', 'HUF']);
-    if (!supportedCurrencies.has(currency) && !/^[A-Z]{3}$/.test(currency)) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Unsupported currency code' },
-        { status: 400 }
-      );
-    }
-
-    // Validate account currency matches transaction currency
-    if (sourceAccount.currency !== currency) {
-      return NextResponse.json(
-        {
-          error: 'Validation Error',
-          message: `Account currency (${sourceAccount.currency}) does not match transaction currency (${currency})`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check sufficient balance
-    const amount = Number(body.amount);
-    if (sourceAccount.balance < amount) {
-      return NextResponse.json(
-        {
-          error: 'Insufficient Funds',
-          message: `Account balance (${sourceAccount.balance}) is less than transaction amount (${amount})`,
-          balance: sourceAccount.balance,
-          required: amount,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate note length
-    if (body.note && body.note.length > 140) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Note must be 140 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    // Validate symbol lengths
-    if (body.variableSymbol && body.variableSymbol.length > 10) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Variable symbol must be 10 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    if (body.constantSymbol && body.constantSymbol.length > 10) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Constant symbol must be 10 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    if (body.specificSymbol && body.specificSymbol.length > 10) {
-      return NextResponse.json(
-        { error: 'Validation Error', message: 'Specific symbol must be 10 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    // Perform atomic transaction
-    const transaction = await prisma.$transaction(async (tx) => {
-      // Lock the account for update to prevent race conditions
-      const lockedAccount = await tx.account.findUnique({
-        where: { id: body.accountId },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      if (!lockedAccount) {
-        throw new Error('Account not found');
-      }
-
-      // Re-check balance after locking
-      if (lockedAccount.balance < amount) {
-        throw new Error(`Insufficient balance: ${lockedAccount.balance} < ${amount}`);
-      }
-
-      // Create the transaction
-      const newTransaction = await tx.transaction.create({
-        data: {
-          accountId: body.accountId,
-          userId,
-          type: 'OUTGOING',
-          status: 'COMPLETED',
-          
-          // Recipient info
-          recipientName: body.recipientName || null,
-          recipientIban: normalizedIban,
-          recipientBic: body.recipientBic ? body.recipientBic.replace(/\s+/g, '').toUpperCase() : null,
-          
-          // Payment symbols
-          variableSymbol: body.variableSymbol || null,
-          constantSymbol: body.constantSymbol || null,
-          specificSymbol: body.specificSymbol || null,
-          
-          // Additional info
-          note: body.note || null,
-          paymentReference: body.paymentReference || null,
-          dueDate: body.dueDate ? new Date(body.dueDate) : null,
-          qrFormat: body.qrFormat || null,
-          
-          // Amounts
-          amount,
-          currency,
-          fee: 0, // No fee for now
-          totalAmount: amount,
-          
-          // Balance info
-          balanceBefore: lockedAccount.balance,
-          balanceAfter: lockedAccount.balance - amount,
-          
-          // Metadata
-          idempotencyKey,
-          isDemo: true, // All transactions are demo for now
-          description: body.recipientName 
-            ? `Payment to ${body.recipientName}` 
-            : 'Payment',
-        },
-      });
-
-      // Update account balance
-      await tx.account.update({
-        where: { id: body.accountId },
-        data: {
-          balance: lockedAccount.balance - amount,
-          updatedAt: new Date(),
-        },
-      });
-
-      // Create transaction history entry
-      await tx.transactionHistory.create({
-        data: {
-          transactionId: newTransaction.id,
-          action: 'CREATE',
-          changes: {
-            amount,
-            recipientIban: normalizedIban,
-            balanceBefore: lockedAccount.balance,
-            balanceAfter: lockedAccount.balance - amount,
-          },
-          userId,
-        },
-      });
-
-      return newTransaction;
-    });
+    const accounts = await db.query.bankAccount.findMany()
+    const usedCents = await getTodayOutgoingUsedCents(DEMO_DEFAULT_USER_ID)
+    const dailyLimit = dailyLimitSnapshot(usedCents)
 
     return NextResponse.json({
       success: true,
-      data: transaction,
-      message: 'Transaction completed successfully',
-    }, { status: 201 });
+      dailyLimit,
+      transactions: records.map((t) => ({
+        id: t.id,
+        recipient: t.description || 'Platba',
+        amount: t.amount / 100,
+        date: new Date(t.createdAt).toLocaleDateString('sk-SK'),
+        createdAt: new Date(t.createdAt).toISOString(),
+        type: t.type,
+        status: t.status,
+        note: t.description,
+        balanceBefore: t.balanceBefore ? t.balanceBefore / 100 : undefined,
+        balanceAfter: t.balanceAfter ? t.balanceAfter / 100 : undefined,
+        pdfUrl: t.pdfUrl || null,
+      })),
+      accounts,
+      source: 'drizzle',
+    })
   } catch (error) {
-    console.error('POST /api/transactions error:', error);
-
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    // Handle specific error cases
-    if (errorMessage.includes('Insufficient balance')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Insufficient Funds',
-          message: errorMessage,
-        },
-        { status: 400 }
-      );
-    }
-
-    if (errorMessage.includes('Account not found')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Not Found',
-          message: errorMessage,
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal Server Error',
-        message: errorMessage,
-      },
-      { status: 500 }
-    );
+    console.error('[API /api/transactions GET] Error:', error)
+    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
   }
 }
 
-/**
- * GET /api/transactions
- * 
- * Returns transactions for the authenticated user.
- * 
- * Query Parameters:
- * - accountId: Filter by account ID (optional)
- * - type: Filter by transaction type (optional)
- * - status: Filter by transaction status (optional)
- * - limit: Maximum number of transactions (default: 50)
- * - offset: Offset for pagination (default: 0)
- * - startDate: Filter by start date (optional)
- * - endDate: Filter by end date (optional)
- * 
- * Authentication: Required (via session)
- */
-export async function GET(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    // TODO: Implement proper authentication
-    const userId = request.headers.get('X-User-ID') || 'mock-user-id';
-    
-    if (!userId) {
+    const body = await req.json()
+    const { recipient, iban, vs, amount, note, type = 'outgoing', category = 'Platba' } = body
+
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: 'Zadajte platnú sumu' }, { status: 400 })
+    }
+
+    if (isManualTopupType(type)) {
       return NextResponse.json(
-        { error: 'Unauthorized', message: 'User ID is required' },
-        { status: 401 }
-      );
-    }
-
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const accountId = searchParams.get('accountId') || undefined;
-    const type = searchParams.get('type') || undefined;
-    const status = searchParams.get('status') || undefined;
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
-    const startDate = searchParams.get('startDate') || undefined;
-    const endDate = searchParams.get('endDate') || undefined;
-
-    // Validate query parameters
-    if (isNaN(limit) || limit < 1 || limit > 1000) {
-      return NextResponse.json(
-        { error: 'Invalid limit parameter', message: 'Limit must be between 1 and 1000' },
-        { status: 400 }
-      );
-    }
-
-    if (isNaN(offset) || offset < 0) {
-      return NextResponse.json(
-        { error: 'Invalid offset parameter', message: 'Offset must be a non-negative integer' },
-        { status: 400 }
-      );
-    }
-
-    // Build where clause
-    const where: {
-      userId: string;
-      accountId?: string;
-      type?: string;
-      status?: string;
-      transactionDate?: {
-        gte?: Date;
-        lte?: Date;
-      };
-    } = { userId };
-
-    if (accountId) {
-      where.accountId = accountId;
-    }
-
-    if (type) {
-      where.type = type;
-    }
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (startDate || endDate) {
-      where.transactionDate = {};
-      if (startDate) {
-        where.transactionDate.gte = new Date(startDate);
-      }
-      if (endDate) {
-        where.transactionDate.lte = new Date(endDate);
-      }
-    }
-
-    // Fetch transactions with account info
-    const transactions = await prisma.transaction.findMany({
-      where,
-      include: {
-        account: {
-          select: {
-            id: true,
-            name: true,
-            accountNumber: true,
-            iban: true,
-            currency: true,
+        {
+          success: false,
+          error: MANUAL_TOPUP_BLOCKED_MESSAGE,
+          topupPolicy: {
+            manualTopupDisabled: true,
+            autoRefillEveryHours: 24,
           },
         },
-      },
-      orderBy: [
-        { transactionDate: 'desc' },
-        { createdAt: 'desc' },
-      ],
-      take: limit,
-      skip: offset,
-    });
+        { status: 403 }
+      )
+    }
 
-    // Get total count for pagination
-    const total = await prisma.transaction.count({ where });
+    if (createServiceSupabase()) {
+      const remote = await createMovementViaSupabase({
+        recipient,
+        iban,
+        vs,
+        amount,
+        note,
+        type,
+        category,
+      })
+      if (remote && 'error' in remote && remote.error) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: remote.error,
+            dailyLimit: 'dailyLimit' in remote ? remote.dailyLimit : undefined,
+          },
+          { status: remote.status || 400 }
+        )
+      }
+      if (remote && 'transaction' in remote) {
+        return NextResponse.json({
+          success: true,
+          dailyLimit: remote.dailyLimit,
+          transaction: remote.transaction,
+          source: 'supabase',
+        })
+      }
+    }
+
+    const amountInCents = Math.round(Number(amount) * 100)
+    const newTxnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const isOutgoing = type === 'outgoing' || type === 'withdrawal' || type === 'transfer'
+
+    // Ensure seed default user exists in database
+    const defaultUserId = DEMO_DEFAULT_USER_ID
+    const existingUser = await db.query.user.findFirst({
+      where: (t, { eq }) => eq(t.id, defaultUserId),
+    })
+
+    if (!existingUser) {
+      // Migrate leftover local rows that still use a legacy demo user id.
+      const legacyUsers = await db.query.user.findMany({
+        where: (t, { inArray: inArr }) =>
+          inArr(t.id, [...DEMO_DEFAULT_USER_LEGACY_IDS]),
+      })
+      if (legacyUsers.length > 0) {
+        for (const legacyId of DEMO_DEFAULT_USER_LEGACY_IDS) {
+          await db
+            .update(user)
+            .set({
+              email: `migrated-${legacyId}@local.test`,
+              updatedAt: new Date(),
+            })
+            .where(eq(user.id, legacyId))
+        }
+        await db.insert(user).values({
+          id: defaultUserId,
+          name: DEMO_DEFAULT_USER_NAME,
+          email: DEMO_DEFAULT_USER_EMAIL,
+          emailVerified: true,
+        }).onConflictDoNothing()
+        await db
+          .update(bankAccount)
+          .set({ userId: defaultUserId, updatedAt: new Date() })
+          .where(inArray(bankAccount.userId, [...DEMO_DEFAULT_USER_LEGACY_IDS]))
+        await db
+          .update(transaction)
+          .set({ userId: defaultUserId, updatedAt: new Date() })
+          .where(inArray(transaction.userId, [...DEMO_DEFAULT_USER_LEGACY_IDS]))
+        for (const legacyId of DEMO_DEFAULT_USER_LEGACY_IDS) {
+          await db.delete(user).where(eq(user.id, legacyId))
+        }
+      } else {
+        await db.insert(user).values({
+          id: defaultUserId,
+          name: DEMO_DEFAULT_USER_NAME,
+          email: DEMO_DEFAULT_USER_EMAIL,
+          emailVerified: true,
+        }).onConflictDoNothing()
+      }
+    } else if (
+      existingUser.name !== DEMO_DEFAULT_USER_NAME ||
+      existingUser.email !== DEMO_DEFAULT_USER_EMAIL
+    ) {
+      await db
+        .update(user)
+        .set({
+          name: DEMO_DEFAULT_USER_NAME,
+          email: DEMO_DEFAULT_USER_EMAIL,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, defaultUserId))
+    }
+
+    // Find or create default bank account (reclaim legacy Filip / shared demo IBAN)
+    let accountRecord = await db.query.bankAccount.findFirst({
+      where: (t, { eq }) => eq(t.userId, defaultUserId),
+    })
+
+    if (!accountRecord) {
+      const legacyAccount = await db.query.bankAccount.findFirst({
+        where: (t, { inArray: inArr }) =>
+          inArr(t.userId, [...DEMO_DEFAULT_USER_LEGACY_IDS]),
+      })
+      if (legacyAccount) {
+        await db
+          .update(bankAccount)
+          .set({ userId: defaultUserId, updatedAt: new Date() })
+          .where(eq(bankAccount.id, legacyAccount.id))
+        accountRecord = { ...legacyAccount, userId: defaultUserId }
+      }
+    }
+
+    if (!accountRecord) {
+      const byIban = await db.query.bankAccount.findFirst({
+        where: (t, { eq }) => eq(t.accountNumber, DEMO_ACCOUNT_NUMBER),
+      })
+      if (byIban) {
+        await db
+          .update(bankAccount)
+          .set({ userId: defaultUserId, updatedAt: new Date() })
+          .where(eq(bankAccount.id, byIban.id))
+        accountRecord = { ...byIban, userId: defaultUserId }
+      }
+    }
+
+    // €100 seed so CI / multi-test runs do not exhaust the shared demo account
+    const SEED_BALANCE_CENTS = 10_000
+
+    if (!accountRecord) {
+      const newAccId = `acc-${Date.now()}`
+      try {
+        await db.insert(bankAccount).values({
+          id: newAccId,
+          userId: defaultUserId,
+          accountNumber: DEMO_ACCOUNT_NUMBER,
+          displayName: 'Osobný účet',
+          accountType: 'checking',
+          balance: SEED_BALANCE_CENTS,
+          currency: 'EUR',
+          isActive: true,
+        })
+        accountRecord = await db.query.bankAccount.findFirst({
+          where: (t, { eq }) => eq(t.id, newAccId),
+        })
+      } catch {
+        const existing = await db.query.bankAccount.findFirst({
+          where: (t, { eq }) => eq(t.accountNumber, DEMO_ACCOUNT_NUMBER),
+        })
+        if (existing) {
+          await db
+            .update(bankAccount)
+            .set({ userId: defaultUserId, updatedAt: new Date() })
+            .where(eq(bankAccount.id, existing.id))
+          accountRecord = { ...existing, userId: defaultUserId }
+        }
+      }
+    }
+
+    const currentBalanceCents = accountRecord?.balance ?? SEED_BALANCE_CENTS
+    const newBalanceCents = type === 'incoming' || type === 'deposit'
+      ? currentBalanceCents + amountInCents
+      : currentBalanceCents - amountInCents
+
+    let dailyLimit = dailyLimitSnapshot(0)
+    if (isOutgoing) {
+      const usedCents = await getTodayOutgoingUsedCents(defaultUserId)
+      dailyLimit = dailyLimitSnapshot(usedCents)
+      if (amountInCents > dailyLimit.remainingCents) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Denný limit ${DAILY_PAYMENT_LIMIT_EUR} € je vyčerpaný. Zostáva ${dailyLimit.remainingEur.toFixed(2)} €.`,
+            dailyLimit,
+          },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Update account balance in Supabase DB
+    if (accountRecord) {
+      await db
+        .update(bankAccount)
+        .set({ balance: newBalanceCents, updatedAt: new Date() })
+        .where(eq(bankAccount.id, accountRecord.id))
+    }
+
+    const fullDescription = [recipient, note ? `(${note})` : '', iban ? `IBAN: ${iban}` : '', vs ? `VS: ${vs}` : '']
+      .filter(Boolean)
+      .join(' ')
+
+    // Insert transaction into Supabase DB
+    await db.insert(transaction).values({
+      id: newTxnId,
+      userId: defaultUserId,
+      fromAccountId: accountRecord?.id,
+      amount: amountInCents,
+      balanceBefore: currentBalanceCents,
+      balanceAfter: newBalanceCents,
+      type: type,
+      description: fullDescription,
+      status: 'completed',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    if (isOutgoing) {
+      dailyLimit = dailyLimitSnapshot(
+        dailyLimit.usedCents + amountInCents
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      data: transactions,
-      pagination: {
-        total,
-        limit,
-        offset,
-        hasMore: offset + transactions.length < total,
+      dailyLimit,
+      transaction: {
+        id: newTxnId,
+        recipient,
+        iban,
+        vs,
+        amount: Number(amount),
+        date: new Date().toLocaleDateString('sk-SK'),
+        createdAt: new Date().toISOString(),
+        note,
+        type,
+        status: 'Spracované',
+        balanceBefore: currentBalanceCents / 100,
+        balanceAfter: newBalanceCents / 100,
+        category,
       },
-    });
+    })
   } catch (error) {
-    console.error('GET /api/transactions error:', error);
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal Server Error',
-        message: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
+    console.error('[API /api/transactions POST] Error:', error)
+    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
   }
 }

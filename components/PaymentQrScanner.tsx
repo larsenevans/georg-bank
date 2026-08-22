@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { BrowserMultiFormatReader, Result, NotFoundException } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { Result, NotFoundException } from '@zxing/library';
 import { PaymentDraft, PaymentOption, QrDecodingResult } from '@/types/payment';
 import { decodeQrCode, QrDecodingError } from '@/utils/qr';
 
@@ -95,6 +96,7 @@ export function PaymentQrScanner({
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const scannerControlsRef = useRef<any>(null);
 
   /**
    * Cleanup camera stream and code reader
@@ -106,17 +108,20 @@ export function PaymentQrScanner({
       animationFrameRef.current = null;
     }
 
+    // Stop scanner controls
+    if (scannerControlsRef.current) {
+      scannerControlsRef.current.stop();
+      scannerControlsRef.current = null;
+    }
+
     // Stop camera stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
 
-    // Reset code reader
-    if (codeReaderRef.current) {
-      codeReaderRef.current.reset();
-      codeReaderRef.current = null;
-    }
+    // Cleanup code reader
+    codeReaderRef.current = null;
 
     setState('idle');
     setErrorMessage(null);
@@ -131,7 +136,7 @@ export function PaymentQrScanner({
     
     try {
       // Check if camera API is available
-      if (typeof window === 'undefined' || !window.mediaDevices || !window.MediaStreamTrack) {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !window.MediaStreamTrack) {
         setIsCameraAvailable(false);
         setHasCameraPermission(false);
         return;
@@ -181,59 +186,27 @@ export function PaymentQrScanner({
   }, [cleanup]);
 
   /**
-   * Start scanning for QR codes
+   * Start scanning for QR codes using continuous scan
    */
   const startScanning = useCallback((codeReader: BrowserMultiFormatReader) => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current) return;
 
     const video = videoRef.current;
-    const canvas = canvasRef.current;
     
-    // Wait for video to be ready
-    video.onloadedmetadata = () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      scanFrame(codeReader, video, canvas);
-    };
-
-    if (video.readyState >= video.HAVE_CURRENT_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      scanFrame(codeReader, video, canvas);
-    }
-  }, []);
-
-  /**
-   * Scan a single frame for QR codes
-   */
-  const scanFrame = useCallback((
-    codeReader: BrowserMultiFormatReader,
-    video: HTMLVideoElement,
-    canvas: HTMLCanvasElement
-  ) => {
-    try {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // Draw current video frame to canvas
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Decode from canvas
-      codeReader.decodeFromCanvas(canvas).then((result: Result) => {
-        handleScanResult(result.getText());
-      }).catch((err: Error) => {
-        if (err.name !== 'NotFoundException') {
-          // Only log non-NotFound errors
-          console.warn('QR scanning error:', err.message);
+    // Use continuous scan with callback
+    const controls = codeReader.scan(
+      video,
+      (result: Result | undefined, error: any | undefined) => {
+        if (result) {
+          handleScanResult(result.getText());
         }
-        // Continue scanning
-        animationFrameRef.current = requestAnimationFrame(() => {
-          scanFrame(codeReader, video, canvas);
-        });
-      });
-    } catch (err) {
-      console.warn('Frame scanning error:', err);
-    }
+        if (error && error.name !== 'NotFoundException') {
+          console.warn('QR scanning error:', error.message);
+        }
+      }
+    );
+    
+    scannerControlsRef.current = controls;
   }, []);
 
   /**
@@ -326,7 +299,7 @@ export function PaymentQrScanner({
 
       // Decode QR from image
       const codeReader = new BrowserMultiFormatReader();
-      const result = await codeReader.decodeFromImage(img);
+      const result = await codeReader.decodeFromImageElement(img);
 
       await handleScanResult(result.getText());
     } catch (err) {
