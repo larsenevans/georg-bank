@@ -152,7 +152,11 @@ function newTxnId(prefix = 'txn') {
 
 export default function GeorgePrototypePage() {
   const { data: sessionData } = useSession()
-  const user = sessionData?.user ?? { name: 'Peter', email: 'peter@example.com', image: null }
+  const user = {
+    name: sessionData?.user?.name ?? 'Peter Novotný',
+    email: sessionData?.user?.email ?? 'peter@example.com',
+    image: sessionData?.user?.image || '/images/profile-avatar.png',
+  }
 
   // GLOBÁLNY STAV
   const [state, setState] = useState({
