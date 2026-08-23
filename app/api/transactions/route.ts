@@ -38,28 +38,28 @@ async function getTodayOutgoingUsedCents(userId: string) {
 
 export async function GET() {
   try {
-    if (createServiceSupabase()) {
-      try {
-        const remote = await listMovementsViaSupabase(100)
-        if (remote) {
-          return NextResponse.json({
-            success: true,
-            dailyLimit: remote.dailyLimit,
-            transactions: remote.transactions,
-            accounts: remote.accounts ?? [],
-            topupPolicy: remote.topupPolicy,
-            source: 'supabase',
-          })
-        }
-      } catch (supabaseError) {
-        // Prefer surfacing Supabase failure over falling through to broken localhost Drizzle.
-        console.error('[API /api/transactions GET] Supabase error:', supabaseError)
-        return NextResponse.json(
-          { success: false, error: 'Supabase unavailable', source: 'supabase' },
-          { status: 502 }
-        )
-      }
-    }
+    // TODO: Re-enable Supabase integration once transaction table is synced to Supabase
+    // if (createServiceSupabase()) {
+    //   try {
+    //     const remote = await listMovementsViaSupabase(100)
+    //     if (remote) {
+    //       return NextResponse.json({
+    //         success: true,
+    //         dailyLimit: remote.dailyLimit,
+    //         transactions: remote.transactions,
+    //         accounts: remote.accounts ?? [],
+    //         topupPolicy: remote.topupPolicy,
+    //         source: 'supabase',
+    //       })
+    //     }
+    //   } catch (supabaseError) {
+    //     console.error('[API /api/transactions GET] Supabase error:', supabaseError)
+    //     return NextResponse.json(
+    //       { success: false, error: 'Supabase unavailable', source: 'supabase' },
+    //       { status: 502 }
+    //     )
+    //   }
+    // }
 
     const records = await db.query.transaction.findMany({
       orderBy: [desc(transaction.createdAt)],
