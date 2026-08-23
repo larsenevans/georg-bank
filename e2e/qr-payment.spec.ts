@@ -54,14 +54,14 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
 
   test('QR-02: Scan QR Code button', async ({ page }) => {
     await openPaymentQrScanner(page);
-    const scanBtn = page.getByRole('button', { name: /Scan QR Code/i });
+    const scanBtn = page.getByRole('button', { name: /Skenovať kamerou|Scan QR Code/i });
     await expect(scanBtn).toBeVisible({ timeout: 5000 });
     await expect(scanBtn).toBeEnabled();
   });
 
   test('QR-03: video element mounted', async ({ page }) => {
     await openPaymentQrScanner(page);
-    const scanBtn = page.getByRole('button', { name: /Scan QR Code/i });
+    const scanBtn = page.getByRole('button', { name: /Skenovať kamerou|Scan QR Code/i });
     await scanBtn.click();
 
     const video = page.locator('video');
@@ -70,7 +70,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
 
   test('QR-04: playsInline + autoplay + muted', async ({ page }) => {
     await openPaymentQrScanner(page);
-    await page.getByRole('button', { name: /Scan QR Code/i }).click();
+    await page.getByRole('button', { name: /Skenovať kamerou|Scan QR Code/i }).click();
 
     const video = page.locator('video');
     await expect(video).toBeVisible({ timeout: 10000 });
@@ -87,7 +87,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
 
   test('QR-05: video dimensions > 0 pri fake camera', async ({ page }) => {
     await openPaymentQrScanner(page);
-    await page.getByRole('button', { name: /Scan QR Code/i }).click();
+    await page.getByRole('button', { name: /Skenovať kamerou|Scan QR Code/i }).click();
 
     const video = page.locator('video');
     await expect(video).toBeVisible({ timeout: 10000 });
@@ -220,7 +220,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
 
   test('QR-11: scanner closes and tracks stop', async ({ page }) => {
     await openPaymentQrScanner(page);
-    await page.getByRole('button', { name: /Scan QR Code/i }).click();
+    await page.getByRole('button', { name: /Skenovať kamerou|Scan QR Code/i }).click();
     await expect(page.locator('video')).toBeVisible({ timeout: 10000 });
 
     // Close scanner
