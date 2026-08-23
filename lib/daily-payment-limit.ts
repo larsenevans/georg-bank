@@ -1,5 +1,5 @@
 /** Rolling 24h outgoing payment allowance for the demo payer (EUR). */
-export const DAILY_PAYMENT_LIMIT_EUR = 6660
+export const DAILY_PAYMENT_LIMIT_EUR = 8850
 export const DAILY_PAYMENT_LIMIT_CENTS = DAILY_PAYMENT_LIMIT_EUR * 100
 
 /** Start of the rolling 24-hour window (now − 24h). */
