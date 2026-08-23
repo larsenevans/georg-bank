@@ -3084,27 +3084,14 @@ export default function GeorgePrototypePage() {
 
               {/* QR Code Scanner Modal */}
               {showQrScanner && scannedDraft === null && (
-                <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-md bg-[#12131b] rounded-2xl p-6 relative">
-                    <button
-                      onClick={handleScannerClose}
-                      className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
-                      aria-label="Zavrieť skener"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                    <PaymentQrScanner
-                      onScanSuccess={handleScanSuccess}
-                      onError={handleScanError}
-                      onClose={handleScannerClose}
-                      title="Skenovať platobný QR kód"
-                      description="Namierte kameru na platobný QR kód (EPC/SEPA, PAY by square)"
-                      showImageUpload={true}
-                    />
-                  </div>
-                </div>
+                <PaymentQrScanner
+                  onScanSuccess={handleScanSuccess}
+                  onError={handleScanError}
+                  onClose={handleScannerClose}
+                  title="Skenovať platobný QR kód"
+                  description="Namierte kameru na platobný QR kód (EPC/SEPA, PAY by square)"
+                  showImageUpload={true}
+                />
               )}
 
               {/* QR Code Preview Modal */}

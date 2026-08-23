@@ -36,30 +36,34 @@ async function getTodayOutgoingUsedCents(userId: string) {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 }
 
+// Architecture:
+// CURRENT: transactions = Drizzle/Postgres
+// DISABLED: Supabase REST transaction path (activate with USE_SUPABASE_TRANSACTIONS=true)
+const USE_SUPABASE_TRANSACTIONS = process.env.USE_SUPABASE_TRANSACTIONS === 'true'
+
 export async function GET() {
   try {
-    // TODO: Re-enable Supabase integration once transaction table is synced to Supabase
-    // if (createServiceSupabase()) {
-    //   try {
-    //     const remote = await listMovementsViaSupabase(100)
-    //     if (remote) {
-    //       return NextResponse.json({
-    //         success: true,
-    //         dailyLimit: remote.dailyLimit,
-    //         transactions: remote.transactions,
-    //         accounts: remote.accounts ?? [],
-    //         topupPolicy: remote.topupPolicy,
-    //         source: 'supabase',
-    //       })
-    //     }
-    //   } catch (supabaseError) {
-    //     console.error('[API /api/transactions GET] Supabase error:', supabaseError)
-    //     return NextResponse.json(
-    //       { success: false, error: 'Supabase unavailable', source: 'supabase' },
-    //       { status: 502 }
-    //     )
-    //   }
-    // }
+    if (USE_SUPABASE_TRANSACTIONS && createServiceSupabase()) {
+      try {
+        const remote = await listMovementsViaSupabase(100)
+        if (remote) {
+          return NextResponse.json({
+            success: true,
+            dailyLimit: remote.dailyLimit,
+            transactions: remote.transactions,
+            accounts: remote.accounts ?? [],
+            topupPolicy: remote.topupPolicy,
+            source: 'supabase',
+          })
+        }
+      } catch (supabaseError) {
+        console.error('[API /api/transactions GET] Supabase error:', supabaseError)
+        return NextResponse.json(
+          { success: false, error: 'Supabase unavailable', source: 'supabase' },
+          { status: 502 }
+        )
+      }
+    }
 
     const records = await db.query.transaction.findMany({
       orderBy: [desc(transaction.createdAt)],
@@ -118,7 +122,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (createServiceSupabase()) {
+    if (USE_SUPABASE_TRANSACTIONS && createServiceSupabase()) {
       const remote = await createMovementViaSupabase({
         recipient,
         iban,

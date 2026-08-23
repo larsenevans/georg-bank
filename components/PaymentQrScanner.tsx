@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { Result, NotFoundException } from '@zxing/library';
 import { PaymentDraft, PaymentOption, QrDecodingResult } from '@/types/payment';
 import { decodeQrCode, QrDecodingError } from '@/utils/qr';
@@ -14,45 +14,45 @@ export interface PaymentQrScannerProps {
    * Called when a QR code is successfully scanned and decoded
    */
   onScanSuccess: (draft: PaymentDraft) => void;
-  
+
   /**
    * Called when an error occurs during scanning
    */
   onError: (error: Error) => void;
-  
+
   /**
    * Called when the scanner is closed
    */
   onClose: () => void;
-  
+
   /**
    * Optional: Called when multiple payment options are available
    * If not provided, the first option will be used automatically
    */
   onMultipleOptions?: (options: PaymentOption[]) => void;
-  
+
   /**
    * Title to display in the scanner modal
    */
   title?: string;
-  
+
   /**
    * Description to display in the scanner modal
    */
   description?: string;
-  
+
   /**
    * Whether to show the image upload fallback option
    * @default true
    */
   showImageUpload?: boolean;
-  
+
   /**
    * Maximum image file size in bytes
    * @default 5 * 1024 * 1024 (5MB)
    */
   maxImageSize?: number;
-  
+
   /**
    * Allowed image MIME types
    * @default ['image/jpeg', 'image/png', 'image/webp']
@@ -61,275 +61,380 @@ export interface PaymentQrScannerProps {
 }
 
 /**
- * PaymentQRScanner Component
- * 
+ * PaymentQrScanner Component
+ *
  * A component that allows users to scan QR codes using their device camera
  * or upload an image containing a QR code.
- * 
- * Features:
- * - Camera access with user permission
- * - Image upload fallback
- * - Multiple payment option handling
- * - Error handling and user feedback
- * - Automatic stream cleanup
  */
 export function PaymentQrScanner({
   onScanSuccess,
   onError,
   onClose,
   onMultipleOptions,
-  title = 'Scan QR Code',
-  description = 'Point your camera at a payment QR code to scan it',
+  title = 'Skenovať platobný QR kód',
+  description = 'Namierte kameru na platobný QR kód (EPC/SEPA, PAY by square)',
   showImageUpload = true,
   maxImageSize = 5 * 1024 * 1024, // 5MB
   allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'],
 }: PaymentQrScannerProps) {
   const [state, setState] = useState<'idle' | 'scanning' | 'processing' | 'error' | 'success'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isCameraAvailable, setIsCameraAvailable] = useState<boolean>(true);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const scannerControlsRef = useRef<any>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
 
   /**
-   * Cleanup camera stream and code reader
+   * Stop camera tracks, decoder, and reset video element
    */
-  const cleanup = useCallback(() => {
-    // Cancel any pending animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    // Stop scanner controls
+  const stopCameraResources = useCallback(() => {
     if (scannerControlsRef.current) {
-      scannerControlsRef.current.stop();
+      try {
+        scannerControlsRef.current.stop();
+      } catch (err) {
+        console.warn('[PaymentQrScanner] Error stopping scanner controls:', err);
+      }
       scannerControlsRef.current = null;
     }
 
-    // Stop camera stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (err) {
+          console.warn('[PaymentQrScanner] Error stopping track:', err);
+        }
+      });
       streamRef.current = null;
     }
 
-    // Cleanup code reader
-    codeReaderRef.current = null;
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.srcObject = null;
+      } catch {
+        // ignore
+      }
+    }
 
-    setState('idle');
-    setErrorMessage(null);
-    setPaymentOptions([]);
+    codeReaderRef.current = null;
   }, []);
 
   /**
-   * Initialize camera stream
+   * Full cleanup of camera and state
+   */
+  const cleanup = useCallback(() => {
+    stopCameraResources();
+    setState('idle');
+    setErrorMessage(null);
+  }, [stopCameraResources]);
+
+  /**
+   * Handle a single payment draft
+   */
+  const handleSingleDraft = useCallback(
+    (draft: PaymentDraft) => {
+      setState('success');
+      onScanSuccess(draft);
+    },
+    [onScanSuccess]
+  );
+
+  /**
+   * Handle a successful QR code scan string
+   */
+  const handleScanResult = useCallback(
+    async (qrData: string) => {
+      stopCameraResources();
+      setState('processing');
+      setErrorMessage(null);
+
+      try {
+        const result: QrDecodingResult = await decodeQrCode(qrData);
+
+        if (!result.success || result.drafts.length === 0) {
+          throw new QrDecodingError(
+            result.error || 'Nepodarilo sa dekódovať QR kód',
+            result.format ? 'UNSUPPORTED_QR_TYPE' : 'INVALID_QR_FORMAT',
+            qrData
+          );
+        }
+
+        if (result.drafts.length > 1 && onMultipleOptions) {
+          const options: PaymentOption[] = result.drafts.map((draft, index) => ({
+            id: `option-${index}`,
+            label: draft.recipientName || `Možnosť ${index + 1}`,
+            draft,
+          }));
+          onMultipleOptions(options);
+        } else {
+          handleSingleDraft(result.drafts[0]);
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        setErrorMessage(error.message);
+        setState('error');
+        onError(error);
+      }
+    },
+    [stopCameraResources, onMultipleOptions, handleSingleDraft, onError]
+  );
+
+  /**
+   * Initialize camera stream (Step A: get stream and transition to scanning state)
    */
   const initCamera = useCallback(async () => {
-    cleanup();
-    
+    stopCameraResources();
+    setErrorMessage(null);
+
     try {
-      // Check if camera API is available
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !window.MediaStreamTrack) {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setIsCameraAvailable(false);
         setHasCameraPermission(false);
+        const err = new Error('Kamera nie je podporovaná v tomto prehliadači.');
+        setErrorMessage(err.message);
+        setState('error');
+        onError(err);
         return;
       }
 
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // Prefer rear camera
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch (envErr) {
+        console.warn('[PaymentQrScanner] Ideal environment camera unavailable, attempting fallback:', envErr);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
 
       streamRef.current = stream;
       setHasCameraPermission(true);
       setIsCameraAvailable(true);
       setState('scanning');
-
-      // Initialize code reader
-      const codeReader = new BrowserMultiFormatReader();
-      codeReaderRef.current = codeReader;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        startScanning(codeReader);
-      }
     } catch (err) {
       const error = err as Error;
-      
-      // Check specific error types
-      if (error.name === 'NotAllowedError') {
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setHasCameraPermission(false);
-        setErrorMessage('Camera access was denied. Please allow camera access to scan QR codes.');
+        setErrorMessage('Prístup ku kamere bol zamietnutý. Povoľte prístup v nastaveniach prehliadača.');
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         setIsCameraAvailable(false);
-        setErrorMessage('No camera found on this device.');
-      } else if (error.name === 'NotReadableError') {
-        setErrorMessage('Camera is already in use by another application.');
+        setErrorMessage('Na tomto zariadení sa nenašla žiadna kamera.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        setErrorMessage('Kamera je už používaná inou aplikáciou.');
       } else {
-        setErrorMessage('Failed to access camera. Please try again.');
+        setErrorMessage(`Chyba prístupu ku kamere: ${error.message || 'Neznáma chyba'}`);
       }
-      
+
       setHasCameraPermission(false);
-      setState('error');
-    }
-  }, [cleanup]);
-
-  /**
-   * Start scanning for QR codes using continuous scan
-   */
-  const startScanning = useCallback((codeReader: BrowserMultiFormatReader) => {
-    if (!videoRef.current) return;
-
-    const video = videoRef.current;
-    
-    // Use continuous scan with callback
-    const controls = codeReader.scan(
-      video,
-      (result: Result | undefined, error: any | undefined) => {
-        if (result) {
-          handleScanResult(result.getText());
-        }
-        if (error && error.name !== 'NotFoundException') {
-          console.warn('QR scanning error:', error.message);
-        }
-      }
-    );
-    
-    scannerControlsRef.current = controls;
-  }, []);
-
-  /**
-   * Handle a successful QR code scan
-   */
-  const handleScanResult = useCallback(async (qrData: string) => {
-    cleanup();
-    setState('processing');
-    setErrorMessage(null);
-
-    try {
-      // Decode the QR data
-      const result: QrDecodingResult = await decodeQrCode(qrData);
-
-      if (!result.success || result.drafts.length === 0) {
-        throw new QrDecodingError(
-          result.error || 'Failed to decode QR code',
-          result.format ? 'UNSUPPORTED_QR_TYPE' : 'INVALID_QR_FORMAT',
-          qrData
-        );
-      }
-
-      // Handle multiple payment options
-      if (result.drafts.length > 1) {
-        if (onMultipleOptions) {
-          // Let parent component handle multiple options
-          const options: PaymentOption[] = result.drafts.map((draft, index) => ({
-            id: `option-${index}`,
-            label: draft.recipientName || `Option ${index + 1}`,
-            draft,
-          }));
-          onMultipleOptions(options);
-        } else {
-          // Use first option by default
-          handleSingleDraft(result.drafts[0]);
-        }
-      } else {
-        handleSingleDraft(result.drafts[0]);
-      }
-    } catch (err) {
-      const error = err as Error;
-      setErrorMessage(error.message);
       setState('error');
       onError(error);
     }
-  }, [cleanup, onScanSuccess, onMultipleOptions]);
+  }, [stopCameraResources, onError]);
 
   /**
-   * Handle a single payment draft
+   * Step B: Attach stream to mounted video element and start ZXing scanner
    */
-  const handleSingleDraft = useCallback((draft: PaymentDraft) => {
-    setState('success');
-    onScanSuccess(draft);
-  }, [onScanSuccess]);
-
-  /**
-   * Handle image file selection for QR scanning
-   */
-  const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!allowedImageTypes.includes(file.type)) {
-      setErrorMessage(`Unsupported file type. Please upload: ${allowedImageTypes.join(', ')}`);
-      setState('error');
+  useEffect(() => {
+    if (state !== 'scanning' || !streamRef.current || !videoRef.current) {
       return;
     }
 
-    // Validate file size
-    if (file.size > maxImageSize) {
-      setErrorMessage(`File is too large. Maximum size: ${maxImageSize / (1024 * 1024)}MB`);
-      setState('error');
-      return;
-    }
+    let isCancelled = false;
+    const video = videoRef.current;
+    const stream = streamRef.current;
 
-    setState('processing');
-    setErrorMessage(null);
+    const setupAndScan = async () => {
+      try {
+        video.srcObject = stream;
 
-    try {
-      // Create image element
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
+        // Ensure video is ready to play and has dimensions
+        if (video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              cleanupListeners();
+              if (video.videoWidth > 0 && video.videoHeight > 0) {
+                resolve();
+              } else {
+                reject(new Error('Kamera neposkytuje žiadny obraz (rozmery videa sú 0x0).'));
+              }
+            }, 4000);
 
-      // Wait for image to load
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
-      });
+            const onReady = () => {
+              cleanupListeners();
+              resolve();
+            };
 
-      // Decode QR from image
-      const codeReader = new BrowserMultiFormatReader();
-      const result = await codeReader.decodeFromImageElement(img);
+            const onVideoError = () => {
+              cleanupListeners();
+              reject(new Error('Chyba pri inicializácii obrazu kamery.'));
+            };
 
-      await handleScanResult(result.getText());
-    } catch (err) {
-      const error = err as Error;
-      if (error.message.includes('No MultiFormat Readers')) {
-        setErrorMessage('No QR code found in the uploaded image.');
-      } else {
-        setErrorMessage(`Failed to read QR code from image: ${error.message}`);
+            const cleanupListeners = () => {
+              clearTimeout(timeout);
+              video.removeEventListener('loadedmetadata', onReady);
+              video.removeEventListener('canplay', onReady);
+              video.removeEventListener('error', onVideoError);
+            };
+
+            video.addEventListener('loadedmetadata', onReady);
+            video.addEventListener('canplay', onReady);
+            video.addEventListener('error', onVideoError);
+          });
+        }
+
+        if (isCancelled) return;
+
+        await video.play();
+
+        if (isCancelled) return;
+
+        // Verification of video properties
+        const isMediaStream = video.srcObject instanceof MediaStream;
+        const hasDimensions = video.videoWidth > 0 && video.videoHeight > 0;
+        const isReady = video.readyState >= 2;
+
+        if (!isMediaStream || !hasDimensions || !isReady) {
+          throw new Error(
+            `Kamera neodovzdáva platný obraz (readyState: ${video.readyState}, ${video.videoWidth}x${video.videoHeight}).`
+          );
+        }
+
+        const codeReader = new BrowserMultiFormatReader();
+        codeReaderRef.current = codeReader;
+
+        const controls: IScannerControls = codeReader.scan(
+          video,
+          (result: Result | undefined, error: unknown) => {
+            if (isCancelled) return;
+            if (result) {
+              handleScanResult(result.getText());
+            }
+            if (error && !(error instanceof NotFoundException)) {
+              // Ignore background scanning frames without QR
+            }
+          }
+        );
+
+        if (isCancelled) {
+          controls.stop();
+        } else {
+          scannerControlsRef.current = controls;
+        }
+      } catch (err) {
+        if (isCancelled) return;
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error('[PaymentQrScanner] Video play/scan error:', error);
+        setErrorMessage(error.message || 'Nepodarilo sa spustiť obraz kamery.');
+        setState('error');
+        onError(error);
       }
-      setState('error');
-    } finally {
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    };
+
+    setupAndScan();
+
+    return () => {
+      isCancelled = true;
+      if (scannerControlsRef.current) {
+        try {
+          scannerControlsRef.current.stop();
+        } catch {
+          // ignore
+        }
+        scannerControlsRef.current = null;
       }
-    }
-  }, [allowedImageTypes, maxImageSize, handleScanResult]);
+      codeReaderRef.current = null;
+    };
+  }, [state, handleScanResult, onError]);
 
   /**
-   * Trigger file input click
+   * Handle image file upload for QR scanning
    */
+  const handleImageUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!allowedImageTypes.includes(file.type)) {
+        const err = new Error(`Nepodporovaný typ súboru. Nahrajte prosím: ${allowedImageTypes.join(', ')}`);
+        setErrorMessage(err.message);
+        setState('error');
+        onError(err);
+        return;
+      }
+
+      if (file.size > maxImageSize) {
+        const err = new Error(`Súbor je príliš veľký. Maximálna povolená veľkosť: ${maxImageSize / (1024 * 1024)}MB`);
+        setErrorMessage(err.message);
+        setState('error');
+        onError(err);
+        return;
+      }
+
+      setState('processing');
+      setErrorMessage(null);
+
+      let objectUrl: string | null = null;
+      try {
+        objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.src = objectUrl;
+
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('Nepodarilo sa načítať obrázok zo súboru.'));
+        });
+
+        const codeReader = new BrowserMultiFormatReader();
+        const result = await codeReader.decodeFromImageElement(img);
+
+        await handleScanResult(result.getText());
+      } catch (err) {
+        const error = err as Error;
+        const isNotFound =
+          error instanceof NotFoundException ||
+          error.name === 'NotFoundException' ||
+          error.message?.includes('No MultiFormat Readers') ||
+          error.message?.includes('No barcode') ||
+          error.message?.includes('not found');
+
+        const message = isNotFound
+          ? 'V nahranom obrázku sa nenašiel žiadny platný QR kód.'
+          : `Nepodarilo sa načítať QR kód: ${error.message || 'Neznáma chyba'}`;
+
+        setErrorMessage(message);
+        setState('error');
+        onError(new Error(message));
+      } finally {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    },
+    [allowedImageTypes, maxImageSize, handleScanResult, onError]
+  );
+
   const triggerFileUpload = useCallback(() => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   }, []);
 
-  /**
-   * Handle retry
-   */
   const handleRetry = useCallback(() => {
     cleanup();
     setErrorMessage(null);
@@ -337,97 +442,94 @@ export function PaymentQrScanner({
     setHasCameraPermission(null);
   }, [cleanup]);
 
-  /**
-   * Handle close
-   */
   const handleClose = useCallback(() => {
     cleanup();
     onClose();
   }, [cleanup, onClose]);
 
-  // Cleanup on unmount
+  // Clean up resources when unmounting
   useEffect(() => {
     return () => {
-      cleanup();
+      stopCameraResources();
     };
-  }, [cleanup]);
+  }, [stopCameraResources]);
 
-  // Initialize camera when state becomes scanning
-  useEffect(() => {
-    if (state === 'scanning' && !codeReaderRef.current) {
-      initCamera();
-    }
-  }, [state, initCamera]);
-
-  // Render different states
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md mx-4 bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
           </div>
           <button
             onClick={handleClose}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label="Close"
+            aria-label="Zavrieť skener"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Main Content */}
-        <div className="p-6">
+        <div className="p-5">
           {state === 'idle' && (
-            <div className="text-center">
-              <div className="mb-6">
-                <svg className="w-20 h-20 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16V6a1 1 0 011-1h16a1 1 0 011 1v10" />
-                </svg>
+            <div className="text-center py-4">
+              <div className="mb-5">
+                <div className="w-16 h-16 mx-auto rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1" strokeWidth="2" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" strokeWidth="2" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth="2" />
+                    <path d="M14 14h2v2h-2zm4 0h3v3h-3zm-4 4h3v3h-3zm4 0h3v3h-3z" strokeWidth="2" />
+                  </svg>
+                </div>
               </div>
-              
+
               {hasCameraPermission === false && (
-                <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    Camera access was denied. You can still upload a QR code image.
+                <div className="mb-4 p-3.5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-left">
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                    Prístup ku kamere bol zamietnutý. Môžete nahrať obrázok s QR kódom nižšie.
                   </p>
                 </div>
               )}
 
               {isCameraAvailable === false && (
-                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-700 dark:text-red-300">
-                    No camera found on this device.
+                <div className="mb-4 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-left">
+                  <p className="text-xs text-red-700 dark:text-red-300">
+                    Na tomto zariadení sa nenašla žiadna dostupná kamera.
                   </p>
                 </div>
               )}
 
-              <button
-                onClick={initCamera}
-                disabled={hasCameraPermission === false || isCameraAvailable === false}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors mb-3"
-              >
-                Scan QR Code
-              </button>
-
-              {showImageUpload && (
+              <div className="space-y-3">
                 <button
-                  onClick={triggerFileUpload}
-                  className="w-full py-3 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                  type="button"
+                  onClick={initCamera}
+                  disabled={hasCameraPermission === false || isCameraAvailable === false}
+                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors shadow-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Upload QR Image
+                  Scan QR Code
                 </button>
-              )}
 
-              {/* Hidden file input */}
+                {showImageUpload && (
+                  <button
+                    type="button"
+                    onClick={triggerFileUpload}
+                    className="w-full py-3 px-4 border border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-500 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Nahrať obrázok s QR kódom
+                  </button>
+                )}
+              </div>
+
+              {/* Hidden file input supporting desktop file picker & mobile photo/camera capture */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -442,80 +544,68 @@ export function PaymentQrScanner({
           {state === 'scanning' && (
             <div className="relative">
               {/* Camera Preview */}
-              <div className="relative w-full h-64 md:h-80 bg-black rounded-lg overflow-hidden">
+              <div className="relative w-full h-64 md:h-72 bg-black rounded-xl overflow-hidden flex items-center justify-center">
                 <video
                   ref={videoRef}
+                  autoPlay
                   playsInline
                   muted
                   className="w-full h-full object-cover"
-                  onError={() => setErrorMessage('Camera stream error. Please try again.')}
+                  onError={() => setErrorMessage('Chyba kamery pri prehrávaní obrazu.')}
                 />
-                
-                {/* Scanner Overlay */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute inset-4 border-2 border-blue-500 rounded-lg" />
-                  <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-blue-500 rounded-tl-lg" />
-                  <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-blue-500 rounded-tr-lg" />
-                  <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-blue-500 rounded-bl-lg" />
-                  <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-blue-500 rounded-br-lg" />
-                </div>
 
-                {/* Scan Line Animation */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 animate-scan-line" />
+                {/* Scanner Overlay UI */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="relative w-48 h-48 sm:w-56 sm:h-56 border-2 border-blue-400/60 rounded-xl overflow-hidden shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
+                    <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl" />
+                    <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr" />
+                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl" />
+                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-500 rounded-br" />
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500 shadow-[0_0_8px_#3b82f6] animate-scan-line" />
+                  </div>
+                </div>
               </div>
 
-              <canvas ref={canvasRef} className="hidden" />
-
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Point your camera at a payment QR code
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  The scan will happen automatically
+              <div className="mt-3 text-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  Namierte kameru priamo na QR kód
                 </p>
               </div>
             </div>
           )}
 
           {state === 'processing' && (
-            <div className="text-center py-8">
-              <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Decoding QR code...</p>
+            <div className="text-center py-10">
+              <div className="animate-spin h-10 w-10 border-3 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Spracovávam QR kód...</p>
             </div>
           )}
 
           {state === 'error' && (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-4">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <p className="text-red-600 dark:text-red-400 font-medium mb-4">{errorMessage}</p>
-              
-              <div className="space-y-3">
-                {hasCameraPermission === false && isCameraAvailable && (
-                  <button
-                    onClick={() => window.open('https://support.google.com/chrome/answer/2693767', '_blank')}
-                    className="w-full py-2 px-4 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors"
-                  >
-                    How to enable camera access
-                  </button>
-                )}
+              <p className="text-sm text-red-600 dark:text-red-400 font-semibold mb-4">{errorMessage}</p>
 
+              <div className="space-y-2.5">
                 <button
+                  type="button"
                   onClick={handleRetry}
-                  className="w-full py-3 px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-medium rounded-lg transition-colors"
+                  className="w-full py-2.5 px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm font-medium rounded-xl transition-colors"
                 >
-                  Try Again
+                  Skúsiť znova
                 </button>
 
                 {showImageUpload && (
                   <button
+                    type="button"
                     onClick={triggerFileUpload}
-                    className="w-full py-3 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
+                    className="w-full py-2.5 px-4 border border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-500 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors"
                   >
-                    Upload QR Image Instead
+                    Nahrať obrázok s QR kódom
                   </button>
                 )}
               </div>
@@ -524,27 +614,36 @@ export function PaymentQrScanner({
 
           {state === 'success' && (
             <div className="text-center py-8">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <p className="text-green-600 dark:text-green-400 font-medium">QR code scanned successfully!</p>
+              <p className="text-sm text-green-600 dark:text-green-400 font-semibold">QR kód úspešne načítaný!</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* CSS Animation for scan line */}
       <style jsx>{`
         @keyframes scan-line {
-          0% { top: 0; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 100%; opacity: 0; }
+          0% {
+            top: 0;
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+          }
+          85% {
+            opacity: 1;
+          }
+          100% {
+            top: 100%;
+            opacity: 0;
+          }
         }
         .animate-scan-line {
-          animation: scan-line 2s linear infinite;
+          animation: scan-line 2.2s ease-in-out infinite;
         }
       `}</style>
     </div>
