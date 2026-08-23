@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   downloadPaymentConfirmationAsPdf,
@@ -10,6 +10,9 @@ import {
 import { PdfGenerateOverlay } from '@/components/pdf-generate-overlay'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { useSession } from '@/lib/auth-client'
+import { PaymentQrScanner } from '@/components/PaymentQrScanner'
+import { QrPaymentPreview } from '@/components/QrPaymentPreview'
+import { PaymentDraft, PaymentOption, QrDecodingResult } from '@/types/payment'
 import {
   DAILY_PAYMENT_LIMIT_EUR,
   isOutgoingPaymentType,
@@ -149,7 +152,7 @@ function newTxnId(prefix = 'txn') {
 
 export default function GeorgePrototypePage() {
   const { data: sessionData } = useSession()
-  const user = sessionData?.user ?? { name: 'Peter', email: 'peter@example.com' }
+  const user = sessionData?.user ?? { name: 'Peter', email: 'peter@example.com', image: null }
 
   // GLOBÁLNY STAV
   const [state, setState] = useState({
@@ -171,6 +174,12 @@ export default function GeorgePrototypePage() {
   const [payAmount, setPayAmount] = useState('')
   const [payVs, setPayVs] = useState('')
   const [payNote, setPayNote] = useState('')
+
+  // QR Code Scanning State
+  const [showQrScanner, setShowQrScanner] = useState(false)
+  const [showQrPreview, setShowQrPreview] = useState(false)
+  const [scannedDraft, setScannedDraft] = useState<PaymentDraft | null>(null)
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([])
 
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -207,7 +216,7 @@ export default function GeorgePrototypePage() {
   const [faceapiLoaded, setFaceapiLoaded] = useState(false)
   const [modelsLoaded, setModelsLoaded] = useState(false)
   const [isCameraActive, setIsCameraActive] = useState(false)
-  
+
   const cameraStreamRef = useRef<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -269,7 +278,7 @@ export default function GeorgePrototypePage() {
   // Dynamicky načítať face-api a modely
   const initFaceApi = async (): Promise<FaceApiInstance | null> => {
     if (typeof window === 'undefined') return null
-    
+
     const win = window as unknown as Record<string, FaceApiInstance | undefined>
     if (faceapiLoaded && modelsLoaded && win.faceapi) {
       return win.faceapi
@@ -576,7 +585,7 @@ export default function GeorgePrototypePage() {
         if (saved) {
           const parsed = JSON.parse(saved)
           const age = Date.now() - (parsed.timestamp || 0)
-          
+
           if (age < 1209600000) {
             const rawTxns = Array.isArray(parsed.transactions) ? parsed.transactions : []
             setState(prev => ({
@@ -647,6 +656,66 @@ export default function GeorgePrototypePage() {
     setPayVs('')
     setPayNote('')
   }
+
+  // QR Code Scanning Handlers
+  const handleScanSuccess = useCallback((draft: PaymentDraft) => {
+    setShowQrScanner(false)
+    setScannedDraft(draft)
+
+    // If there are multiple options, show preview with selection
+    // Otherwise, directly fill the form
+    if (draft.amount === null || draft.amount === 0) {
+      // Amount not specified in QR, show preview for user to edit
+      setShowQrPreview(true)
+      setPaymentOptions([])
+    } else {
+      // Directly fill the form with scanned data
+      setPayRecipient(draft.recipientName)
+      setPayIban(draft.iban)
+      setPayAmount(draft.amount?.toFixed(2) || '')
+      setPayVs(draft.variableSymbol || '')
+      setPayNote(draft.note || '')
+      showToast('QR kód úspešne naskenovaný!')
+    }
+  }, [])
+
+  const handleScanError = useCallback((error: Error) => {
+    console.error('QR scanning error:', error)
+    showToast(`Chyba pri skenovaní: ${error.message}`)
+  }, [])
+
+  const handleScannerClose = useCallback(() => {
+    setShowQrScanner(false)
+  }, [])
+
+  const handleSendMoneyFromPreview = useCallback((draft: PaymentDraft) => {
+    setShowQrPreview(false)
+    setPayRecipient(draft.recipientName)
+    setPayIban(draft.iban)
+    setPayAmount(draft.amount?.toFixed(2) || '')
+    setPayVs(draft.variableSymbol || '')
+    setPayNote(draft.note || '')
+    showToast('Platba predvyplnená z QR kódu!')
+  }, [])
+
+  const handleScanAgain = useCallback(() => {
+    setShowQrPreview(false)
+    setScannedDraft(null)
+    setPaymentOptions([])
+    setShowQrScanner(true)
+  }, [])
+
+  const handleOptionSelect = useCallback((draft: PaymentDraft) => {
+    setScannedDraft(draft)
+  }, [])
+
+  const handleSaveContactFromPreview = useCallback((draft: PaymentDraft) => {
+    showToast(`Kontakt ${draft.recipientName} uložený!`)
+  }, [])
+
+  const openQrScanner = useCallback(() => {
+    setShowQrScanner(true)
+  }, [])
 
   const getTodayOutgoingUsed = (txns: Transaction[]) => {
     const dayStart = startOfLocalDay().getTime()
@@ -897,7 +966,7 @@ export default function GeorgePrototypePage() {
   const showToast = (message: string) => {
     setToastMessage(message)
     setIsToastVisible(true)
-    
+
     if (toastTimeoutId) clearTimeout(toastTimeoutId)
     const id = setTimeout(() => {
       setIsToastVisible(false)
@@ -1041,7 +1110,7 @@ export default function GeorgePrototypePage() {
     const sumStr = prompt(`Zadajte sumu v EUR, ktorú chcete investovať do fondu ${fundName}:`, "50")
     if (sumStr === null) return
     const sum = parseFloat(sumStr)
-    
+
     if (isNaN(sum) || sum <= 0) {
       showToast('Neplatná suma pre investíciu.')
       return
@@ -1206,7 +1275,7 @@ export default function GeorgePrototypePage() {
         }`}
         style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
       >
-        
+
         {/* Desktop chrome — only ≥lg; hidden on PIN / mobile / PWA standalone */}
         {!isPasscodeScreen && (
           <>
@@ -1226,10 +1295,10 @@ export default function GeorgePrototypePage() {
               : 'flex-1 p-0 items-stretch lg:items-center lg:p-6 xl:p-12'
           }`}
         >
-          
+
           <style dangerouslySetInnerHTML={{ __html: `
             @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&display=swap');
-            
+
             html, body {
               background-color: #030305 !important;
               overflow-x: hidden;
@@ -1391,7 +1460,7 @@ export default function GeorgePrototypePage() {
             .face-id-scanner-ring.active {
               opacity: 0.8;
             }
-            
+
             .face-id-scanner-ring-1 {
               border-top-color: #327bf5;
               border-bottom-color: #327bf5;
@@ -1426,7 +1495,7 @@ export default function GeorgePrototypePage() {
                 : 'h-dvh max-h-dvh min-h-0 lg:max-w-103 lg:h-223 lg:min-h-223 lg:max-h-223 lg:rounded-[44px] lg:ring-12 lg:ring-neutral-800/90 lg:shadow-[0_30px_80px_-10px_rgba(0,0,0,0.95)]'
             }`}
           >
-            
+
             <div className="flex-1 min-h-0 bg-[#12131a] flex flex-col overflow-hidden relative w-full h-full">
               <div id="toast-welcome" className={`absolute top-12 left-1/2 -translate-x-1/2 bg-blue-600 border border-blue-400 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl transition-all duration-300 text-center w-[85%] z-100 ${isToastVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                 {toastMessage}
@@ -1476,7 +1545,7 @@ export default function GeorgePrototypePage() {
 
                     {/* Prihlásiť sa */}
                     <div className="welcome-cta">
-                      <button 
+                      <button
                         onClick={() => {
                           // Len PIN obrazovka – Face ID spúšťa samostatne ikona na klávesnici
                           setIsPasscodeScreen(true)
@@ -1492,7 +1561,7 @@ export default function GeorgePrototypePage() {
                     </div>
 
                     {/* Zabudnuté prihlasovacie údaje */}
-                    <div 
+                    <div
                       onClick={() => {
                         showToast('Zabudnuté údaje je možné nastaviť v Georgeovi pre PC.')
                       }}
@@ -1514,9 +1583,9 @@ export default function GeorgePrototypePage() {
                     {/* Produktové kartičky – prirodzený tok pod Zabudnuté */}
                     <div className="welcome-products">
                       <h3 className="welcome-products-title">Chcem sa stať klientom</h3>
-                      
+
                       {/* Osobný účet */}
-                      <div 
+                      <div
                         onClick={() => {
                           showToast('Založenie účtu je k dispozícii v pobočkách SLSP.')
                         }}
@@ -1555,7 +1624,7 @@ export default function GeorgePrototypePage() {
                       </div>
 
                       {/* Podnikateľský účet */}
-                      <div 
+                      <div
                         onClick={() => {
                           showToast('Založenie firemného účtu je k dispozícii v pobočkách SLSP.')
                         }}
@@ -1595,7 +1664,7 @@ export default function GeorgePrototypePage() {
                       </div>
 
                       {/* Investovanie */}
-                      <div 
+                      <div
                         onClick={() => {
                           showToast('Pre investovanie sa najprv prihláste.')
                         }}
@@ -1651,7 +1720,7 @@ export default function GeorgePrototypePage() {
                   >
                     <div className="flex flex-col items-center shrink-0">
                       <div className="flex justify-between items-center w-full mb-6">
-                        <button 
+                        <button
                           onClick={() => {
                             setIsPasscodeScreen(false)
                             setPasscode('')
@@ -1731,7 +1800,7 @@ export default function GeorgePrototypePage() {
                               {num}
                             </button>
                           ))}
-                          
+
                           <button
                             onClick={triggerBiometrics}
                             className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b]/80 flex items-center justify-center text-[#327bf5] active:scale-90 transition-all cursor-pointer shadow-sm"
@@ -1742,7 +1811,7 @@ export default function GeorgePrototypePage() {
                               <path d="M8 8h.01M16 8h.01M9 13h6M10 17h4" />
                             </svg>
                           </button>
-                          
+
                           <button
                             onClick={() => handleKeypadPress('0')}
                             className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b] text-lg font-bold flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer"
@@ -1856,7 +1925,7 @@ export default function GeorgePrototypePage() {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={cancelBiometrics}
                     className="absolute bottom-16 text-slate-400 hover:text-white font-semibold text-sm transition-colors cursor-pointer select-none"
                   >
@@ -1875,7 +1944,7 @@ export default function GeorgePrototypePage() {
   return (
     <>
     <div className="min-h-dvh h-dvh w-full bg-[#030305] text-slate-100 flex flex-col font-sans relative overflow-hidden">
-      
+
       {/* Desktop chrome — only ≥lg; hidden on mobile / PWA standalone */}
       <div className="d2-desktop-chrome hidden lg:block shrink-0">
         <DashboardHeader user={user} />
@@ -1886,10 +1955,10 @@ export default function GeorgePrototypePage() {
 
       {/* Centrovací kontajner: full-bleed mobile; phone preview ≥lg */}
       <div className="d2-phone-center flex-1 min-h-0 flex items-stretch justify-center p-0 lg:items-center lg:p-6 xl:p-12 relative">
-      
+
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
+
         html, body {
           background-color: #030305 !important;
           overflow-x: hidden;
@@ -1910,7 +1979,7 @@ export default function GeorgePrototypePage() {
           border: 1px solid rgba(255, 255, 255, 0.015);
           box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
         }
-        
+
         .george-card::before {
           content: '';
           position: absolute;
@@ -1950,13 +2019,13 @@ export default function GeorgePrototypePage() {
 
       {/* HLAVNÝ SHELL: full-bleed mobile; desktop phone frame ≥lg */}
       <div className="d2-phone-shell w-full max-w-none bg-[#0a0a10] h-dvh max-h-dvh min-h-0 lg:max-w-103 lg:h-223 lg:min-h-223 lg:max-h-223 lg:rounded-[44px] lg:ring-12 lg:ring-neutral-800/90 lg:shadow-[0_30px_80px_-10px_rgba(0,0,0,0.95)] relative flex flex-col justify-between overflow-hidden z-10">
-        
+
         {/* INNER SCROLLABLE WORKSPACE */}
-        <div 
+        <div
           className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col justify-between transition-all duration-300"
           style={{ paddingBottom: isDemoDrawerOpen ? '250px' : 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
         >
-          
+
           {/*==================================================
               ZÁLOŽKA 1: PREHĽAD (VÝCHODISKOVÁ)
               ==================================================*/}
@@ -1965,7 +2034,7 @@ export default function GeorgePrototypePage() {
             <header className="sticky top-0 bg-[#0a0a10]/95 backdrop-blur-md z-30 px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 flex items-center justify-between">
               <div className="w-8"></div>
               <h1 className="text-[20px] font-bold tracking-tight text-white select-none">Prehľad</h1>
-              
+
               <div className="flex items-center space-x-4.5">
                 {/* Lupa */}
                 <button onClick={toggleSearch} className="text-[#327bf5] hover:text-blue-400 transition-all p-0.5 active:scale-90" aria-label="Vyhľadať">
@@ -1995,15 +2064,15 @@ export default function GeorgePrototypePage() {
             {/* SEKCIA: VAŠE PRODUKTY */}
             <main className="px-5 mt-1">
               <h2 className="text-[15px] font-semibold text-slate-200 mb-3 px-1 select-none">Vaše produkty</h2>
-              
+
               <div className="space-y-3.5">
-                
+
                 {/* KARTA 1: SPACE účet */}
                 <div className="george-card glow-purple rounded-[18px] p-5 shadow-lg relative overflow-hidden transition-all duration-300">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-[15px] font-semibold text-slate-200">SPACE účet</h3>
-                      
+
                       {/* Suma s reálnou trávovo-zelenou farbou George #179f42 */}
                       <div className="text-[32px] font-extrabold text-[#179f42] mt-1.5 tracking-tight flex items-start select-none leading-none">
                         <span id="space-balance-main">{spaceBal.main}</span>
@@ -2012,13 +2081,13 @@ export default function GeorgePrototypePage() {
                       </div>
                       <p className="text-xs text-[#7f8596] mt-2 select-none"><span id="space-balance-sub">{spaceBal.sub}</span> € vlastné zdroje</p>
                     </div>
-                    
+
                     {/* Profilová fotka s retro hrejivým filtrom ako na snímke */}
                     <div className="w-11 h-11 rounded-full border border-indigo-500/25 overflow-hidden shadow-inner cursor-pointer hover:scale-105 active:scale-95 transition-transform" onClick={() => showModal('profile-modal')}>
-                      <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&auto=format&fit=crop&q=80" alt="Profil" className="w-full h-full object-cover filter sepia-20 contrast-105 brightness-92 saturate-85" />
+                      <img src={user.image || "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&auto=format&fit=crop&q=80"} alt="Profil" className="w-full h-full object-cover filter sepia-20 contrast-105 brightness-92 saturate-85" />
                     </div>
                   </div>
-                  
+
                   {/* Akčné prvky (Nová platba, tri bodky s obrysom) */}
                   <div className="flex items-center justify-between mt-5 pt-3.5 border-t border-slate-800/60">
                     <button onClick={openPaymentSheet} className="text-[#327bf5] hover:text-blue-300 font-bold text-[14px] transition-colors active:scale-95 focus:outline-none">
@@ -2099,7 +2168,7 @@ export default function GeorgePrototypePage() {
                       </svg>
                     </div>
                   </div>
-                  
+
                   {/* Odkaz presne pod sumou s deliacou čiarou */}
                   <div className="mt-4 pt-3.5 border-t border-white/5">
                     <button onClick={() => switchTab('invest')} className="text-[#327bf5] hover:text-blue-300 font-bold text-[14px] transition-colors active:scale-95 focus:outline-none">
@@ -2467,11 +2536,11 @@ export default function GeorgePrototypePage() {
         {/*==================================================
             SPODNÁ NAVIGAČNÁ LIŠTA (AKTÍVNA KAPSULA 1:1)
             ==================================================*/}
-        <nav 
+        <nav
           className="d2-tab-nav absolute left-0 right-0 bg-[#0a0a10]/98 backdrop-blur-md border-t border-slate-900/40 px-4 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] flex justify-around items-center z-40 lg:rounded-b-[42px] transition-all duration-300"
           style={{ bottom: isDemoDrawerOpen ? '172px' : '0px' }}
         >
-          
+
           {/* Záložka 1: Prehľad s obrysom #327bf5 */}
           <button
             onClick={() => switchTab('prehlad')}
@@ -2682,9 +2751,9 @@ export default function GeorgePrototypePage() {
               {modalType === 'profile-modal' && (
                 <>
                   <div className="w-16 h-16 rounded-full border-2 border-indigo-500/20 overflow-hidden mx-auto mb-3">
-                    <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&auto=format&fit=crop&q=80" alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={user.image || "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&auto=format&fit=crop&q=80"} alt="Avatar" className="w-full h-full object-cover" />
                   </div>
-                  <h4 className="text-base font-bold text-white">Peter Novotný</h4>
+                  <h4 className="text-base font-bold text-white">{user.name || 'Peter Novotný'}</h4>
                   <p className="text-xs text-[#7f8596] mt-1">SPACE účet</p>
                   <div className="mt-4 pt-4 border-t border-slate-800 space-y-2.5 text-left text-xs">
                     <div className="flex justify-between"><span className="text-[#7f8596]">George Kľúč:</span> <span className="text-emerald-400 font-bold">Aktívny</span></div>
@@ -2852,9 +2921,9 @@ export default function GeorgePrototypePage() {
         </div>
 
         {/* Tlačidlo pre Sandbox */}
-        <button 
-          onClick={toggleDemoDrawer} 
-          className="absolute right-4 bg-slate-800/80 hover:bg-blue-600 text-slate-300 hover:text-white p-2.5 rounded-full shadow-lg z-30 transition-all border border-slate-700 active:scale-90 duration-300" 
+        <button
+          onClick={toggleDemoDrawer}
+          className="absolute right-4 bg-slate-800/80 hover:bg-blue-600 text-slate-300 hover:text-white p-2.5 rounded-full shadow-lg z-30 transition-all border border-slate-700 active:scale-90 duration-300"
           style={{ bottom: isDemoDrawerOpen ? '252px' : '96px' }}
           title="Otvoriť Sandbox"
         >
@@ -2911,6 +2980,23 @@ export default function GeorgePrototypePage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
+                </button>
+              </div>
+
+              {/* QR Code Scanner Button */}
+              <div className="px-6 mb-3">
+                <button
+                  type="button"
+                  onClick={openQrScanner}
+                  className="w-full bg-transparent border border-slate-800 rounded-xl text-[13px] text-[#327bf5] font-bold flex items-center justify-center gap-2 hover:bg-[#1b1b26]/50 transition-colors focus:outline-none py-2.5"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <path d="M14 14h2v2h-2zm4 0h3v3h-3zm-4 4h3v3h-3zm4 0h3v3h-3z" />
+                  </svg>
+                  Skenovať QR kód
                 </button>
               </div>
 
@@ -2995,6 +3081,48 @@ export default function GeorgePrototypePage() {
                   Autorizovať cez George kľúč
                 </button>
               </div>
+
+              {/* QR Code Scanner Modal */}
+              {showQrScanner && scannedDraft === null && (
+                <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-md bg-[#12131b] rounded-2xl p-6 relative">
+                    <button
+                      onClick={handleScannerClose}
+                      className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+                      aria-label="Zavrieť skener"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <PaymentQrScanner
+                      onScanSuccess={handleScanSuccess}
+                      onError={handleScanError}
+                      onClose={handleScannerClose}
+                      title="Skenovať platobný QR kód"
+                      description="Namierte kameru na platobný QR kód (EPC/SEPA, PAY by square)"
+                      showImageUpload={true}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* QR Code Preview Modal */}
+              {showQrPreview && scannedDraft && (
+                <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-md bg-[#12131b] rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
+                    <QrPaymentPreview
+                      draft={scannedDraft}
+                      options={paymentOptions}
+                      onOptionSelect={handleOptionSelect}
+                      onSaveContact={handleSaveContactFromPreview}
+                      onSendMoney={handleSendMoneyFromPreview}
+                      onClose={() => setShowQrPreview(false)}
+                      onScanAgain={handleScanAgain}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>,
           document.body
