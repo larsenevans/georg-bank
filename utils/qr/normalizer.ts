@@ -1,7 +1,7 @@
 import {
   DEFAULT_NORMALIZE_IBAN_OPTIONS,
   NormalizeIbanOptions,
-} from '@/types/payment';
+} from '../../types/payment';
 
 /**
  * Normalizes an IBAN string
@@ -246,8 +246,9 @@ export function normalizeDate(date: string | Date | null | undefined): Date | nu
         const year = parseInt(match[1], 10);
         const month = parseInt(match[2], 10) - 1;
         const day = parseInt(match[3], 10);
+        if (month < 0 || month > 11 || day < 1 || day > 31) return null;
         const dateObj = new Date(year, month, day);
-        if (!isNaN(dateObj.getTime())) {
+        if (!isNaN(dateObj.getTime()) && dateObj.getMonth() === month && dateObj.getDate() === day) {
           return dateObj;
         }
       }
@@ -260,8 +261,9 @@ export function normalizeDate(date: string | Date | null | undefined): Date | nu
         const day = parseInt(match[1], 10);
         const month = parseInt(match[2], 10) - 1;
         const year = parseInt(match[3], 10);
+        if (month < 0 || month > 11 || day < 1 || day > 31) return null;
         const dateObj = new Date(year, month, day);
-        if (!isNaN(dateObj.getTime())) {
+        if (!isNaN(dateObj.getTime()) && dateObj.getMonth() === month && dateObj.getDate() === day) {
           return dateObj;
         }
       }
@@ -274,8 +276,9 @@ export function normalizeDate(date: string | Date | null | undefined): Date | nu
         const year = parseInt(match[1], 10);
         const month = parseInt(match[2], 10) - 1;
         const day = parseInt(match[3], 10);
+        if (month < 0 || month > 11 || day < 1 || day > 31) return null;
         const dateObj = new Date(year, month, day);
-        if (!isNaN(dateObj.getTime())) {
+        if (!isNaN(dateObj.getTime()) && dateObj.getMonth() === month && dateObj.getDate() === day) {
           return dateObj;
         }
       }

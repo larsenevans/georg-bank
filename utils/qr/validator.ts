@@ -2,7 +2,7 @@ import {
   PaymentDraft,
   ValidationResult,
   ValidationError,
-} from '@/types/payment';
+} from '../../types/payment';
 import {
   validateIbanChecksum,
   isValidIbanFormat,

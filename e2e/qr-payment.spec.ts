@@ -169,6 +169,55 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
     await expect(submitBtn).toBeVisible();
   });
 
+  test('QR-13: PAY by square — all 5 fields mapped into form (Meno, IBAN, Suma, VS, Poznámka)', async ({ page }) => {
+    await openPaymentQrScanner(page);
+    const fileInput = page.locator('input[type="file"]');
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-pbs-5fields.png');
+
+    await fileInput.setInputFiles(fixturePath);
+
+    // 5 fields verification
+    const recipientInput = page.locator('#pay-recipient');
+    const ibanInput = page.locator('#pay-iban');
+    const amountInput = page.locator('#pay-amount');
+    const vsInput = page.locator('#pay-vs');
+    const noteInput = page.locator('#pay-note');
+
+    await expect(recipientInput).toHaveValue('Miroslav Polacek', { timeout: 10000 });
+    await expect(ibanInput).toHaveValue('SK3109000000005012345678');
+    await expect(amountInput).toHaveValue('125.50');
+    await expect(vsInput).toHaveValue('0000123456');
+    await expect(noteInput).toHaveValue('Uhrada faktury 2026');
+
+    // Field editability check (user can edit before authorizing)
+    await noteInput.fill('Upravena poznamka');
+    await expect(noteInput).toHaveValue('Upravena poznamka');
+
+    // Payment must NOT be automatically submitted
+    const submitBtn = page.getByRole('button', { name: /Autorizovať cez George kľúč/i }).first();
+    await expect(submitBtn).toBeVisible();
+  });
+
+  test('QR-14: SPAYD — all 5 fields mapped with leading zeros on VS', async ({ page }) => {
+    await openPaymentQrScanner(page);
+    const fileInput = page.locator('input[type="file"]');
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-spayd-5fields.png');
+
+    await fileInput.setInputFiles(fixturePath);
+
+    const recipientInput = page.locator('#pay-recipient');
+    const ibanInput = page.locator('#pay-iban');
+    const amountInput = page.locator('#pay-amount');
+    const vsInput = page.locator('#pay-vs');
+    const noteInput = page.locator('#pay-note');
+
+    await expect(recipientInput).toHaveValue('Peter Ziak', { timeout: 10000 });
+    await expect(ibanInput).toHaveValue('SK3109000000005012345678');
+    await expect(amountInput).toHaveValue('1234.56');
+    await expect(vsInput).toHaveValue('0098765432');
+    await expect(noteInput).toHaveValue('Platba za material 1234');
+  });
+
   test('QR-11: scanner closes and tracks stop', async ({ page }) => {
     await openPaymentQrScanner(page);
     await page.getByRole('button', { name: /Scan QR Code/i }).click();

@@ -3,7 +3,7 @@ import {
   QrDecodingResult,
   QrErrorType,
   QrDecodingError,
-} from '@/types/payment';
+} from '../../types/payment';
 
 export { QrDecodingError };
 import {
@@ -55,13 +55,19 @@ export async function decodeQrCode(qrData: string): Promise<QrDecodingResult> {
 
     // Try PAY by square format first (Slovak standard)
     const payBySquareResult = tryDecodePayBySquare(qrData);
-    if (payBySquareResult.success) {
+    if (payBySquareResult.format === 'pay-by-square') {
       return payBySquareResult;
+    }
+
+    // Try SPAYD format (Czech standard: SPD*1.0*...)
+    const spaydResult = tryDecodeSpayd(qrData);
+    if (spaydResult.format === 'spayd') {
+      return spaydResult;
     }
 
     // Try EPC/SEPA QR format
     const epcResult = tryDecodeEpcSepa(qrData);
-    if (epcResult.success) {
+    if (epcResult.format === 'epc-sepa') {
       return epcResult;
     }
 
@@ -148,17 +154,17 @@ function tryDecodePayBySquare(qrData: string): QrDecodingResult {
     for (const account of accountEntries) {
       const draft: PaymentDraft = {
         qrFormat: 'pay-by-square',
-        recipientName: normalizeText(pairs['Nazov'] || pairs['Name'] || pairs['Meno'] || '') || '',
+        recipientName: normalizeText(pairs['Nazov'] || pairs['Name'] || pairs['Meno'] || pairs['BeneficiaryName'] || '') || '',
         iban: normalizeIban(account.iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || '',
-        bic: normalizeBic(account.bic || pairs['Kod'] || null),
+        bic: normalizeBic(account.bic || pairs['Kod'] || pairs['BIC'] || null),
         amount: normalizeAmount(pairs['Sum'] || pairs['Summa'] || pairs['Amount'] || null),
-        currency: normalizeCurrency(pairs['Mena'] || pairs['Currency'] || null) || 'EUR',
-        variableSymbol: normalizeText(pairs['VS'] || pairs['VarSym'] || null, 10),
-        constantSymbol: normalizeText(pairs['KS'] || pairs['KonstSym'] || null, 10),
-        specificSymbol: normalizeText(pairs['SS'] || pairs['SpecSym'] || null, 10),
-        note: normalizeText(pairs['Popis'] || pairs['Message'] || pairs[' Pozn'] || null),
-        paymentReference: normalizeText(pairs['Ref'] || pairs['Reference'] || null),
-        dueDate: normalizeDate(pairs['Datum'] || pairs['Date'] || pairs['Splatnost'] || null),
+        currency: normalizeCurrency(pairs['Mena'] || pairs['Currency'] || pairs['CurrencyCode'] || null) || 'EUR',
+        variableSymbol: normalizeText(pairs['VS'] || pairs['VarSym'] || pairs['VariableSymbol'] || null, 10),
+        constantSymbol: normalizeText(pairs['KS'] || pairs['KonstSym'] || pairs['ConstantSymbol'] || null, 10),
+        specificSymbol: normalizeText(pairs['SS'] || pairs['SpecSym'] || pairs['SpecificSymbol'] || null, 10),
+        note: normalizeText(pairs['Popis'] || pairs['Message'] || pairs['Pozn'] || pairs['PaymentNote'] || null),
+        paymentReference: normalizeText(pairs['Ref'] || pairs['Reference'] || pairs['PaymentReference'] || null),
+        dueDate: normalizeDate(pairs['Datum'] || pairs['Date'] || pairs['Splatnost'] || pairs['DueDate'] || null),
         rawQrData: qrData,
       };
 
@@ -254,26 +260,20 @@ function getPayBySquareAccounts(pairs: Record<string, string>): Array<{ iban: st
  */
 function tryDecodeEpcSepa(qrData: string): QrDecodingResult {
   try {
-    // EPC/SEPA QR codes typically start with "BCD"
-    // and contain service tags like "01", "53", "60", etc.
-    if (!qrData.includes('BCD') && !qrData.includes('01') && !qrData.includes('60')) {
+    const trimmed = qrData.trim();
+    const isStandardEpc = trimmed.startsWith('BCD\n') || trimmed.startsWith('BCD\r\n') || trimmed === 'BCD' || /^BCD(?:\r?\n|$)/i.test(trimmed);
+    
+    if (!isStandardEpc) {
       return { success: false, format: null, drafts: [] };
     }
 
-    // Parse the BCD data
-    // BCD format: Each service tag is followed by its length and data
-    // Example: BCD\n001\n01\n16\nDE89370400440532013000\n002\n53\n... 
-    
-    // For simplicity, we'll try to extract known fields
-    // This is a simplified parser - a full implementation would need to handle BCD encoding properly
-    
     const draft: PaymentDraft = {
       qrFormat: 'epc-sepa',
       recipientName: '',
       iban: '',
       bic: null,
       amount: null,
-      currency: 'EUR', // EPC always uses EUR
+      currency: 'EUR',
       variableSymbol: null,
       constantSymbol: null,
       specificSymbol: null,
@@ -283,66 +283,89 @@ function tryDecodeEpcSepa(qrData: string): QrDecodingResult {
       rawQrData: qrData,
     };
 
-    // Try to extract fields using regex patterns
-    // IBAN pattern (country code + checksum + BBAN)
-    const ibanMatch = qrData.match(/([A-Z]{2})([0-9]{2})([A-Z0-9]{11,34})/i);
-    if (ibanMatch) {
-      const fullIban = ibanMatch[1] + ibanMatch[2] + ibanMatch[3];
-      draft.iban = normalizeIban(fullIban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || '';
-    }
+    // If standard line-separated EPC format:
+    // Line 0: BCD
+    // Line 1: Version (e.g. 001, 002)
+    // Line 2: Character set (e.g. 1, 2)
+    // Line 3: Identification / Service (SCT)
+    // Line 4: BIC (optional)
+    // Line 5: Beneficiary Name
+    // Line 6: IBAN
+    // Line 7: Amount (e.g. EUR100.00 or 100.00)
+    // Line 8: Purpose code (optional)
+    // Line 9: Structured Reference (RF... or SCOR)
+    // Line 10: Unstructured Remittance text / note
+    // Line 11: Beneficiary to originator information (optional)
+    const lines = qrData.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 
-    // BIC pattern (4-11 alphanumeric characters)
-    const bicMatch = qrData.match(/([A-Z0-9]{8,11})/i);
-    if (bicMatch && isValidBicPosition(qrData, bicMatch.index || 0)) {
-      draft.bic = normalizeBic(bicMatch[1]) || null;
-    }
+    if (lines[0]?.trim() === 'BCD' && lines.length >= 7) {
+      const bic = lines[4]?.trim() || '';
+      const name = lines[5]?.trim() || '';
+      const iban = lines[6]?.replace(/\s+/g, '').toUpperCase() || '';
+      const rawAmt = lines[7]?.trim() || '';
+      const ref = lines[9]?.trim() || '';
+      const note = lines[10]?.trim() || '';
 
-    // Amount pattern (e.g., EUR100.00 or 100.00EUR)
-    const amountMatch = qrData.match(/(EUR|USD|GBP|SKK|[0-9])(\d*[.,]?\d{0,2})/i);
-    if (amountMatch) {
-      // Try to find amount with currency
-      const currencyAmountMatch = qrData.match(/(EUR|USD|GBP|SKK)(\d+[.,]?\d{0,2})/i);
+      if (bic) draft.bic = normalizeBic(bic);
+      if (name) draft.recipientName = normalizeText(name, 70) || '';
+      if (iban) draft.iban = normalizeIban(iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || iban;
+
+      if (rawAmt) {
+        const amtMatch = rawAmt.match(/(?:EUR)?([0-9]+(?:[.,][0-9]{1,2})?)/i);
+        if (amtMatch) {
+          draft.amount = normalizeAmount(amtMatch[1]);
+        }
+      }
+
+      if (ref) {
+        draft.paymentReference = normalizeText(ref, 35);
+      }
+      if (note) {
+        draft.note = normalizeText(note, 140);
+      }
+    } else {
+      // Regex fallback for non-standard or partial BCD payloads
+      const ibanMatch = qrData.match(/([A-Z]{2})([0-9]{2})([A-Z0-9]{11,34})/i);
+      if (ibanMatch) {
+        const fullIban = ibanMatch[1] + ibanMatch[2] + ibanMatch[3];
+        draft.iban = normalizeIban(fullIban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || '';
+      }
+
+      const bicMatch = qrData.match(/([A-Z0-9]{8,11})/i);
+      if (bicMatch && isValidBicPosition(qrData, bicMatch.index || 0)) {
+        draft.bic = normalizeBic(bicMatch[1]) || null;
+      }
+
+      const currencyAmountMatch = qrData.match(/(EUR)(\d+[.,]?\d{0,2})/i);
       if (currencyAmountMatch) {
-        draft.currency = normalizeCurrency(currencyAmountMatch[1]) || 'EUR';
         draft.amount = normalizeAmount(currencyAmountMatch[2]);
       } else {
-        // Try without currency
         const simpleAmountMatch = qrData.match(/(\d+[.,]?\d{0,2})/);
         if (simpleAmountMatch) {
           draft.amount = normalizeAmount(simpleAmountMatch[1]);
         }
       }
+
+      const nameMatch = qrData.match(/[A-Z]{2,}\s+[A-Z\s]+/i);
+      if (nameMatch) {
+        draft.recipientName = normalizeText(nameMatch[0], 70) || '';
+      }
+
+      const refMatch = qrData.match(/(RF[0-9]{2})[A-Z0-9]{1,35}/i);
+      if (refMatch) {
+        draft.paymentReference = normalizeText(refMatch[0], 35) || null;
+      }
+
+      const remittanceMatch = qrData.match(/5[34]\d{2}([^\n]{0,140})/);
+      if (remittanceMatch) {
+        draft.note = normalizeText(remittanceMatch[1], 140) || null;
+      }
     }
 
-    // Name extraction (look for text after account info)
-    const nameMatch = qrData.match(/[A-Z]{2,}\s+[A-Z\s]+/i);
-    if (nameMatch) {
-      draft.recipientName = normalizeText(nameMatch[0]) || '';
-    }
-
-    // Reference/payment reference
-    const refMatch = qrData.match(/(RF[0-9]{2})[A-Z0-9]{1,35}/i);
-    if (refMatch) {
-      draft.paymentReference = normalizeText(refMatch[0]) || null;
-    }
-
-    // Remittance information (note)
-    const remittanceMatch = qrData.match(/5[34]\d{2}([^\n]{0,140})/);
-    if (remittanceMatch) {
-      draft.note = normalizeText(remittanceMatch[1]) || null;
-    }
-
-    // Due date (look for date pattern)
-    const dateMatch = qrData.match(/(\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      draft.dueDate = normalizeDate(dateMatch[1]) || null;
-    }
-
-    // Validate that we have at least IBAN
     if (!draft.iban || !isValidIbanFormat(draft.iban)) {
       return {
         success: false,
-        format: null,
+        format: 'epc-sepa',
         drafts: [],
         error: 'No valid IBAN found in EPC/SEPA QR',
       };
@@ -364,12 +387,164 @@ function tryDecodeEpcSepa(qrData: string): QrDecodingResult {
 }
 
 /**
+ * Attempts to decode a SPAYD (Short Payment Descriptor) QR code
+ * Czech banking standard (SPD*1.0*...)
+ * 
+ * Spec:
+ * SPD*1.0*ACC:CZ5508000000001234567890*AM:500.00*CC:CZK*RN:Jan Novak*X-VS:0012345678*MSG:Poznamka*
+ */
+function tryDecodeSpayd(qrData: string): QrDecodingResult {
+  try {
+    const trimmed = qrData.trim();
+    if (!trimmed.startsWith('SPD*')) {
+      return { success: false, format: null, drafts: [] };
+    }
+
+    const segments = trimmed.split('*');
+    if (segments.length < 2) {
+      return { success: false, format: null, drafts: [] };
+    }
+
+    // Version check (segments[1])
+    const version = segments[1];
+    if (version !== '1.0') {
+      return {
+        success: false,
+        format: 'spayd',
+        drafts: [],
+        error: `Unsupported SPAYD version: ${version}`,
+      };
+    }
+
+    const pairs: Record<string, string> = {};
+    for (let i = 2; i < segments.length; i++) {
+      const seg = segments[i];
+      if (!seg) continue;
+      const colonIdx = seg.indexOf(':');
+      if (colonIdx === -1) continue;
+      const key = seg.substring(0, colonIdx).trim().toUpperCase();
+      let rawVal = seg.substring(colonIdx + 1);
+      // Safe percent decoding
+      try {
+        rawVal = decodeURIComponent(rawVal);
+      } catch {
+        // Keep as is if decodeURIComponent fails
+      }
+      // First occurrence wins or deterministic assignment
+      if (!pairs[key]) {
+        pairs[key] = rawVal;
+      }
+    }
+
+    let iban = '';
+    let bic: string | null = null;
+
+    if (pairs['ACC']) {
+      // ACC format: IBAN or IBAN+BIC or prefix-number/bank
+      const accVal = pairs['ACC'].trim();
+      const parts = accVal.split('+');
+      iban = parts[0]?.replace(/\s+/g, '').toUpperCase() || '';
+      if (parts[1]) {
+        bic = normalizeBic(parts[1]);
+      }
+    }
+
+    if (!iban && pairs['IBAN']) {
+      iban = pairs['IBAN'].replace(/\s+/g, '').toUpperCase();
+    }
+
+    if (!bic && pairs['BIC']) {
+      bic = normalizeBic(pairs['BIC']);
+    }
+
+    if (!iban || !isValidIbanFormat(iban)) {
+      return {
+        success: false,
+        format: 'spayd',
+        drafts: [],
+        error: 'No valid IBAN/account found in SPAYD QR',
+      };
+    }
+
+    // Parse amount
+    let amount: number | null = null;
+    if (pairs['AM'] !== undefined) {
+      amount = normalizeAmount(pairs['AM']);
+    }
+
+    // Currency
+    const currency = pairs['CC'] ? normalizeCurrency(pairs['CC']) || pairs['CC'].toUpperCase() : 'CZK';
+
+    // VS, KS, SS (preserve leading zeros as strings!)
+    const variableSymbol = pairs['X-VS']
+      ? pairs['X-VS'].replace(/\D/g, '').substring(0, 10) || null
+      : pairs['VS']
+      ? pairs['VS'].replace(/\D/g, '').substring(0, 10) || null
+      : null;
+
+    const constantSymbol = pairs['X-KS']
+      ? pairs['X-KS'].replace(/\D/g, '').substring(0, 10) || null
+      : pairs['KS']
+      ? pairs['KS'].replace(/\D/g, '').substring(0, 10) || null
+      : null;
+
+    const specificSymbol = pairs['X-SS']
+      ? pairs['X-SS'].replace(/\D/g, '').substring(0, 10) || null
+      : pairs['SS']
+      ? pairs['SS'].replace(/\D/g, '').substring(0, 10) || null
+      : null;
+
+    // Recipient Name
+    const recipientName = normalizeText(pairs['RN'] || pairs['NAME'] || '', 70) || '';
+
+    // Message / Note
+    const note = normalizeText(pairs['MSG'] || pairs['NOTE'] || null, 140);
+
+    // Due Date: DT:YYYYMMDD
+    let dueDate: Date | null = null;
+    if (pairs['DT']) {
+      dueDate = normalizeDate(pairs['DT']);
+    }
+
+    // Payment reference: RF
+    const paymentReference = normalizeText(pairs['RF'] || null, 35);
+
+    const draft: PaymentDraft = {
+      qrFormat: 'spayd',
+      recipientName,
+      iban: normalizeIban(iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || iban,
+      bic,
+      amount,
+      currency,
+      variableSymbol,
+      constantSymbol,
+      specificSymbol,
+      note,
+      paymentReference,
+      dueDate,
+      rawQrData: qrData,
+    };
+
+    return {
+      success: true,
+      format: 'spayd',
+      drafts: [draft],
+    };
+  } catch (error) {
+    return {
+      success: false,
+      format: null,
+      drafts: [],
+      error: `SPAYD decoding failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
  * Checks if BIC is in a valid position within the QR data
  * (Not part of the IBAN or another field)
  */
 function isValidBicPosition(qrData: string, bicIndex: number): boolean {
-  // Simple check: BIC should not be immediately after country code + checksum
-  // This is a heuristic to avoid false positives
   if (bicIndex > 0 && bicIndex < 4) {
     return false;
   }

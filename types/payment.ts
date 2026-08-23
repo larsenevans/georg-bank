@@ -8,7 +8,7 @@
 /**
  * Supported QR code formats
  */
-export type QrFormat = 'pay-by-square' | 'epc-sepa' | 'unknown';
+export type QrFormat = 'pay-by-square' | 'epc-sepa' | 'spayd' | 'unknown';
 
 /**
  * Supported currencies

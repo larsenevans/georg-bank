@@ -660,23 +660,17 @@ export default function GeorgePrototypePage() {
   // QR Code Scanning Handlers
   const handleScanSuccess = useCallback((draft: PaymentDraft) => {
     setShowQrScanner(false)
-    setScannedDraft(draft)
+    setShowQrPreview(false)
+    setScannedDraft(null)
 
-    // If there are multiple options, show preview with selection
-    // Otherwise, directly fill the form
-    if (draft.amount === null || draft.amount === 0) {
-      // Amount not specified in QR, show preview for user to edit
-      setShowQrPreview(true)
-      setPaymentOptions([])
-    } else {
-      // Directly fill the form with scanned data
-      setPayRecipient(draft.recipientName)
-      setPayIban(draft.iban)
-      setPayAmount(draft.amount?.toFixed(2) || '')
-      setPayVs(draft.variableSymbol || '')
-      setPayNote(draft.note || '')
-      showToast('QR kód úspešne naskenovaný!')
-    }
+    // Directly populate all available fields in the "Nová platba" form
+    setPayRecipient(draft.recipientName || '')
+    setPayIban(draft.iban || '')
+    setPayAmount(draft.amount !== null && draft.amount !== undefined ? draft.amount.toFixed(2) : '')
+    setPayVs(draft.variableSymbol ? draft.variableSymbol.substring(0, 10) : '')
+    setPayNote(draft.note ? draft.note.substring(0, 140) : '')
+
+    showToast('Údaje z QR kódu boli vyplnené do formulára!')
   }, [])
 
   const handleScanError = useCallback((error: Error) => {
@@ -3049,10 +3043,12 @@ export default function GeorgePrototypePage() {
                     </label>
                     <input
                       id="pay-vs"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
                       placeholder="Nepovinné"
                       value={payVs}
-                      onChange={(e) => setPayVs(e.target.value)}
+                      onChange={(e) => setPayVs(e.target.value.replace(/\D/g, '').substring(0, 10))}
                       className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
@@ -3060,15 +3056,15 @@ export default function GeorgePrototypePage() {
 
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
-                    Poznámka (max. 20 znakov)
+                    Poznámka (max. 140 znakov)
                   </label>
                   <input
                     id="pay-note"
                     type="text"
-                    maxLength={20}
+                    maxLength={140}
                     placeholder="Nepovinné"
                     value={payNote}
-                    onChange={(e) => setPayNote(e.target.value.substring(0, 20))}
+                    onChange={(e) => setPayNote(e.target.value.substring(0, 140))}
                     className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
