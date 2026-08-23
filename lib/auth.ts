@@ -21,25 +21,7 @@ const fallback = authFallbackUrl()
 
 export const auth = betterAuth({
   database: pool,
-  baseURL: {
-    allowedHosts: [
-      'localhost:3030',
-      'localhost:3355',
-      '10.0.2.2:3030',
-      '*.vercel.app',
-      ...(fallback
-        ? (() => {
-            try {
-              return [new URL(fallback).host]
-            } catch {
-              return [] as string[]
-            }
-          })()
-        : []),
-    ],
-    fallback: fallback || 'http://localhost:3030',
-    protocol: 'auto',
-  },
+  baseURL: fallback || 'http://localhost:3030',
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
