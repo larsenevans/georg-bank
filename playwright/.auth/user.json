@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "__Secure-better-auth.session_token",
+      "value": "zY8em4H4u_uOC7ijW7JBMsdD1MZ2Twdb.82REH79cjQrAsxceRpDd7Wor1EVSq8qgcxYt7%2FlrtfM%3D",
+      "domain": "georg-bank.vercel.app",
+      "path": "/",
+      "expires": 1788066497.216766,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

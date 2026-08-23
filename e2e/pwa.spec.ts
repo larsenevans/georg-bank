@@ -14,7 +14,7 @@ test.describe('PWA Funkcionalita - 20x Komplexné Testy', () => {
           page.evaluate(async () => {
             if (!('serviceWorker' in navigator)) return false
             try {
-              let regs = await navigator.serviceWorker.getRegistrations()
+              const regs = await navigator.serviceWorker.getRegistrations()
               if (regs.length === 0) {
                 await navigator.serviceWorker.register('/service-worker.js')
               }

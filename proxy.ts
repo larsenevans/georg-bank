@@ -56,6 +56,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
  * Next.js 16+: file convention is `proxy` (formerly `middleware`).
  * Site gate + guest session redirects.
  * Legacy /dashboard is redirected to /dashboard2 (active product surface).
+ * Also adds security headers for QR scanning.
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
@@ -65,7 +66,7 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard2'
     url.search = search
-    return NextResponse.redirect(url)
+    return addSecurityHeaders(NextResponse.redirect(url))
   }
 
   if (isSiteGateEnabled()) {
@@ -100,13 +101,13 @@ export function proxy(request: NextRequest) {
         gateUrl.searchParams.set('from', from)
       }
 
-      return NextResponse.redirect(gateUrl)
+      return addSecurityHeaders(NextResponse.redirect(gateUrl))
     }
     // Tailscale / gate cookie only skips the password gate — still require guest session below.
   }
 
   if (hasSessionCookie(request) || shouldSkipAuth(request)) {
-    return NextResponse.next()
+    return addSecurityHeaders(NextResponse.next())
   }
 
   const guestUrl = request.nextUrl.clone()
@@ -119,7 +120,7 @@ export function proxy(request: NextRequest) {
       : rawTarget
   guestUrl.searchParams.set('from', target)
 
-  return NextResponse.redirect(guestUrl)
+  return addSecurityHeaders(NextResponse.redirect(guestUrl))
 }
 
 export const config = {

@@ -1,24 +1,62 @@
-.vercel
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# local/tmp artifacts
-tmp-*
+# Next.js
+.next/
+out/
+
+# Production
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Playwright
 playwright-report/
 test-results/
-.vercel.bak*/
 
-# local build / capture junk
-**/.gradle/
-maestro-shots/
-docs/slsp.pdf
-playwright/.auth/
-public/pdfs/
-.cursor/
-*.pdf
-# Secrets / local env (never commit)
-.env
-.env.*
-!.env.example
-secr.md
-secrets.md
-dokumenty/secrets/
-.env.local.bak*
+# Temp files
+tmp/
+temp/
+
+# Supabase
+.supabase/
+.vercel

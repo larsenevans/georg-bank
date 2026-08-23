@@ -1,0 +1,26 @@
+{
+  "name": "EPC/SEPA QR v3.1 - Valid",
+  "description": "Valid EPC/SEPA QR code with IBAN and amount",
+  "qrData": "BCD01DE1089370400440532013000",
+  "expected": {
+    "success": true,
+    "format": "epc-sepa",
+    "drafts": [
+      {
+        "qrFormat": "epc-sepa",
+        "recipientName": "",
+        "iban": "DE1089370400440532013000",
+        "bic": null,
+        "amount": null,
+        "currency": "EUR",
+        "variableSymbol": null,
+        "constantSymbol": null,
+        "specificSymbol": null,
+        "note": null,
+        "paymentReference": null,
+        "dueDate": null,
+        "rawQrData": "BCD01DE1089370400440532013000"
+      }
+    ]
+  }
+}

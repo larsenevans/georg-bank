@@ -1,0 +1,26 @@
+{
+  "name": "PAY by square 1.2 - Valid QR",
+  "description": "Valid PAY by square QR code with all required fields",
+  "qrData": "Ver=1.2;Typ=PAY;ID=123456789;Nazov=John Doe;UC=SK9312345678901234567890;Kod=FIOBSKBA;Mena=EUR;Sum=100.00;VS=123456;KS=0800;SS=789;Popis=Test payment;Datum=2026-12-31",
+  "expected": {
+    "success": true,
+    "format": "pay-by-square",
+    "drafts": [
+      {
+        "qrFormat": "pay-by-square",
+        "recipientName": "John Doe",
+        "iban": "SK9312345678901234567890",
+        "bic": "FIOBSKBA",
+        "amount": 100.00,
+        "currency": "EUR",
+        "variableSymbol": "123456",
+        "constantSymbol": "0800",
+        "specificSymbol": "789",
+        "note": "Test payment",
+        "paymentReference": null,
+        "dueDate": "2026-12-31T00:00:00.000Z",
+        "rawQrData": "Ver=1.2;Typ=PAY;ID=123456789;Nazov=John Doe;UC=SK9312345678901234567890;Kod=FIOBSKBA;Mena=EUR;Sum=100.00;VS=123456;KS=0800;SS=789;Popis=Test payment;Datum=2026-12-31"
+      }
+    ]
+  }
+}

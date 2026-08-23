@@ -90,7 +90,7 @@ function parseMovementDescription(description: string | undefined | null): {
 
   const ibanMatch = raw.match(/IBAN:\s*([A-Za-z0-9 ]+?)(?=\s+(?:VS|CS|SS):|\s*$)/i)
   const vsMatch = raw.match(/VS:\s*([A-Za-z0-9]+)/i)
-  let head = raw
+  const head = raw
     .replace(/\s*IBAN:\s*[A-Za-z0-9 ]+?(?=\s+(?:VS|CS|SS):|\s*$)/i, '')
     .replace(/\s*VS:\s*[A-Za-z0-9]+/i, '')
     .trim()
@@ -2084,7 +2084,7 @@ export default function GeorgePrototypePage() {
 
                     {/* Profilová fotka s retro hrejivým filtrom ako na snímke */}
                     <div className="w-11 h-11 rounded-full border border-indigo-500/25 overflow-hidden shadow-inner cursor-pointer hover:scale-105 active:scale-95 transition-transform" onClick={() => showModal('profile-modal')}>
-                      <img src={user.image || "/images/default-avatar.svg"} alt="Profil" className="w-full h-full object-cover filter sepia-20 contrast-105 brightness-92 saturate-85" />
+                      <img src={user.image || "/images/default-avatar.svg"} alt="Profil" className="w-full h-full object-cover" />
                     </div>
                   </div>
 

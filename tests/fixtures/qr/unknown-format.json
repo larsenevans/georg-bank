@@ -1,0 +1,11 @@
+{
+  "name": "Unknown QR Format",
+  "description": "QR code that is not PAY by square or EPC/SEPA",
+  "qrData": "This is just some random text that is not a payment QR code",
+  "expected": {
+    "success": false,
+    "format": null,
+    "drafts": [],
+    "error": "Unknown QR code format"
+  }
+}

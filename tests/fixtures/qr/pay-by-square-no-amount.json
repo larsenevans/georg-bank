@@ -1,0 +1,27 @@
+{
+  "name": "PAY by square - No Amount",
+  "description": "Valid PAY by square QR without amount (user will enter manually)",
+  "qrData": "Ver=1.2;Typ=PAY;Nazov=Jane Smith;UC=SK2609876543210987654321;Kod=UNCRSKBX;Mena=EUR;VS=987654",
+  "expected": {
+    "success": true,
+    "format": "pay-by-square",
+    "drafts": [
+      {
+        "qrFormat": "pay-by-square",
+        "recipientName": "Jane Smith",
+        "iban": "SK2609876543210987654321",
+        "bic": "UNCRSKBX",
+        "amount": null,
+        "currency": "EUR",
+        "variableSymbol": "987654",
+        "constantSymbol": null,
+        "specificSymbol": null,
+        "note": null,
+        "paymentReference": null,
+        "dueDate": null,
+        "rawQrData": "Ver=1.2;Typ=PAY;Nazov=Jane Smith;UC=SK2609876543210987654321;Kod=UNCRSKBX;Mena=EUR;VS=987654"
+      }
+    ],
+    "warnings": ["Amount is recommended"]
+  }
+}

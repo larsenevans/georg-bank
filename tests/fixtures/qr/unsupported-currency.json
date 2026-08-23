@@ -1,0 +1,26 @@
+{
+  "name": "Unsupported Currency",
+  "description": "QR code with unsupported currency (should use EUR as default)",
+  "qrData": "Ver=1.2;Typ=PAY;Nazov=Test;UC=SK9312345678901234567890;Kod=FIOBSKBA;Mena=XYZ;Sum=100.00",
+  "expected": {
+    "success": true,
+    "format": "pay-by-square",
+    "drafts": [
+      {
+        "qrFormat": "pay-by-square",
+        "recipientName": "Test",
+        "iban": "SK9312345678901234567890",
+        "bic": "FIOBSKBA",
+        "amount": 100.00,
+        "currency": "XYZ",
+        "variableSymbol": null,
+        "constantSymbol": null,
+        "specificSymbol": null,
+        "note": null,
+        "paymentReference": null,
+        "dueDate": null,
+        "rawQrData": "Ver=1.2;Typ=PAY;Nazov=Test;UC=SK9312345678901234567890;Kod=FIOBSKBA;Mena=XYZ;Sum=100.00"
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Invalid IBAN",
+  "description": "QR code with invalid IBAN format",
+  "qrData": "Ver=1.2;Typ=PAY;Nazov=Test;UC=INVALIDIBAN;Kod=FIOBSKK;Mena=EUR;Sum=100.00",
+  "expected": {
+    "success": false,
+    "format": null,
+    "drafts": [],
+    "error": "No valid accounts found in PAY by square QR"
+  }
+}

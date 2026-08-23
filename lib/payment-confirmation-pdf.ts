@@ -511,7 +511,7 @@ export function generatePaymentConfirmationHtml(data: PaymentConfirmationPdfData
   return htmlContent
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = window.setTimeout(() => {
       reject(new Error(`${label} timed out after ${ms}ms`))
@@ -646,14 +646,12 @@ async function htmlToPdfBlobInner(html: string): Promise<Blob> {
 
     const canvas = await withTimeout(
       html2canvas(page, {
-        scale: 1.5,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
+        background: '#ffffff',
         logging: false,
-        imageTimeout: 2000,
-        windowWidth: Math.max(page.scrollWidth, 794),
-        windowHeight: Math.max(page.scrollHeight, 1123),
+        width: Math.max(page.scrollWidth, 794),
+        height: Math.max(page.scrollHeight, 1123),
       }),
       8_000,
       'html2canvas'

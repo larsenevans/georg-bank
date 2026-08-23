@@ -195,7 +195,7 @@ test.describe.serial('Safari prod smoke – platba + pohyby', () => {
     await expect(detail.getByText(/SK80|1234567890/i)).toBeVisible()
     await expect(detail.getByText(payment.vs)).toBeVisible()
 
-    // eslint-disable-next-line no-console
+     
     console.log(
       `[safari-smoke] george OK runId=${payment.runId} vs=${payment.vs} bytes=${size} txn=${txnId} pdf=${isPdf}`
     )
@@ -249,7 +249,7 @@ test.describe.serial('Safari prod smoke – platba + pohyby', () => {
     await expect(row.getByText(payment.note)).toBeVisible()
     await expect(row.getByText(/−\s*0[,.]11\s*€/)).toBeVisible()
 
-    // eslint-disable-next-line no-console
+     
     console.log(
       `[safari-smoke] pohyby OK runId=${payment.runId} vs=${payment.vs} row="${(await row.innerText()).replace(/\s+/g, ' ').slice(0, 160)}"`
     )

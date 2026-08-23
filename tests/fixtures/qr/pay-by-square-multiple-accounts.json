@@ -1,0 +1,42 @@
+{
+  "name": "PAY by square - Multiple Accounts",
+  "description": "PAY by square QR with multiple payment options (accounts separated by |)",
+  "qrData": "Ver=1.2;Typ=PAY;Nazov=Test Company;UC=SK9312345678901234567890|SK636543210987654321;Kod=FIOBSKBA|TATRSKBA;Mena=EUR;Sum=50.00",
+  "expected": {
+    "success": true,
+    "format": "pay-by-square",
+    "drafts": [
+      {
+        "qrFormat": "pay-by-square",
+        "recipientName": "Test Company",
+        "iban": "SK9312345678901234567890",
+        "bic": "FIOBSKBA",
+        "amount": 50.00,
+        "currency": "EUR",
+        "variableSymbol": null,
+        "constantSymbol": null,
+        "specificSymbol": null,
+        "note": null,
+        "paymentReference": null,
+        "dueDate": null,
+        "rawQrData": "Ver=1.2;Typ=PAY;Nazov=Test Company;UC=SK9312345678901234567890|SK636543210987654321;Kod=FIOBSKBA|TATRSKBA;Mena=EUR;Sum=50.00"
+      },
+      {
+        "qrFormat": "pay-by-square",
+        "recipientName": "Test Company",
+        "iban": "SK636543210987654321",
+        "bic": "TATRSKBA",
+        "amount": 50.00,
+        "currency": "EUR",
+        "variableSymbol": null,
+        "constantSymbol": null,
+        "specificSymbol": null,
+        "note": null,
+        "paymentReference": null,
+        "dueDate": null,
+        "rawQrData": "Ver=1.2;Typ=PAY;Nazov=Test Company;UC=SK9312345678901234567890|SK636543210987654321;Kod=FIOBSKBA|TATRSKBA;Mena=EUR;Sum=50.00"
+      }
+    ],
+    "warnings": ["Multiple payment options found, user must select one"]
+  }
+}

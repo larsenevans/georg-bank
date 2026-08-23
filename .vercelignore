@@ -2,3 +2,10 @@
 *.backup
 test-results/
 playwright-report/
+drizzle/
+android/
+android-apk/
+ios/
+src-tauri/
+George.app/
+*.apk
