@@ -2,7 +2,6 @@
 *.backup
 test-results/
 playwright-report/
-node_modules/
 drizzle/
 android/
 android-apk/
