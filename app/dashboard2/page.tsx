@@ -2076,9 +2076,29 @@ export default function GeorgePrototypePage() {
                       <p className="text-xs text-[#7f8596] mt-2 select-none"><span id="space-balance-sub">{spaceBal.sub}</span> € vlastné zdroje</p>
                     </div>
 
-                    {/* Profilová fotka s retro hrejivým filtrom ako na snímke */}
-                    <div className="w-11 h-11 rounded-full border border-indigo-500/25 overflow-hidden shadow-inner cursor-pointer hover:scale-105 active:scale-95 transition-transform" onClick={() => showModal('profile-modal')}>
-                      <img src={user.image || "/images/default-avatar.svg"} alt="Profil" className="w-full h-full object-cover" />
+                    {/* Profilová fotka / fallback avatar */}
+                    <div
+                      className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full border border-blue-500/20 bg-blue-500/10 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-inner"
+                      onClick={() => showModal('profile-modal')}
+                      aria-label="Profil"
+                    >
+                      {user.image ? (
+                        <img src={user.image} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="w-7 h-7 text-[#3B82F6]"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <circle cx="12" cy="8" r="4" />
+                          <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+                        </svg>
+                      )}
                     </div>
                   </div>
 
@@ -2108,10 +2128,22 @@ export default function GeorgePrototypePage() {
                         <span className="ml-0.5">€ na vyplatenie</span>
                       </div>
                     </div>
-                    {/* Slivkovo-fialové kruhové pozadie s fialovou nákupnou taškou */}
-                    <div className="w-10 h-10 rounded-full bg-[#1d112d] border border-purple-500/10 flex items-center justify-center">
-                      <svg className="w-4.5 h-4.5" fill="none" stroke="#a13fe7" strokeWidth="2.2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    {/* Moneyback ikona: € symbol + circular refund arrow */}
+                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#111c33] border border-[#2F80ED]/20 flex items-center justify-center overflow-hidden shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-7 h-7 text-[#2F80ED]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                        <path d="M14.5 9.5a3 3 0 0 0-4 0v5a3 3 0 0 0 4 0" />
+                        <path d="M9 12h4" />
                       </svg>
                     </div>
                   </div>
@@ -2129,15 +2161,20 @@ export default function GeorgePrototypePage() {
                       </div>
                       <p className="text-xs text-[#7f8596] mt-1.5">mesačne</p>
                     </div>
-                    {/* Vektorová replika loga pre cestovné poistenie (Travel logo z predlohy) */}
-                    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center p-1 shadow-md select-none">
-                      <svg className="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="50" cy="50" r="45" fill="#1da1c0" />
-                        {/* Airplane silhouette */}
-                        <path d="M50 22 L54 42 L78 48 L54 52 L50 72 L46 52 L22 48 L46 42 Z" fill="#ffffff" />
-                        {/* Curved dashed lines for flight path */}
-                        <path d="M25 70 C 40 85, 60 85, 75 70" stroke="#ffffff" strokeWidth="3.5" strokeDasharray="6,4" strokeLinecap="round" />
-                        <path d="M15 50 C 15 30, 85 30, 85 50" stroke="#ffffff" strokeWidth="2.5" opacity="0.4" />
+                    {/* Poistenie ikona: shield outline + checkmark */}
+                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0 select-none">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-7 h-7 text-[#A855F7]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="M9 12l2 2 4-4" />
                       </svg>
                     </div>
                   </div>
@@ -2154,11 +2191,23 @@ export default function GeorgePrototypePage() {
                         <span className="text-2xl font-normal ml-1.5">€</span>
                       </div>
                     </div>
-                    {/* Slivkovo-fialové pozadie s ikonou vlnitého grafu */}
-                    <div className="w-10 h-10 rounded-full bg-[#1d112d] border border-purple-500/10 flex items-center justify-center">
-                      <svg className="w-5 h-5" fill="none" stroke="#a13fe7" strokeWidth="2.3" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5 L7.5 10.5 L12 14.5 L16.5 7 L21 11" />
-                        <circle cx="16.5" cy="7" r="1.5" fill="#a13fe7" />
+                    {/* Investície ikona: 3-bar chart + rising trend arrow */}
+                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-7 h-7 text-[#A855F7]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M18 20V10" />
+                        <path d="M12 20V4" />
+                        <path d="M6 20v-6" />
+                        <path d="M4 10l8-6 8 4" />
+                        <path d="M17 4h3v3" />
                       </svg>
                     </div>
                   </div>
@@ -2179,12 +2228,20 @@ export default function GeorgePrototypePage() {
                       <p className="text-[13px] text-[#7f8596] mt-2 select-none">súčasť balíka Premium</p>
                     </div>
                     {/* Slivkové pozadie s ikonou platobnej karty a štítom */}
-                    <div className="w-10 h-10 rounded-full bg-[#1d112d] border border-purple-500/10 flex items-center justify-center">
-                      <svg className="w-5 h-5" fill="none" stroke="#a13fe7" strokeWidth="2.2" viewBox="0 0 24 24">
+                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-7 h-7 text-[#A855F7]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
                         <rect x="2" y="5" width="20" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round" />
                         <path d="M2 10h20" strokeLinecap="round" />
-                        <rect x="5" y="13" width="3" height="2" rx="0.5" fill="#a13fe7" />
-                        <path d="M15 13.5 C 15 12, 17 11.5, 17 11.5 C 17 11.5, 19 12, 19 13.5 C 19 15.5, 17 17, 17 17 C 17 17, 15 15.5, 15 13.5 Z" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M12 14v3" />
                       </svg>
                     </div>
                   </div>
