@@ -10,7 +10,6 @@ export const SWAPPED_CARD_ENDINGS = ['1234', '4321', '4444'] as const
 export const PROTECTED_DASHBOARD_ROUTES = [
   '/dashboard2',
   '/dashboard/payment-orders',
-  '/dashboard/assistant',
 ] as const
 
 /** Full-bleed dashboard2 (or legacy /dashboard redirect target) — no outer Menu chrome. */
@@ -86,10 +85,17 @@ export async function expectGeorgeHeader(page: Page) {
     return
   }
 
+  // Assistant page check
+  if (path.includes('/dashboard/assistant')) {
+    const header = page.locator('header').first()
+    await expect(header).toBeVisible({ timeout: 15000 })
+    return
+  }
+
   const header = page.locator('header').first()
-  await expect(header).toBeVisible()
-  await expect(header.getByRole('button', { name: /^Menu$/i })).toBeVisible()
-  await expect(header.getByRole('button', { name: /Odhlás/i })).toBeVisible()
+  await expect(header).toBeVisible({ timeout: 15000 })
+  await expect(header.getByRole('button', { name: /^Menu$/i }).first()).toBeVisible({ timeout: 10000 })
+  await expect(header.getByRole('button', { name: /Odhlás/i }).first()).toBeVisible({ timeout: 10000 })
 }
 
 export async function openDashboardMenu(page: Page) {

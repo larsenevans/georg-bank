@@ -115,7 +115,7 @@ test.describe('iPhone 14 Plus – Dashboard', () => {
 
   for (const route of PROTECTED_DASHBOARD_ROUTES) {
     test(`dashboard-header: George header on ${route}`, async ({ page }) => {
-      await page.goto(route)
+      await gotoApp(page, route)
       await expect(page).not.toHaveURL(/sign-in/)
       await expectGeorgeHeader(page)
       await expectNoHorizontalOverflow(page)
