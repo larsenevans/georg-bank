@@ -27,6 +27,32 @@ function shouldSkipAuth(request: NextRequest) {
 }
 
 /**
+ * Security headers helper - adds camera permissions and security headers
+ */
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "img-src 'self' data: blob: https://fonts.gstatic.com; " +
+    "connect-src 'self' https:; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "object-src 'none'; " +
+    "frame-ancestors 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self'"
+  );
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-ID, Idempotency-Key');
+  return response;
+}
+
+/**
  * Next.js 16+: file convention is `proxy` (formerly `middleware`).
  * Site gate + guest session redirects.
  * Legacy /dashboard is redirected to /dashboard2 (active product surface).

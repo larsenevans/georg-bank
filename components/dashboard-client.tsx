@@ -213,7 +213,7 @@ export function DashboardClient({ accounts, transactions }: DashboardClientProps
               >
                 <div className="w-12 h-12 rounded-full border border-indigo-500/25 overflow-hidden shrink-0 shadow-inner">
                   <img 
-                    src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=150&q=80" 
+                    src="/images/default-avatar.svg" 
                     alt="Account Avatar"
                     className="w-full h-full object-cover filter sepia-20 contrast-105 brightness-92 saturate-85"
                   />
@@ -242,7 +242,7 @@ export function DashboardClient({ accounts, transactions }: DashboardClientProps
                       /* Platinum Card Image avatar */
                       <div className="w-11 h-11 rounded-full border border-slate-800 overflow-hidden shrink-0 bg-linear-to-br from-[#d4af37] via-[#a37c1a] to-[#5c4008]">
                         <img 
-                          src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=150&q=80" 
+                          src="/images/default-avatar.svg" 
                           alt="Platinum Card" 
                           className="w-full h-full object-cover saturate-50 contrast-125"
                         />

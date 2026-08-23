@@ -2084,7 +2084,7 @@ export default function GeorgePrototypePage() {
 
                     {/* Profilová fotka s retro hrejivým filtrom ako na snímke */}
                     <div className="w-11 h-11 rounded-full border border-indigo-500/25 overflow-hidden shadow-inner cursor-pointer hover:scale-105 active:scale-95 transition-transform" onClick={() => showModal('profile-modal')}>
-                      <img src={user.image || "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&auto=format&fit=crop&q=80"} alt="Profil" className="w-full h-full object-cover filter sepia-20 contrast-105 brightness-92 saturate-85" />
+                      <img src={user.image || "/images/default-avatar.svg"} alt="Profil" className="w-full h-full object-cover filter sepia-20 contrast-105 brightness-92 saturate-85" />
                     </div>
                   </div>
 
@@ -2751,7 +2751,7 @@ export default function GeorgePrototypePage() {
               {modalType === 'profile-modal' && (
                 <>
                   <div className="w-16 h-16 rounded-full border-2 border-indigo-500/20 overflow-hidden mx-auto mb-3">
-                    <img src={user.image || "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&auto=format&fit=crop&q=80"} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={user.image || "/images/default-avatar.svg"} alt="Avatar" className="w-full h-full object-cover" />
                   </div>
                   <h4 className="text-base font-bold text-white">{user.name || 'Peter Novotný'}</h4>
                   <p className="text-xs text-[#7f8596] mt-1">SPACE účet</p>
