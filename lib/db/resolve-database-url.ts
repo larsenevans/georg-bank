@@ -26,8 +26,8 @@ export function resolveDatabaseUrl(): string | undefined {
       process.env.SUPABASE_POOLER_HOST?.trim() ||
       `aws-0-${region}.pooler.supabase.com`
 
-    // Session pooler (port 5432) works best with Better Auth + Drizzle.
-    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@${host}:5432/postgres?sslmode=require`
+    // Supavisor Transaction Pooler (port 6543) for Vercel/serverless.
+    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@${host}:6543/postgres?sslmode=require`
   }
 
   if (supabaseUrl && !password) {
