@@ -2080,29 +2080,13 @@ export default function GeorgePrototypePage() {
                       <p className="text-xs text-[#7f8596] mt-2 select-none"><span id="space-balance-sub">{spaceBal.sub}</span> € vlastné zdroje</p>
                     </div>
 
-                    {/* Profilová fotka / fallback avatar */}
+                    {/* Profilová fotka (oranžový avatar) */}
                     <div
-                      className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full border border-blue-500/20 bg-blue-500/10 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-inner"
+                      className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-md"
                       onClick={() => showModal('profile-modal')}
                       aria-label="Profil"
                     >
-                      {user.image ? (
-                        <img src={user.image} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="w-7 h-7 text-[#3B82F6]"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <circle cx="12" cy="8" r="4" />
-                          <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
-                        </svg>
-                      )}
+                      <img src="/images/profile-avatar.png" alt="Profil" className="w-full h-full object-cover" />
                     </div>
                   </div>
 
@@ -2805,8 +2789,8 @@ export default function GeorgePrototypePage() {
             <div id="modal-content" className="text-center pt-3">
               {modalType === 'profile-modal' && (
                 <>
-                  <div className="w-16 h-16 rounded-full border-2 border-indigo-500/20 overflow-hidden mx-auto mb-3">
-                    <img src={user.image || "/images/default-avatar.svg"} alt="Avatar" className="w-full h-full object-cover" />
+                  <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 shadow-md">
+                    <img src="/images/profile-avatar.png" alt="Avatar" className="w-full h-full object-cover" />
                   </div>
                   <h4 className="text-base font-bold text-white">{user.name || 'Peter Novotný'}</h4>
                   <p className="text-xs text-[#7f8596] mt-1">SPACE účet</p>
