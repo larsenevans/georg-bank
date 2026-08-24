@@ -50,6 +50,12 @@ prisma/dev.db-journal
 # Playwright
 playwright-report/
 test-results/
+playwright/.auth/
+
+# Mobile / tooling binaries (never commit)
+*.apk
+George-release.apk
+tailscale.apk
 
 # Temp files
 tmp/

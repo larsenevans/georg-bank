@@ -56,7 +56,8 @@ async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
     return { ok: true, detail: 'ok' }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    return { ok: false, detail: message }
+    console.error('[guest-auth] database probe failed:', message)
+    return { ok: false, detail: 'database_unreachable' }
   }
 }
 
@@ -81,10 +82,10 @@ async function ensureGuestSignedIn(request: NextRequest) {
   const dbProbe = await probeDatabase()
   if (!dbProbe.ok) {
     console.error('[guest-auth] database unreachable:', dbProbe.detail)
-    return new Response(
-      JSON.stringify({ error: 'Database unreachable', detail: dbProbe.detail }),
-      { status: 500, headers: { 'content-type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: 'Database unreachable' }), {
+      status: 500,
+      headers: { 'content-type': 'application/json' },
+    })
   }
 
   const headers = serverAuthHeaders(request)

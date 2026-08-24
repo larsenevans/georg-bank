@@ -36,7 +36,9 @@ export async function GET() {
       }
     } catch (error) {
       database = 'unreachable'
-      databaseError = error instanceof Error ? error.message : String(error)
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('[health] database probe failed:', message)
+      databaseError = 'connection_failed'
     }
   }
 

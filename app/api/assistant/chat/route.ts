@@ -338,7 +338,10 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(
-      { error: 'Asistent teraz nevie odpovedať. Skúste to znova.', detail: error },
+      {
+        error: 'Asistent teraz nevie odpovedať. Skúste to znova.',
+        ...(process.env.NODE_ENV === 'development' ? { detail: error } : {}),
+      },
       { status: 500 }
     )
   }
