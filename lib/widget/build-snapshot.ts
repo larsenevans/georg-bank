@@ -1,4 +1,8 @@
-import { DAILY_PAYMENT_LIMIT_CENTS, isOutgoingPaymentType } from '@/lib/daily-payment-limit'
+import {
+  DAILY_PAYMENT_LIMIT_ENABLED,
+  DEMO_ACCOUNT_TARGET_BALANCE_CENTS,
+  isOutgoingPaymentType,
+} from '@/lib/daily-payment-limit'
 import { DEMO_DEFAULT_USER_NAME } from '@/lib/demo-user'
 import {
   DEFAULT_WIDGET_DEEP_LINKS,
@@ -17,12 +21,13 @@ type TxnLike = {
 }
 
 type DailyLimitLike = {
-  limitEur?: number
+  enabled?: boolean
+  limitEur?: number | null
   usedEur?: number
-  remainingEur?: number
-  limitCents?: number
+  remainingEur?: number | null
+  limitCents?: number | null
   usedCents?: number
-  remainingCents?: number
+  remainingCents?: number | null
 }
 
 type AccountLike = {
@@ -52,21 +57,33 @@ function resolveBalanceCents(payload: TransactionsApiPayload, txns: TxnLike[]): 
     const after = toCentsFromEur(t.balanceAfter)
     if (after !== undefined) return after
   }
-  return DAILY_PAYMENT_LIMIT_CENTS
+  return DEMO_ACCOUNT_TARGET_BALANCE_CENTS
 }
 
 function resolveDailyLimit(payload: TransactionsApiPayload) {
   const dl = payload.dailyLimit
+  const enabled = dl?.enabled ?? DAILY_PAYMENT_LIMIT_ENABLED
+  const usedCents = dl?.usedCents ?? Math.round((dl?.usedEur ?? 0) * 100)
+
+  if (!enabled) {
+    const unlimitedCents = 999_999_999
+    return {
+      enabled: false,
+      limitCents: unlimitedCents,
+      usedCents,
+      remainingCents: unlimitedCents,
+    }
+  }
+
   const limitCents =
     dl?.limitCents ??
-    toCentsFromEur(dl?.limitEur) ??
-    DAILY_PAYMENT_LIMIT_CENTS
-  const usedCents = dl?.usedCents ?? toCentsFromEur(dl?.usedEur) ?? 0
+    (typeof dl?.limitEur === 'number' ? Math.round(dl.limitEur * 100) : undefined) ??
+    DEMO_ACCOUNT_TARGET_BALANCE_CENTS
   const remainingCents =
     dl?.remainingCents ??
-    toCentsFromEur(dl?.remainingEur) ??
+    (typeof dl?.remainingEur === 'number' ? Math.round(dl.remainingEur * 100) : undefined) ??
     Math.max(0, limitCents - usedCents)
-  return { limitCents, usedCents, remainingCents }
+  return { enabled: true, limitCents, usedCents, remainingCents }
 }
 
 function resolveLastPayment(txns: TxnLike[]) {

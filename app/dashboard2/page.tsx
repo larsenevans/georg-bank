@@ -14,6 +14,7 @@ import { PaymentQrScanner } from '@/components/PaymentQrScanner'
 import { QrPaymentPreview } from '@/components/QrPaymentPreview'
 import { PaymentDraft, PaymentOption, QrDecodingResult } from '@/types/payment'
 import {
+  DAILY_PAYMENT_LIMIT_ENABLED,
   DAILY_PAYMENT_LIMIT_EUR,
   isOutgoingPaymentType,
   startOfLocalDay,
@@ -743,12 +744,14 @@ export default function GeorgePrototypePage() {
     }
 
     const usedToday = getTodayOutgoingUsed(state.transactions)
-    const remaining = Math.max(0, DAILY_PAYMENT_LIMIT_EUR - usedToday)
-    if (amount > remaining) {
-      showToast(
-        `Limit 24 h: ${DAILY_PAYMENT_LIMIT_EUR.toFixed(0)} €. Zostáva ${remaining.toFixed(2)} €.`
-      )
-      return
+    if (DAILY_PAYMENT_LIMIT_ENABLED) {
+      const remaining = Math.max(0, DAILY_PAYMENT_LIMIT_EUR - usedToday)
+      if (amount > remaining) {
+        showToast(
+          `Limit 24 h: ${DAILY_PAYMENT_LIMIT_EUR.toFixed(0)} €. Zostáva ${remaining.toFixed(2)} €.`
+        )
+        return
+      }
     }
 
     const balanceBefore = state.spaceBalance
@@ -2248,14 +2251,23 @@ export default function GeorgePrototypePage() {
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">História</p>
                       <h2 className="text-base font-bold text-white mt-1">Prehľad prevodov</h2>
                       <p className="mt-1 text-[11px] text-slate-400">
-                        Limit 24 h:{' '}
-                        <span className="font-semibold text-slate-200">
-                          {(
-                            DAILY_PAYMENT_LIMIT_EUR -
-                            getTodayOutgoingUsed(state.transactions)
-                          ).toFixed(2)}{' '}
-                          / {DAILY_PAYMENT_LIMIT_EUR.toFixed(0)} €
-                        </span>
+                        {DAILY_PAYMENT_LIMIT_ENABLED ? (
+                          <>
+                            Limit 24 h:{' '}
+                            <span className="font-semibold text-slate-200">
+                              {(
+                                DAILY_PAYMENT_LIMIT_EUR -
+                                getTodayOutgoingUsed(state.transactions)
+                              ).toFixed(2)}{' '}
+                              / {DAILY_PAYMENT_LIMIT_EUR.toFixed(0)} €
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            Platby 24 h:{' '}
+                            <span className="font-semibold text-slate-200">neobmedzené</span>
+                          </>
+                        )}
                       </p>
                     </div>
                     <div className="text-right">

@@ -1,15 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { DAILY_PAYMENT_LIMIT_EUR } from '@/lib/daily-payment-limit'
+import {
+  DAILY_PAYMENT_LIMIT_ENABLED,
+  DAILY_PAYMENT_LIMIT_EUR,
+} from '@/lib/daily-payment-limit'
 import { subscribePohybyLive } from '@/lib/pohyby-live'
 import { syncWidgetFromTransactionsApi } from '@/lib/widget'
 import { ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react'
 
 type DailyLimit = {
-  limitEur: number
+  enabled?: boolean
+  limitEur: number | null
   usedEur: number
-  remainingEur: number
+  remainingEur: number | null
 }
 
 type TopupPolicy = {
@@ -57,9 +61,9 @@ function isOutgoing(type: string, amount: number) {
 export function PohybyClient() {
   const [movements, setMovements] = useState<Movement[]>([])
   const [dailyLimit, setDailyLimit] = useState<DailyLimit>({
-    limitEur: DAILY_PAYMENT_LIMIT_EUR,
+    limitEur: DAILY_PAYMENT_LIMIT_ENABLED ? DAILY_PAYMENT_LIMIT_EUR : null,
     usedEur: 0,
-    remainingEur: DAILY_PAYMENT_LIMIT_EUR,
+    remainingEur: DAILY_PAYMENT_LIMIT_ENABLED ? DAILY_PAYMENT_LIMIT_EUR : null,
   })
   const [topupPolicy, setTopupPolicy] = useState<TopupPolicy | null>(null)
   const [loading, setLoading] = useState(true)
@@ -112,10 +116,10 @@ export function PohybyClient() {
     }
   }, [load])
 
-  const usedPct = Math.min(
-    100,
-    (dailyLimit.usedEur / Math.max(dailyLimit.limitEur, 1)) * 100
-  )
+  const limitEnabled = dailyLimit.enabled ?? DAILY_PAYMENT_LIMIT_ENABLED
+  const usedPct = limitEnabled
+    ? Math.min(100, (dailyLimit.usedEur / Math.max(dailyLimit.limitEur ?? 1, 1)) * 100)
+    : 0
 
   return (
     <div className="min-h-[100dvh] bg-[#0b1220] text-slate-100">
@@ -144,12 +148,20 @@ export function PohybyClient() {
         >
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-300">Limit platieb (24 h) — nie zostatok účtu</p>
+              <p className="text-sm text-slate-300">
+                {limitEnabled
+                  ? 'Limit platieb (24 h) — nie zostatok účtu'
+                  : 'Platby (24 h) — bez denného limitu'}
+              </p>
               <p className="mt-1 text-3xl font-semibold tabular-nums">
-                {formatEur(dailyLimit.remainingEur)}
+                {limitEnabled && dailyLimit.remainingEur != null
+                  ? formatEur(dailyLimit.remainingEur)
+                  : 'Neobmedzené'}
               </p>
               <p className="mt-1 text-sm text-slate-400">
-                zostáva z limitu {formatEur(dailyLimit.limitEur)}
+                {limitEnabled && dailyLimit.limitEur != null
+                  ? `zostáva z limitu ${formatEur(dailyLimit.limitEur)}`
+                  : 'Obmedzuje len zostatok na účte'}
               </p>
             </div>
             <div className="text-right text-sm text-slate-300">
@@ -159,12 +171,14 @@ export function PohybyClient() {
               </p>
             </div>
           </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30">
-            <div
-              className="h-full rounded-full bg-sky-400 transition-all duration-500"
-              style={{ width: `${usedPct}%` }}
-            />
-          </div>
+          {limitEnabled && (
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30">
+              <div
+                className="h-full rounded-full bg-sky-400 transition-all duration-500"
+                style={{ width: `${usedPct}%` }}
+              />
+            </div>
+          )}
           {updatedAt && (
             <p className="mt-3 text-xs text-slate-500">
               Aktualizované {updatedAt.toLocaleTimeString('sk-SK')}

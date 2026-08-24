@@ -11,6 +11,7 @@ import {
 import {
   DAILY_PAYMENT_LIMIT_EUR,
   dailyLimitSnapshot,
+  exceedsDailyPaymentLimit,
   isOutgoingPaymentType,
   startOfLocalDay,
 } from '@/lib/daily-payment-limit'
@@ -291,11 +292,11 @@ export async function POST(req: Request) {
     if (isOutgoing) {
       const usedCents = await getTodayOutgoingUsedCents(defaultUserId)
       dailyLimit = dailyLimitSnapshot(usedCents)
-      if (amountInCents > dailyLimit.remainingCents) {
+      if (exceedsDailyPaymentLimit(usedCents, amountInCents)) {
         return NextResponse.json(
           {
             success: false,
-            error: `Denný limit ${DAILY_PAYMENT_LIMIT_EUR} € je vyčerpaný. Zostáva ${dailyLimit.remainingEur.toFixed(2)} €.`,
+            error: `Denný limit ${DAILY_PAYMENT_LIMIT_EUR} € je vyčerpaný. Zostáva ${dailyLimit.remainingEur?.toFixed(2) ?? '0.00'} €.`,
             dailyLimit,
           },
           { status: 403 }

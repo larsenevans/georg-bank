@@ -7,9 +7,10 @@ import {
   DEMO_DEFAULT_USER_NAME,
 } from '@/lib/demo-user'
 import {
-  DAILY_PAYMENT_LIMIT_CENTS,
+  DEMO_ACCOUNT_TARGET_BALANCE_CENTS,
   DAILY_PAYMENT_LIMIT_EUR,
   dailyLimitSnapshot,
+  exceedsDailyPaymentLimit,
   isOutgoingPaymentType,
   startOfLocalDay,
 } from '@/lib/daily-payment-limit'
@@ -208,7 +209,7 @@ export async function listMovementsViaSupabase(limit = 100) {
   let account = await ensureDemoBankAccount(
     supabase,
     DEMO_DEFAULT_USER_ID,
-    DAILY_PAYMENT_LIMIT_CENTS
+    DEMO_ACCOUNT_TARGET_BALANCE_CENTS
   )
 
   const lastAutoRefillAt = await getLastAutoRefillAt(supabase, DEMO_DEFAULT_USER_ID)
@@ -235,7 +236,7 @@ export async function listMovementsViaSupabase(limit = 100) {
       ? [
           {
             id: account.id,
-            balance: account.balance ?? DAILY_PAYMENT_LIMIT_CENTS,
+            balance: account.balance ?? DEMO_ACCOUNT_TARGET_BALANCE_CENTS,
             accountNumber: account.accountNumber,
             currency: 'EUR',
           },
@@ -367,7 +368,7 @@ export async function createMovementViaSupabase(input: {
   )
 
   // New accounts start with full 24h allowance; auto-refill only after 24h cooldown.
-  const SEED_BALANCE_CENTS = DAILY_PAYMENT_LIMIT_CENTS
+  const SEED_BALANCE_CENTS = DEMO_ACCOUNT_TARGET_BALANCE_CENTS
   let account = await ensureDemoBankAccount(supabase, defaultUserId, SEED_BALANCE_CENTS)
   if (!account) {
     return { error: 'Nepodarilo sa pripraviť demo účet', status: 500 as const }
@@ -393,9 +394,9 @@ export async function createMovementViaSupabase(input: {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
   let dailyLimit = dailyLimitSnapshot(usedCents)
 
-  if (isOutgoing && amountInCents > dailyLimit.remainingCents) {
+  if (isOutgoing && exceedsDailyPaymentLimit(usedCents, amountInCents)) {
     return {
-      error: `Denný limit ${DAILY_PAYMENT_LIMIT_EUR} € je vyčerpaný. Zostáva ${dailyLimit.remainingEur.toFixed(2)} €.`,
+      error: `Denný limit ${DAILY_PAYMENT_LIMIT_EUR} € je vyčerpaný. Zostáva ${dailyLimit.remainingEur?.toFixed(2) ?? '0.00'} €.`,
       status: 403 as const,
       dailyLimit,
     }

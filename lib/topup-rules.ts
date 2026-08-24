@@ -1,4 +1,7 @@
-import { DAILY_PAYMENT_LIMIT_CENTS, DAILY_PAYMENT_LIMIT_EUR } from '@/lib/daily-payment-limit'
+import {
+  DEMO_ACCOUNT_TARGET_BALANCE_CENTS,
+  DEMO_ACCOUNT_TARGET_BALANCE_EUR,
+} from '@/lib/daily-payment-limit'
 
 /** Manual top-up / deposit is permanently disabled. */
 export const MANUAL_TOPUP_DISABLED = true
@@ -7,7 +10,7 @@ export const MANUAL_TOPUP_DISABLED = true
 export const AUTO_REFILL_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 /** Target balance after a successful auto-refill (matches 24h payment allowance). */
-export const AUTO_REFILL_TARGET_CENTS = DAILY_PAYMENT_LIMIT_CENTS
+export const AUTO_REFILL_TARGET_CENTS = DEMO_ACCOUNT_TARGET_BALANCE_CENTS
 
 /** Marker stored in transaction.description for auto-refill events. */
 export const AUTO_REFILL_MARKER = '[auto-refill-24h]'
@@ -44,7 +47,7 @@ export function formatAutoRefillWait(ms: number): string {
 export function autoRefillInfoMessage(lastRefillAt: Date | string | null | undefined): string {
   const wait = msUntilAutoRefillAllowed(lastRefillAt)
   if (wait <= 0) {
-    return `Automatické obnovenie na ${DAILY_PAYMENT_LIMIT_EUR} € je pripravené (max 1× / 24 h).`
+    return `Automatické obnovenie na ${DEMO_ACCOUNT_TARGET_BALANCE_EUR} € je pripravené (max 1× / 24 h).`
   }
   return `Automatické obnovenie bude možné o ${formatAutoRefillWait(wait)} (pravidlo 24 h).`
 }
