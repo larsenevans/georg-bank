@@ -70,8 +70,9 @@ export function DashboardHeader({ account }: DashboardHeaderProps) {
   }, [])
 
   const handleLogout = async () => {
+    await fetch('/api/pin/logout', { method: 'POST' }).catch(() => {})
     await authClient.signOut()
-    router.push('/sign-in')
+    router.push('/dashboard2')
     router.refresh()
   }
 

@@ -5,7 +5,7 @@ test.describe('PWA Funkcionalita - 20x Komplexné Testy', () => {
 
   // --- 1. SERVICE WORKER ---
   test('1. Service Worker sa úspešne zaregistruje a aktivuje', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
 
     // Prefer layout registration; fall back to explicit register for isolation
     await expect
@@ -56,7 +56,7 @@ test.describe('PWA Funkcionalita - 20x Komplexné Testy', () => {
   test('6. manifest.json obsahuje start_url', async ({ request }) => {
     const response = await request.get('/manifest.json')
     const json = await response.json()
-    expect(json.start_url).toBe('/sign-in')
+    expect(json.start_url).toBe('/dashboard2')
   })
 
   test('7. manifest.json definuje display ako standalone', async ({ request }) => {
@@ -107,19 +107,19 @@ test.describe('PWA Funkcionalita - 20x Komplexné Testy', () => {
 
   // --- META TAGY V HTML ---
   test('14. HTML obsahuje tag link rel="manifest"', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     const manifestLink = await page.getAttribute('link[rel="manifest"]', 'href')
     expect(manifestLink).toContain('manifest.json')
   })
 
   test('15. HTML obsahuje meta tag theme-color', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     const themeColor = await page.getAttribute('meta[name="theme-color"]', 'content')
     expect(themeColor).not.toBeNull()
   })
 
   test('16. HTML obsahuje meta tag pre apple-mobile-web-app-capable', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     const appleCapable = await page.getAttribute('meta[name="apple-mobile-web-app-capable"]', 'content')
     expect(appleCapable).toBe('yes')
   })

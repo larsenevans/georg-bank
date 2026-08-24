@@ -372,7 +372,8 @@ export async function internalTransferByEmail(
 }
 
 export async function deleteTransaction(transactionId: string, pin: string) {
-  if (pin !== '666666') {
+  const { isValidAppPin } = await import('@/lib/app-pin')
+  if (!isValidAppPin(pin)) {
     throw new Error('Nesprávny PIN kód.')
   }
 
@@ -417,7 +418,8 @@ export async function deleteTransaction(transactionId: string, pin: string) {
 }
 
 export async function deleteAllTransactions(pin: string) {
-  if (pin !== '666666') {
+  const { isValidAppPin } = await import('@/lib/app-pin')
+  if (!isValidAppPin(pin)) {
     throw new Error('Nesprávny PIN kód.')
   }
 

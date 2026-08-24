@@ -8,7 +8,7 @@ test.describe('Navigácia & SEO', () => {
   })
 
   test('Sign-in má meta description po site gate', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     const metaDesc = page.locator('meta[name="description"]')
     if (await metaDesc.count() > 0) {
       const content = await metaDesc.getAttribute('content')
@@ -18,7 +18,7 @@ test.describe('Navigácia & SEO', () => {
   })
 
   test('PWA manifest je linkovaný', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     await expect(page.locator('link[rel="manifest"]')).toHaveCount(1)
   })
 
@@ -39,12 +39,12 @@ test.describe('Navigácia & SEO', () => {
   })
 
   test('Viewport meta tag existuje', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     await expect(page.locator('meta[name="viewport"]')).toHaveCount(1)
   })
 
   test('Apple touch icon existuje', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     const appleIcon = page.locator('link[rel="apple-touch-icon"]')
     if (await appleIcon.count() > 0) {
       expect(await appleIcon.first().getAttribute('href')).toBeTruthy()
@@ -52,7 +52,7 @@ test.describe('Navigácia & SEO', () => {
   })
 
   test('Theme color je nastavená', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     await expect(page.locator('meta[name="theme-color"]')).toHaveCount(1)
   })
 })

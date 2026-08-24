@@ -62,9 +62,9 @@ async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
 }
 
 function guestFailureRedirect(request: NextRequest) {
-  const signInUrl = new URL('/sign-in', request.url)
-  signInUrl.searchParams.set('guest', 'unavailable')
-  return NextResponse.redirect(signInUrl)
+  const dashboardUrl = new URL('/dashboard2', request.url)
+  dashboardUrl.searchParams.set('guest', 'unavailable')
+  return NextResponse.redirect(dashboardUrl)
 }
 
 async function ensureGuestSignedIn(request: NextRequest) {

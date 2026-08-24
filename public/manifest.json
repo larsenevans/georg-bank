@@ -2,13 +2,13 @@
   "name": "George – Slovenská sporiteľňa",
   "short_name": "George",
   "description": "George klientska zóna - Slovenská sporiteľňa, a.s.",
-  "start_url": "/sign-in",
+  "start_url": "/dashboard2",
   "scope": "/",
   "display": "standalone",
   "background_color": "#091b3f",
   "theme_color": "#091b3f",
   "orientation": "portrait-primary",
-  "id": "/sign-in",
+  "id": "/dashboard2",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

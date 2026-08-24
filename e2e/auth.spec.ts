@@ -3,24 +3,23 @@ import { gotoApp } from './helpers/app'
 import { loginWithPin } from './helpers/dashboard2'
 
 /**
- * Auth flow (current product):
+ * Auth flow (PIN-only):
  * - Guest auto-login via proxy → /api/auth/guest for protected routes
- * - /sign-in and /sign-up stay reachable (manual login, no guest redirect loop)
+ * - User-facing entry: 6-digit PIN on /dashboard2 (no sign-in/sign-up)
  */
 test.describe('Autentifikácia', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test('Sign-in zobrazí prihlasovací formulár', async ({ page }) => {
+  test('Sign-in presmeruje na dashboard2 s PIN obrazovkou', async ({ page }) => {
     await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/sign-in/)
-    await expect(page.getByLabel(/e-mail|email/i)).toBeVisible({ timeout: 15000 })
-    await expect(page.getByRole('button', { name: /pokračovať|prihlásiť|continue/i })).toBeVisible()
+    await expect(page).toHaveURL(/\/dashboard2/)
+    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
   })
 
-  test('Sign-up zobrazí registračný formulár', async ({ page }) => {
+  test('Sign-up presmeruje na dashboard2 s PIN obrazovkou', async ({ page }) => {
     await page.goto('/sign-up', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/sign-up/)
-    await expect(page.getByLabel(/e-mail|email/i)).toBeVisible({ timeout: 15000 })
+    await expect(page).toHaveURL(/\/dashboard2/)
+    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
   })
 
   test('Root (/) presmeruje na dashboard2', async ({ page }) => {

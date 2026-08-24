@@ -5,8 +5,7 @@ import { gotoApp } from '../helpers/app'
  * Android Chrome installability smoke (Nothing Phone 1 viewport).
  *
  * Focus: Chrome installability criteria (manifest + icons + controlling SW).
- * start_url stays /sign-in intentionally — cold-start should land on auth;
- * guest/PIN on /dashboard2 works after session, but is not the install entry.
+ * start_url is /dashboard2 — cold-start lands on PIN entry.
  *
  * Limitation: headless Chromium rarely fires beforeinstallprompt / A2HS UI;
  * we assert criteria, not the install banner itself.
@@ -20,7 +19,7 @@ test.describe('Nothing Phone 1 – PWA installability', () => {
 
     const manifest = await response.json()
     expect(manifest.display).toBe('standalone')
-    expect(manifest.start_url).toBe('/sign-in')
+    expect(manifest.start_url).toBe('/dashboard2')
     expect(manifest.scope).toBe('/')
     expect(manifest.name).toBeTruthy()
     expect(manifest.short_name).toBeTruthy()
@@ -58,7 +57,7 @@ test.describe('Nothing Phone 1 – PWA installability', () => {
   })
 
   test('layout registers SW and it becomes activated / controlling', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
 
     // Wait for app layout registration (afterInteractive) + activate + claim
     await expect
@@ -112,7 +111,7 @@ test.describe('Nothing Phone 1 – PWA installability', () => {
       })
     })
 
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
 
     // Brief window only — do not fail if headless never fires BIP
     const promptFired = await page

@@ -6,7 +6,7 @@ test.describe('Vizuálna integrita', () => {
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
 
-    await gotoApp(page, '/sign-in')
+    await gotoApp(page, '/dashboard2')
     await page.waitForLoadState('networkidle')
 
     // Žiadne JS errory na stránke

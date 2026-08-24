@@ -431,7 +431,7 @@ export default function GeorgePrototypePage() {
     }
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      showToast('Prehliadač nepodporuje webkameru. Použite PIN kód 666666.')
+      showToast('Prehliadač nepodporuje webkameru. Použite PIN kód.')
       cancelBiometrics()
       return
     }
@@ -483,7 +483,7 @@ export default function GeorgePrototypePage() {
       if (name !== 'NotAllowedError') {
         console.warn('Camera access error:', err)
       }
-      showToast('Webkamera je nedostupná alebo prístup bol zamietnutý. Použite PIN kód 666666.')
+      showToast('Webkamera je nedostupná alebo prístup bol zamietnutý. Použite PIN kód.')
       cancelBiometrics()
     }
   }
@@ -1000,19 +1000,28 @@ export default function GeorgePrototypePage() {
     setToastTimeoutId(id)
   }
 
-  const handleKeypadPress = (digit: string) => {
+  const handleKeypadPress = async (digit: string) => {
     if (passcode.length >= 6) return
     const newPasscode = passcode + digit
     setPasscode(newPasscode)
     setLoginError(null)
 
     if (newPasscode.length === 6) {
-      if (newPasscode === '666666') {
-        setIsSimulatorLoggedIn(true)
-        setPasscode('')
-        // Bez oznamovacej správy – rovno prechod do dashboardu
-      } else {
-        setLoginError('Nesprávny PIN kód. Skúste to znova.')
+      try {
+        const response = await fetch('/api/pin/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: newPasscode }),
+        })
+        if (response.ok) {
+          setIsSimulatorLoggedIn(true)
+          setPasscode('')
+        } else {
+          setLoginError('Nesprávny PIN kód. Skúste to znova.')
+          setPasscode('')
+        }
+      } catch {
+        setLoginError('Nepodarilo sa overiť PIN. Skúste to znova.')
         setPasscode('')
       }
     }

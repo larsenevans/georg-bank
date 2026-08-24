@@ -37,16 +37,16 @@ test.describe('iPhone 14 Plus – Auth', () => {
     await expectNoHorizontalOverflow(page)
   })
 
-  test('auth-004: sign-in route shows manual login form', async ({ page }) => {
+  test('auth-004: sign-in route redirects to PIN screen', async ({ page }) => {
     await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/sign-in/)
-    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 15000 })
+    await expect(page).toHaveURL(/\/dashboard2/)
+    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
   })
 
-  test('auth-005: sign-up route shows registration form', async ({ page }) => {
+  test('auth-005: sign-up route redirects to PIN screen', async ({ page }) => {
     await page.goto('/sign-up', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/sign-up/)
-    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 15000 })
+    await expect(page).toHaveURL(/\/dashboard2/)
+    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
   })
 
   test('auth-006: dashboard2 after cold navigation has session', async ({ page }) => {
@@ -56,16 +56,11 @@ test.describe('iPhone 14 Plus – Auth', () => {
     await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
   })
 
-  test('auth-007: logout returns to a locked or re-auth flow', async ({ page }) => {
-    // Logout lives on classic DashboardHeader (payment-orders), not full-bleed dashboard2
+  test('auth-007: logout returns to PIN screen', async ({ page }) => {
     await gotoApp(page, '/dashboard/payment-orders')
     await page.locator('header').getByRole('button', { name: /Odhlás/i }).click()
-    // After sign-out, middleware may re-guest-login or show gate/sign-in.
-    await page.waitForTimeout(2000)
-    const url = page.url()
-    const onDashboard = /dashboard2/.test(url)
-    const onAuth = /\/(gate|sign-in|api\/auth\/guest)/.test(url)
-    expect(onDashboard || onAuth).toBeTruthy()
+    await page.waitForURL(/dashboard2/, { timeout: 20000 })
+    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
   })
 
   test('auth-008: no horizontal overflow on entry', async ({ page }) => {

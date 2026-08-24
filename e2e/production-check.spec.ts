@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { gotoApp, login, passSiteGate, TEST_USER_EMAIL, TEST_USER_PASSWORD } from './helpers/app'
+import { gotoApp, passSiteGate } from './helpers/app'
+import { loginWithPin } from './helpers/dashboard2'
 
 const isProductionTarget = !!process.env.BASE_URL?.includes('vercel.app')
 
@@ -34,15 +35,15 @@ test.describe('Production check – george-dev.vercel.app', () => {
     await context.close()
   })
 
-  test('sign-in stránka bez hydration chyby v konzole', async ({ page }) => {
+  test('dashboard2 PIN obrazovka bez hydration chyby v konzole', async ({ page }) => {
     const consoleErrors: string[] = []
     page.on('console', (msg) => {
       if (msg.type() === 'error') consoleErrors.push(msg.text())
     })
 
-    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/sign-in/)
-    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 20000 })
+    await gotoApp(page, '/dashboard2')
+    await expect(page).toHaveURL(/\/dashboard2/)
+    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 20000 })
 
     const hydrationErrors = consoleErrors.filter((line) =>
       line.includes('Minified React error #418') || line.includes('Hydration')
@@ -50,11 +51,12 @@ test.describe('Production check – george-dev.vercel.app', () => {
     expect(hydrationErrors).toEqual([])
   })
 
-  test('prihlásenie a dashboard so zjednoteným headerom', async ({ page }) => {
-    await login(page)
+  test('PIN prihlásenie a dashboard', async ({ page }) => {
+    const { loginWithPin } = await import('./helpers/dashboard2')
+    await loginWithPin(page)
 
     await expect(page.getByText('SPACE účet').first()).toBeVisible({ timeout: 20000 })
-    await expect(page.locator('header').getByRole('button', { name: /Odhlás/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible()
 
     const consoleErrors: string[] = []
     page.on('console', (msg) => {
@@ -70,11 +72,10 @@ test.describe('Production check – george-dev.vercel.app', () => {
   })
 
   test('potvrdenie o platbe a overenie responzivity na mobile', async ({ page }) => {
-    // 1. Prihlásenie
-    await login(page)
+    await loginWithPin(page)
     await page.waitForURL('**/dashboard2', { timeout: 45000 })
 
-    // 2. Kliknutie na odchádzajúcu transakciu v histórii (vyberáme zo zoznamu .divide-y)
+    // Kliknutie na odchádzajúcu transakciu v histórii (vyberáme zo zoznamu .divide-y)
     const outgoingTxn = page.locator('section:has-text("História") .divide-y button').filter({ hasText: 'Odoslané' }).first()
     await expect(outgoingTxn).toBeVisible({ timeout: 15000 })
     await outgoingTxn.click()

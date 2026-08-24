@@ -21,8 +21,8 @@ test.describe('Simple Smoke Tests', () => {
     if (gateEnabled) {
       await expect(page).toHaveURL(/\/gate/)
     } else {
-      // CI disables site gate — app redirects to dashboard2 or sign-in
-      await expect(page).toHaveURL(/\/(dashboard2|sign-in|gate)/)
+      // CI disables site gate — app redirects to dashboard2
+      await expect(page).toHaveURL(/\/(dashboard2|gate)/)
     }
   })
 })

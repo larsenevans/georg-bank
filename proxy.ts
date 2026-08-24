@@ -15,12 +15,9 @@ function shouldSkipAuth(request: NextRequest) {
   const { pathname } = request.nextUrl
   return (
     pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/pin') ||
     pathname === '/gate' ||
     pathname.startsWith('/api/gate') ||
-    pathname === '/sign-in' ||
-    pathname === '/sign-up' ||
-    pathname === '/login' ||
-    pathname === '/signup' ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/test-db') ||
     pathname.startsWith('/api/transactions') ||
@@ -28,6 +25,12 @@ function shouldSkipAuth(request: NextRequest) {
     pathname.startsWith('/api/push') ||
     pathname.startsWith('/api/debug-ingest')
   )
+}
+
+/** Break guest ↔ dashboard2 redirect loop when guest bootstrap fails (e.g. DB down). */
+function shouldSkipGuestRedirect(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl
+  return pathname === '/dashboard2' && searchParams.get('guest') === 'unavailable'
 }
 
 /**
@@ -110,7 +113,7 @@ export function proxy(request: NextRequest) {
     // Tailscale / gate cookie only skips the password gate — still require guest session below.
   }
 
-  if (hasSessionCookie(request) || shouldSkipAuth(request)) {
+  if (hasSessionCookie(request) || shouldSkipAuth(request) || shouldSkipGuestRedirect(request)) {
     return addSecurityHeaders(NextResponse.next())
   }
 
