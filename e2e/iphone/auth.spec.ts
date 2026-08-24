@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { gotoApp, passSiteGate } from '../helpers/app'
-import { loginWithPin } from '../helpers/dashboard2'
+import { expectPinOnlyScreen, loginWithPin } from '../helpers/dashboard2'
 import {
   expectNoHorizontalOverflow,
   expectPortraitViewport,
@@ -40,20 +40,19 @@ test.describe('iPhone – Auth', () => {
   test('auth-004: sign-in route redirects to PIN screen', async ({ page }) => {
     await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/dashboard2/)
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+    await expectPinOnlyScreen(page)
   })
 
   test('auth-005: sign-up route redirects to PIN screen', async ({ page }) => {
     await page.goto('/sign-up', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/dashboard2/)
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+    await expectPinOnlyScreen(page)
   })
 
   test('auth-006: dashboard2 after cold navigation has session', async ({ page }) => {
     await gotoApp(page, '/dashboard2')
     await expect(page).toHaveURL(/dashboard2/)
-    // Full-bleed mobile: session is established when PIN screen is shown (no Odhlás chrome)
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+    await expectPinOnlyScreen(page)
   })
 
   test('auth-007: logout returns to PIN screen', async ({ page }) => {
@@ -65,7 +64,7 @@ test.describe('iPhone – Auth', () => {
 
   test('auth-008: no horizontal overflow on entry', async ({ page }) => {
     await gotoApp(page, '/dashboard2')
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+    await expectPinOnlyScreen(page)
     await expectNoHorizontalOverflow(page)
   })
 

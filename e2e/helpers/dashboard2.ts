@@ -1,9 +1,17 @@
 import { expect, type Page } from '@playwright/test'
-import { gotoApp } from './app'
+import { gotoApp, E2E_APP_PIN } from './app'
 
 type Dashboard2Options = {
   /** Absolute origin (e.g. https://george-….vercel.app) or omit for baseURL. */
   origin?: string
+}
+
+/** PIN-only screen: no email/password login or password fallback. */
+export async function expectPinOnlyScreen(page: Page) {
+  await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible()
+  await expect(page.getByText(/Použiť heslo/i)).toHaveCount(0)
+  await expect(page.locator('input[type="email"]')).toHaveCount(0)
+  await expect(page.locator('input[type="password"]')).toHaveCount(0)
 }
 
 /**
@@ -13,9 +21,7 @@ type Dashboard2Options = {
 export async function openDashboard2Welcome(page: Page, options?: Dashboard2Options) {
   const path = options?.origin ? `${options.origin.replace(/\/$/, '')}/dashboard2` : '/dashboard2'
   await gotoApp(page, path)
-  await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({
-    timeout: 20000,
-  })
+  await expectPinOnlyScreen(page)
 }
 
 export async function openPinScreen(page: Page, options?: Dashboard2Options) {
@@ -32,7 +38,7 @@ export async function enterPin(page: Page, pin: string) {
 }
 
 /** PIN login into Prehľad (no welcome CTA click — PIN is the entry screen). */
-export async function loginWithPin(page: Page, pin = '666666', options?: Dashboard2Options) {
+export async function loginWithPin(page: Page, pin = E2E_APP_PIN, options?: Dashboard2Options) {
   await openPinScreen(page, options)
   await enterPin(page, pin)
   await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible({

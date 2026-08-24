@@ -1,43 +1,54 @@
 import { randomUUID } from 'crypto'
 
-const DEFAULT_GUEST_EMAIL = 'admin@local.test'
-const DEFAULT_GUEST_PASSWORD = 'admin1234'
+/** Short-lived cookie set when guest bootstrap fails — breaks proxy redirect loop without URL leaks. */
+export const GUEST_BOOTSTRAP_SKIP_COOKIE = 'guest_bootstrap_skip'
+
+export type GuestConfig =
+  | { ok: true; email: string; password: string; name: string }
+  | { ok: false; missingKeys: string[]; invalidKeys: string[] }
 
 /**
  * Server-side guest identity only — never read NEXT_PUBLIC_* here.
  * Those vars are for client auth-form prefills and must not skew guest auto-login.
  */
-function resolveGuestEmail() {
-  const configured = process.env.GUEST_USER_EMAIL?.trim()
-  if (!configured) {
-    return DEFAULT_GUEST_EMAIL
+export function getGuestConfig(): GuestConfig {
+  const missingKeys: string[] = []
+  const invalidKeys: string[] = []
+
+  const email = process.env.GUEST_USER_EMAIL?.trim()
+  const password = process.env.GUEST_USER_PASSWORD?.trim()
+
+  if (!email) {
+    missingKeys.push('GUEST_USER_EMAIL')
+  } else if (!isDedicatedGuestEmail(email)) {
+    invalidKeys.push('GUEST_USER_EMAIL')
   }
-  if (!configured.toLowerCase().endsWith('@local.test')) {
-    console.error(
-      '[guest-auth] GUEST_USER_EMAIL must end with @local.test; falling back to',
-      DEFAULT_GUEST_EMAIL,
-      '(got:',
-      configured,
-      ')'
-    )
-    return DEFAULT_GUEST_EMAIL
+
+  if (!password) {
+    missingKeys.push('GUEST_USER_PASSWORD')
   }
-  return configured
+
+  if (missingKeys.length > 0 || invalidKeys.length > 0) {
+    return { ok: false, missingKeys, invalidKeys }
+  }
+
+  return {
+    ok: true,
+    email: email!,
+    password: password!,
+    name: process.env.GUEST_USER_NAME?.trim() || 'Peter',
+  }
 }
 
-function resolveGuestPassword() {
-  const configured = process.env.GUEST_USER_PASSWORD?.trim()
-  if (configured) {
-    return configured
-  }
-  return DEFAULT_GUEST_PASSWORD
-}
+const resolvedGuest = getGuestConfig()
 
-export const GUEST_USER_EMAIL = resolveGuestEmail()
+/** @deprecated Prefer getGuestConfig() — empty when env is missing or invalid. */
+export const GUEST_USER_EMAIL = resolvedGuest.ok ? resolvedGuest.email : ''
 
-export const GUEST_USER_PASSWORD = resolveGuestPassword()
+/** @deprecated Prefer getGuestConfig() — empty when env is missing or invalid. */
+export const GUEST_USER_PASSWORD = resolvedGuest.ok ? resolvedGuest.password : ''
 
-export const GUEST_USER_NAME = 'Peter'
+export const GUEST_USER_NAME = resolvedGuest.ok ? resolvedGuest.name : 'Peter'
 
 /** Dedicated guest inbox — never point GUEST_USER_EMAIL at a real person's mailbox. */
 export function isDedicatedGuestEmail(email: string) {
@@ -56,11 +67,11 @@ export function guestLoginPath(from = '/dashboard2') {
  * Refuses to overwrite credentials when GUEST_USER_EMAIL is not a
  * dedicated @local.test address (misconfig would reset a real user).
  */
-export async function syncGuestCredentialPassword() {
-  if (!isDedicatedGuestEmail(GUEST_USER_EMAIL)) {
+export async function syncGuestCredentialPassword(email: string, password: string) {
+  if (!isDedicatedGuestEmail(email)) {
     console.error(
       '[guest-auth] Refusing password sync: GUEST_USER_EMAIL must be a dedicated @local.test address, got:',
-      GUEST_USER_EMAIL
+      email
     )
     return false
   }
@@ -68,7 +79,7 @@ export async function syncGuestCredentialPassword() {
   const { hashPassword } = await import('better-auth/crypto')
   const { pool } = await import('@/lib/db')
 
-  const passwordHash = await hashPassword(GUEST_USER_PASSWORD)
+  const passwordHash = await hashPassword(password)
   const result = await pool.query(
     `UPDATE account SET password = $1, "updatedAt" = NOW()
      FROM "user"
@@ -76,7 +87,7 @@ export async function syncGuestCredentialPassword() {
        AND lower("user".email) = lower($2)
        AND account."providerId" = 'credential'
      RETURNING account.id`,
-    [passwordHash, GUEST_USER_EMAIL]
+    [passwordHash, email]
   )
 
   return (result.rowCount ?? 0) > 0
@@ -86,8 +97,8 @@ export async function syncGuestCredentialPassword() {
  * Ensure the dedicated guest user has a credential account with the configured password.
  * Handles users created without a credential row (sign-up 422 + sign-in loop).
  */
-export async function ensureGuestCredentialAccount() {
-  if (!isDedicatedGuestEmail(GUEST_USER_EMAIL)) {
+export async function ensureGuestCredentialAccount(email: string, password: string) {
+  if (!isDedicatedGuestEmail(email)) {
     return false
   }
 
@@ -96,7 +107,7 @@ export async function ensureGuestCredentialAccount() {
 
   const userResult = await pool.query<{ id: string }>(
     `SELECT id FROM "user" WHERE lower(email) = lower($1) LIMIT 1`,
-    [GUEST_USER_EMAIL]
+    [email]
   )
 
   if (userResult.rows.length === 0) {
@@ -104,7 +115,7 @@ export async function ensureGuestCredentialAccount() {
   }
 
   const userId = userResult.rows[0].id
-  const passwordHash = await hashPassword(GUEST_USER_PASSWORD)
+  const passwordHash = await hashPassword(password)
 
   const accountResult = await pool.query<{ id: string }>(
     `SELECT id FROM account
@@ -124,5 +135,5 @@ export async function ensureGuestCredentialAccount() {
     return true
   }
 
-  return syncGuestCredentialPassword()
+  return syncGuestCredentialPassword(email, password)
 }

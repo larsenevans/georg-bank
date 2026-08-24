@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { GUEST_BOOTSTRAP_SKIP_COOKIE } from '@/lib/guest-auth'
 import { isSiteGateEnabled, SITE_GATE_COOKIE, SITE_GATE_TOKEN, isTailscaleRequest } from '@/lib/site-gate'
 
 const SESSION_COOKIE = '__Secure-better-auth.session_token'
@@ -29,8 +30,11 @@ function shouldSkipAuth(request: NextRequest) {
 
 /** Break guest ↔ dashboard2 redirect loop when guest bootstrap fails (e.g. DB down). */
 function shouldSkipGuestRedirect(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl
-  return pathname === '/dashboard2' && searchParams.get('guest') === 'unavailable'
+  const { pathname } = request.nextUrl
+  return (
+    pathname === '/dashboard2' &&
+    request.cookies.get(GUEST_BOOTSTRAP_SKIP_COOKIE)?.value === '1'
+  )
 }
 
 /**

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { gotoApp } from './helpers/app'
-import { loginWithPin } from './helpers/dashboard2'
+import { expectPinOnlyScreen, loginWithPin } from './helpers/dashboard2'
 
 /**
  * Auth flow (PIN-only):
@@ -13,21 +13,25 @@ test.describe('Autentifikácia', () => {
   test('Sign-in presmeruje na dashboard2 s PIN obrazovkou', async ({ page }) => {
     await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/dashboard2/)
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+    await expectPinOnlyScreen(page)
   })
 
   test('Sign-up presmeruje na dashboard2 s PIN obrazovkou', async ({ page }) => {
     await page.goto('/sign-up', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/dashboard2/)
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+    await expectPinOnlyScreen(page)
   })
 
   test('Root (/) presmeruje na dashboard2', async ({ page }) => {
     await gotoApp(page, '/')
     await expect(page).toHaveURL(/dashboard2/)
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({
-      timeout: 15000,
-    })
+    await expectPinOnlyScreen(page)
+  })
+
+  test('PIN obrazovka nemá email/heslo fallback', async ({ page }) => {
+    await gotoApp(page, '/dashboard2')
+    await expectPinOnlyScreen(page)
+    await expect(page.getByText(/Použiť heslo/i)).toHaveCount(0)
   })
 
   test('Guest session sprístupní klasický /dashboard2', async ({ page }) => {

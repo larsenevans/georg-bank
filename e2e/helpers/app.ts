@@ -1,8 +1,9 @@
 import { expect, type Page } from '@playwright/test'
 
+/** PIN used in e2e — must match APP_PIN env (CI / .env.local), not a code default. */
+export const E2E_APP_PIN = process.env.APP_PIN ?? '666666'
+
 export const SITE_GATE_PASSWORD = process.env.SITE_GATE_PASSWORD ?? 'heslo'
-export const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL ?? 'anton-karton-007@proton.me'
-export const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD ?? 'admin@admin.com'
 
 export const SWAPPED_CARD_ENDINGS = ['1234', '4321', '4444'] as const
 
@@ -120,7 +121,7 @@ export async function openNewPaymentFromMenu(page: Page) {
   if (isDashboard2FullBleed(path)) {
     const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i)
     if (await pinHeading.isVisible().catch(() => false)) {
-      for (const digit of '666666') {
+      for (const digit of E2E_APP_PIN) {
         await page.getByRole('button', { name: digit, exact: true }).click()
       }
       await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible({

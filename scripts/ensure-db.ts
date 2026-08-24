@@ -125,8 +125,10 @@ async function ensureGuestUser(pool: Pool) {
       `UPDATE "user" SET name = $1, "updatedAt" = NOW() WHERE email = $2 AND name IS DISTINCT FROM $1`,
       [GUEST_USER_NAME, GUEST_USER_EMAIL]
     )
-    const { ensureGuestCredentialAccount } = await import('../lib/guest-auth')
-    const synced = await ensureGuestCredentialAccount().catch(() => false)
+    const synced = await ensureGuestCredentialAccount(
+      GUEST_USER_EMAIL,
+      GUEST_USER_PASSWORD
+    ).catch(() => false)
     console.log(
       synced
         ? '[ensure-db] Guest user exists; credential password synced.'

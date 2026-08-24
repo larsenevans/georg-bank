@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
 import {
   enterPin,
+  expectPinOnlyScreen,
   installFaceIdMocks,
   openDashboard2Welcome,
   openPinScreen,
 } from './helpers/dashboard2'
+import { E2E_APP_PIN } from './helpers/app'
 
 test.use({
   launchOptions: {
@@ -46,7 +48,7 @@ test.describe('dashboard2 – Face ID + PIN (agent delivery)', () => {
 
     // PIN-first entry (isPasscodeScreen defaults to true — no welcome CTA click needed)
     await expect(page.getByTestId('pin-screen')).toBeVisible()
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible()
+    await expectPinOnlyScreen(page)
     await expect(page.getByRole('button', { name: 'Prihlásiť sa tvárou' })).toBeVisible()
     await expect(page.getByRole('button', { name: '1', exact: true })).toBeVisible()
 
@@ -85,9 +87,9 @@ test.describe('dashboard2 – Face ID + PIN (agent delivery)', () => {
     await expect(page.locator('#face-api-script')).toHaveCount(0)
   })
 
-  test('PIN 666666 logs in without success toast', async ({ page }) => {
+  test('PIN unlock logs in without success toast', async ({ page }) => {
     await openPinScreen(page)
-    await enterPin(page, '666666')
+    await enterPin(page, E2E_APP_PIN)
 
     await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible({ timeout: 15000 })
 

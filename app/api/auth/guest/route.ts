@@ -2,11 +2,9 @@ import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
 import { resolveDatabaseUrl } from '@/lib/db/resolve-database-url'
 import {
-  GUEST_USER_EMAIL,
-  GUEST_USER_NAME,
-  GUEST_USER_PASSWORD,
+  GUEST_BOOTSTRAP_SKIP_COOKIE,
   ensureGuestCredentialAccount,
-  isDedicatedGuestEmail,
+  getGuestConfig,
 } from '@/lib/guest-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -61,37 +59,52 @@ async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
   }
 }
 
-function guestFailureRedirect(request: NextRequest) {
+function guestFailureRedirect(request: NextRequest, reason: string) {
+  console.error('[guest-auth] bootstrap failed:', reason)
   const dashboardUrl = new URL('/dashboard2', request.url)
-  dashboardUrl.searchParams.set('guest', 'unavailable')
-  return NextResponse.redirect(dashboardUrl)
+  const response = NextResponse.redirect(dashboardUrl)
+  response.cookies.set(GUEST_BOOTSTRAP_SKIP_COOKIE, '1', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 5,
+  })
+  return response
 }
 
-async function ensureGuestSignedIn(request: NextRequest) {
-  if (!isDedicatedGuestEmail(GUEST_USER_EMAIL)) {
-    console.error(
-      '[guest-auth] Refusing guest login: GUEST_USER_EMAIL must end with @local.test, got:',
-      GUEST_USER_EMAIL
-    )
-    return new Response(JSON.stringify({ error: 'Guest auth misconfigured' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    })
+async function healGuestCredentials(email: string, password: string) {
+  const { ensureDatabase } = await import('@/scripts/ensure-db')
+  await ensureDatabase().catch((error) => {
+    console.error('[guest-auth] ensureDatabase failed:', error)
+  })
+
+  const healed = await ensureGuestCredentialAccount(email, password).catch((error) => {
+    console.error('[guest-auth] credential heal failed:', error)
+    return false
+  })
+
+  if (healed) {
+    console.warn('[guest-auth] healed guest credential account')
   }
 
+  return healed
+}
+
+async function ensureGuestSignedIn(
+  request: NextRequest,
+  guest: { email: string; password: string; name: string }
+) {
   const dbProbe = await probeDatabase()
   if (!dbProbe.ok) {
     console.error('[guest-auth] database unreachable:', dbProbe.detail)
-    return new Response(JSON.stringify({ error: 'Database unreachable' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    })
+    return { response: null as Response | null, reason: 'database_unreachable' }
   }
 
   const headers = serverAuthHeaders(request)
   const credentials = {
-    email: GUEST_USER_EMAIL,
-    password: GUEST_USER_PASSWORD,
+    email: guest.email,
+    password: guest.password,
   }
 
   let response = await auth.api.signInEmail({
@@ -100,30 +113,33 @@ async function ensureGuestSignedIn(request: NextRequest) {
     asResponse: true,
   })
 
-  if (response.ok) return response
+  if (response.ok) {
+    return { response, reason: null }
+  }
 
-  const { ensureDatabase } = await import('@/scripts/ensure-db')
-  await ensureDatabase().catch((error) => {
-    console.error('[guest-auth] ensureDatabase failed:', error)
+  await healGuestCredentials(guest.email, guest.password)
+
+  response = await auth.api.signInEmail({
+    body: credentials,
+    headers,
+    asResponse: true,
   })
+
+  if (response.ok) {
+    return { response, reason: null }
+  }
 
   const signUpResponse = await auth.api.signUpEmail({
     body: {
       ...credentials,
-      name: GUEST_USER_NAME,
+      name: guest.name,
     },
     headers,
     asResponse: true,
   })
 
   if (!signUpResponse.ok) {
-    const healed = await ensureGuestCredentialAccount().catch((error) => {
-      console.error('[guest-auth] credential heal failed:', error)
-      return false
-    })
-    if (healed) {
-      console.warn('[guest-auth] healed guest credential account')
-    }
+    await healGuestCredentials(guest.email, guest.password)
   }
 
   response = await auth.api.signInEmail({
@@ -132,19 +148,29 @@ async function ensureGuestSignedIn(request: NextRequest) {
     asResponse: true,
   })
 
-  return response
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    console.error('[guest-auth] sign-in failed after heal:', response.status, body)
+    return { response: null, reason: 'sign_in_failed' }
+  }
+
+  return { response, reason: null }
 }
 
 export async function GET(request: NextRequest) {
   const from = request.nextUrl.searchParams.get('from') ?? '/dashboard2'
+  const guestConfig = getGuestConfig()
+
+  if (!guestConfig.ok) {
+    const keys = [...guestConfig.missingKeys, ...guestConfig.invalidKeys]
+    return guestFailureRedirect(request, `guest_env_misconfigured:${keys.join(',')}`)
+  }
 
   try {
-    const authResponse = await ensureGuestSignedIn(request)
+    const { response: authResponse, reason } = await ensureGuestSignedIn(request, guestConfig)
 
-    if (!authResponse.ok) {
-      const body = await authResponse.text().catch(() => '')
-      console.error('[guest-auth] sign-in failed:', authResponse.status, body)
-      return guestFailureRedirect(request)
+    if (!authResponse) {
+      return guestFailureRedirect(request, reason ?? 'sign_in_failed')
     }
 
     const redirectUrl = new URL(from, request.url)
@@ -153,6 +179,6 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('[guest-auth] unexpected error:', error)
-    return guestFailureRedirect(request)
+    return guestFailureRedirect(request, 'unexpected_error')
   }
 }

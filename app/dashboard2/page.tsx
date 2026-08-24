@@ -212,8 +212,6 @@ export default function GeorgePrototypePage() {
   const [isPasscodeScreen, setIsPasscodeScreen] = useState(true)
   const [passcode, setPasscode] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
-  const [usePasswordInput, setUsePasswordInput] = useState(false)
-  const [textPassword, setTextPassword] = useState('')
 
   // BIOMETRIA TVÁROU (FACE ID) CEZ WEB_KAMERU (FACE-API)
   const [isBiometricsActive, setIsBiometricsActive] = useState(false)
@@ -1034,30 +1032,6 @@ export default function GeorgePrototypePage() {
     }
   }
 
-  const handleTextPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginError(null)
-    try {
-      const response = await fetch('/api/gate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: textPassword })
-      })
-      if (response.ok) {
-        setIsSimulatorLoggedIn(true)
-        setTextPassword('')
-        setUsePasswordInput(false)
-        setIsPasscodeScreen(false)
-        showToast('Úspešne prihlásený cez heslo brány!')
-      } else {
-        setLoginError('Nesprávne heslo brány.')
-      }
-    } catch (err) {
-      console.error(err)
-      setLoginError('Chyba spojenia so serverom.')
-    }
-  }
-
   const toggleSearch = () => {
     if (!isSearchOpen) {
       setIsSearchOpen(true)
@@ -1781,7 +1755,7 @@ export default function GeorgePrototypePage() {
                       </div>
 
                       <h3 className="text-base font-bold text-white text-center leading-snug">
-                        {usePasswordInput ? 'Zadajte heslo' : 'Zadajte bezpečnostný PIN'}
+                        Zadajte bezpečnostný PIN
                       </h3>
 
                       {loginError && (
@@ -1790,106 +1764,59 @@ export default function GeorgePrototypePage() {
                         </p>
                       )}
 
-                      {!usePasswordInput ? (
-                        <div className="flex justify-center space-x-3 my-8">
-                          {[0, 1, 2, 3, 4, 5].map((idx) => {
-                            const isFilled = passcode.length > idx
-                            return (
-                              <div
-                                key={idx}
-                                className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${isFilled ? 'bg-[#327bf5] border-[#327bf5] scale-110' : 'border-slate-700'}`}
-                              />
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <form onSubmit={handleTextPasswordSubmit} className="w-full max-w-xs mt-6 mb-4 flex flex-col gap-2.5">
-                          <input
-                            type="password"
-                            placeholder="Napr. Heslo123###"
-                            value={textPassword}
-                            onChange={(e) => setTextPassword(e.target.value)}
-                            required
-                            autoFocus
-                            className="w-full h-11 px-4 bg-[#171821] border border-slate-800 focus:border-[#327bf5] rounded-xl text-center text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 transition-all"
-                          />
-                          <button
-                            type="submit"
-                            className="w-full h-10 bg-[#327bf5] hover:bg-blue-600 text-white font-bold rounded-xl text-[11px] transition-all active:scale-95"
-                          >
-                            Potvrdiť heslo
-                          </button>
-                        </form>
-                      )}
+                      <div className="flex justify-center space-x-3 my-8">
+                        {[0, 1, 2, 3, 4, 5].map((idx) => {
+                          const isFilled = passcode.length > idx
+                          return (
+                            <div
+                              key={idx}
+                              className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${isFilled ? 'bg-[#327bf5] border-[#327bf5] scale-110' : 'border-slate-700'}`}
+                            />
+                          )
+                        })}
+                      </div>
                     </div>
 
-                    {!usePasswordInput ? (
-                      <div className="w-full max-w-65 mx-auto flex flex-col gap-3 select-none shrink-0 pb-2">
-                        <div className="grid grid-cols-3 gap-x-4 gap-y-3">
-                          {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-                            <button
-                              key={num}
-                              onClick={() => handleKeypadPress(num)}
-                              className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b] text-lg font-bold flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer"
-                            >
-                              {num}
-                            </button>
-                          ))}
-
+                    <div className="w-full max-w-65 mx-auto flex flex-col gap-3 select-none shrink-0 pb-2">
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
+                        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
                           <button
-                            onClick={triggerBiometrics}
-                            className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b]/80 flex items-center justify-center text-[#327bf5] active:scale-90 transition-all cursor-pointer shadow-sm"
-                            aria-label="Prihlásiť sa tvárou"
-                          >
-                            <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-                              <path d="M8 8h.01M16 8h.01M9 13h6M10 17h4" />
-                            </svg>
-                          </button>
-
-                          <button
-                            onClick={() => handleKeypadPress('0')}
+                            key={num}
+                            onClick={() => handleKeypadPress(num)}
                             className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b] text-lg font-bold flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer"
                           >
-                            0
+                            {num}
                           </button>
+                        ))}
 
-                          <button
-                            onClick={handleKeypadBackspace}
-                            className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-slate-400 hover:text-slate-200 active:scale-90 transition-all cursor-pointer"
-                          >
-                            <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.41-6.41A2 2 0 0110.83 5H20a2 2 0 012 2v10a2 2 0 01-2 2h-9.17a2 2 0 01-1.42-.59L3 12z" />
-                            </svg>
-                          </button>
-                        </div>
+                        <button
+                          onClick={triggerBiometrics}
+                          className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b]/80 flex items-center justify-center text-[#327bf5] active:scale-90 transition-all cursor-pointer shadow-sm"
+                          aria-label="Prihlásiť sa tvárou"
+                        >
+                          <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                            <path d="M8 8h.01M16 8h.01M9 13h6M10 17h4" />
+                          </svg>
+                        </button>
 
-                        {/* Použiť heslo text link below the keypad */}
-                        <div className="text-center mt-5">
-                          <button
-                            onClick={() => {
-                              setUsePasswordInput(true)
-                              setPasscode('')
-                              setLoginError(null)
-                            }}
-                            className="text-xs font-bold text-slate-500 hover:text-slate-350 transition-colors uppercase tracking-wider min-h-11"
-                          >
-                            Použiť heslo
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleKeypadPress('0')}
+                          className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b] text-lg font-bold flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer"
+                        >
+                          0
+                        </button>
+
+                        <button
+                          onClick={handleKeypadBackspace}
+                          className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-slate-400 hover:text-slate-200 active:scale-90 transition-all cursor-pointer"
+                        >
+                          <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.41-6.41A2 2 0 0110.83 5H20a2 2 0 012 2v10a2 2 0 01-2 2h-9.17a2 2 0 01-1.42-.59L3 12z" />
+                          </svg>
+                        </button>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setUsePasswordInput(false)
-                          setTextPassword('')
-                          setLoginError(null)
-                        }}
-                        className="text-[11px] font-bold text-[#327bf5] hover:text-blue-400 text-center transition-colors mb-4 cursor-pointer min-h-11"
-                      >
-                        Návrat na zadanie PIN kódu
-                      </button>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
