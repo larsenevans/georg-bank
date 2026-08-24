@@ -40,8 +40,9 @@ test.describe('Production check – george-dev.vercel.app', () => {
       if (msg.type() === 'error') consoleErrors.push(msg.text())
     })
 
-    await gotoApp(page, '/sign-in')
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 20000 })
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
+    await expect(page).toHaveURL(/\/sign-in/)
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 20000 })
 
     const hydrationErrors = consoleErrors.filter((line) =>
       line.includes('Minified React error #418') || line.includes('Hydration')

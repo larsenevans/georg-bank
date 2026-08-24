@@ -5,8 +5,8 @@ import {
   GUEST_USER_EMAIL,
   GUEST_USER_NAME,
   GUEST_USER_PASSWORD,
+  ensureGuestCredentialAccount,
   isDedicatedGuestEmail,
-  syncGuestCredentialPassword,
 } from '@/lib/guest-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -43,7 +43,7 @@ async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
   if (!resolved) {
     return {
       ok: false,
-      detail: 'No DATABASE_URL / SUPABASE_* connection configured',
+      detail: 'database_unconfigured',
     }
   }
   try {
@@ -60,13 +60,10 @@ async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
   }
 }
 
-function guestFailureHtml(hint: string) {
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Prihlásenie</title>
-<style>body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#030305;color:#e2e8f0;font-family:system-ui,sans-serif;padding:24px;text-align:center}
-a{color:#60a5fa}code{font-size:12px;color:#94a3b8}</style></head><body><div><p>Nepodarilo sa automaticky prihlásiť.</p>
-<p style="color:#94a3b8;font-size:14px">Skontrolujte DATABASE_URL a BETTER_AUTH_* na Vercel.</p>
-<p><code>${hint.replace(/</g, '&lt;').slice(0, 180)}</code></p>
-<p><a href="/sign-in">Prihlásiť sa manuálne</a> · <a href="/gate">Späť na bránu</a></p></div></body></html>`
+function guestFailureRedirect(request: NextRequest) {
+  const signInUrl = new URL('/sign-in', request.url)
+  signInUrl.searchParams.set('guest', 'unavailable')
+  return NextResponse.redirect(signInUrl)
 }
 
 async function ensureGuestSignedIn(request: NextRequest) {
@@ -118,15 +115,13 @@ async function ensureGuestSignedIn(request: NextRequest) {
     asResponse: true,
   })
 
-  // Existing guest with a different password → sign-up 422, sign-in keeps failing.
-  // Sync the credential hash to the configured guest password, then retry.
   if (!signUpResponse.ok) {
-    const synced = await syncGuestCredentialPassword().catch((error) => {
-      console.error('[guest-auth] password sync failed:', error)
+    const healed = await ensureGuestCredentialAccount().catch((error) => {
+      console.error('[guest-auth] credential heal failed:', error)
       return false
     })
-    if (synced) {
-      console.warn('[guest-auth] synced guest credential password')
+    if (healed) {
+      console.warn('[guest-auth] healed guest credential account')
     }
   }
 
@@ -148,27 +143,7 @@ export async function GET(request: NextRequest) {
     if (!authResponse.ok) {
       const body = await authResponse.text().catch(() => '')
       console.error('[guest-auth] sign-in failed:', authResponse.status, body)
-      const hint =
-        (() => {
-          try {
-            const parsed = JSON.parse(body) as { detail?: string; error?: string }
-            return parsed.detail || parsed.error || `HTTP ${authResponse.status}`
-          } catch {
-            return body.slice(0, 120) || `HTTP ${authResponse.status}`
-          }
-        })()
-      // GET guest is always a browser navigation → never return blank JSON.
-      const accept = request.headers.get('accept') || ''
-      if (accept.includes('text/html') || accept.includes('*/*') || !accept) {
-        return new NextResponse(guestFailureHtml(hint), {
-          status: 500,
-          headers: { 'content-type': 'text/html; charset=utf-8' },
-        })
-      }
-      return NextResponse.json(
-        { error: 'Nepodarilo sa automaticky prihlásiť.', detail: hint },
-        { status: 500 }
-      )
+      return guestFailureRedirect(request)
     }
 
     const redirectUrl = new URL(from, request.url)
@@ -177,17 +152,6 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('[guest-auth] unexpected error:', error)
-    const hint = error instanceof Error ? error.message : 'unexpected'
-    const accept = request.headers.get('accept') || ''
-    if (accept.includes('text/html') || accept.includes('*/*') || !accept) {
-      return new NextResponse(guestFailureHtml(hint), {
-        status: 500,
-        headers: { 'content-type': 'text/html; charset=utf-8' },
-      })
-    }
-    return NextResponse.json(
-      { error: 'Nepodarilo sa automaticky prihlásiť.', detail: hint },
-      { status: 500 }
-    )
+    return guestFailureRedirect(request)
   }
 }

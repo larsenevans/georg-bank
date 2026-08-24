@@ -20,7 +20,7 @@
     "test:generate-iphone": "npx tsx scripts/generate-iphone-tests.ts",
     "test:generate-iphone-14-plus": "npx tsx scripts/generate-iphone-14-plus-tests.ts",
     "test:generate-iphone-17-air": "npx tsx scripts/generate-iphone-17-air-tests.ts",
-    "test:unit": "npx tsx scripts/statement-generator.test.ts && npx tsx scripts/pdf-generator.test.ts && npx tsx scripts/dashboard2-assets.test.ts && npx tsx scripts/payment-html.test.ts",
+    "test:unit": "npx tsx scripts/guest-auth.test.ts && npx tsx scripts/statement-generator.test.ts && npx tsx scripts/pdf-generator.test.ts && npx tsx scripts/dashboard2-assets.test.ts && npx tsx scripts/payment-html.test.ts",
     "test:dashboard2": "playwright test e2e/dashboard2-face-id.spec.ts e2e/dashboard2-george-key.spec.ts e2e/dashboard2-payment-html.spec.ts e2e/dashboard2-payment-history.spec.ts --project=chromium",
     "test:payment-html": "npx tsx scripts/payment-html.test.ts && playwright test e2e/dashboard2-payment-html.spec.ts e2e/dashboard2-payment-history.spec.ts --project=chromium",
     "test:safari-prod": "playwright test --config=playwright.safari-prod.config.ts",

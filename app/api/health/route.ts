@@ -13,14 +13,12 @@ export async function GET() {
   const hasDatabaseUrl = Boolean(resolveDatabaseUrl())
   const hasBetterAuthSecret = Boolean(process.env.BETTER_AUTH_SECRET?.trim())
   const betterAuthUrl = process.env.BETTER_AUTH_URL?.trim() || null
-  const rawGuestEmail =
-    process.env.GUEST_USER_EMAIL?.trim() ||
-    process.env.NEXT_PUBLIC_DEV_USER_EMAIL?.trim() ||
-    null
+  const rawGuestEmail = process.env.GUEST_USER_EMAIL?.trim() || null
   const rawGuestEmailOk = rawGuestEmail
     ? isDedicatedGuestEmail(rawGuestEmail)
     : true
   const guestEmailOk = isDedicatedGuestEmail(GUEST_USER_EMAIL)
+  const devPrefillEmail = process.env.NEXT_PUBLIC_DEV_USER_EMAIL?.trim() || null
 
   let database: 'ok' | 'unreachable' | 'unconfigured' = 'unconfigured'
   let databaseError: string | null = null
@@ -72,6 +70,8 @@ export async function GET() {
         emailIsLocalTest: guestEmailOk,
         envEmailIsLocalTest: rawGuestEmailOk,
         usingFallbackEmail: Boolean(rawGuestEmail && !rawGuestEmailOk),
+        serverUsesDedicatedGuestEmail: guestEmailOk,
+        devPrefillEmailConfigured: Boolean(devPrefillEmail),
       },
       vercel: {
         env: process.env.VERCEL_ENV ?? null,

@@ -37,16 +37,16 @@ test.describe('iPhone – Auth', () => {
     await expectNoHorizontalOverflow(page)
   })
 
-  test('auth-004: sign-in route redirects into app', async ({ page }) => {
-    await gotoApp(page, '/sign-in')
-    await page.waitForURL(/dashboard2/, { timeout: 30000 })
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+  test('auth-004: sign-in route shows manual login form', async ({ page }) => {
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' })
+    await expect(page).toHaveURL(/\/sign-in/)
+    await expect(page.getByLabel(/e-mail|email/i)).toBeVisible({ timeout: 15000 })
   })
 
-  test('auth-005: sign-up route redirects into app', async ({ page }) => {
-    await gotoApp(page, '/sign-up')
-    await page.waitForURL(/dashboard2/, { timeout: 30000 })
-    await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
+  test('auth-005: sign-up route shows registration form', async ({ page }) => {
+    await page.goto('/sign-up', { waitUntil: 'domcontentloaded' })
+    await expect(page).toHaveURL(/\/sign-up/)
+    await expect(page.getByLabel(/e-mail|email/i)).toBeVisible({ timeout: 15000 })
   })
 
   test('auth-006: dashboard2 after cold navigation has session', async ({ page }) => {

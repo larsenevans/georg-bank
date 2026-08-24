@@ -4,11 +4,13 @@ import { useTranslation } from '@/components/providers/translation-provider'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const guestUnavailable = searchParams.get('guest') === 'unavailable'
   const t = useTranslation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -145,6 +147,11 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
 
         <div className="w-full max-w-[400px] george-card glow-purple rounded-3xl p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] z-10">
           <div className="logo mb-8 ml-auto mr-auto scale-110"></div>
+          {guestUnavailable && (
+            <div className="mb-4 bg-amber-500/10 border border-amber-500/20 text-amber-100 text-xs font-semibold rounded-xl p-3">
+              Automatické prihlásenie hosta nie je dostupné. Prihláste sa prosím manuálne.
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t.auth.emailPlaceholder}</label>

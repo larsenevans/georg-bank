@@ -17,6 +17,10 @@ function shouldSkipAuth(request: NextRequest) {
     pathname.startsWith('/api/auth') ||
     pathname === '/gate' ||
     pathname.startsWith('/api/gate') ||
+    pathname === '/sign-in' ||
+    pathname === '/sign-up' ||
+    pathname === '/login' ||
+    pathname === '/signup' ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/test-db') ||
     pathname.startsWith('/api/transactions') ||

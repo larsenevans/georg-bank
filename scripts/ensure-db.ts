@@ -104,7 +104,7 @@ async function ensureStatementProfileColumns(pool: Pool) {
 }
 
 async function ensureGuestUser(pool: Pool) {
-  const { isDedicatedGuestEmail, syncGuestCredentialPassword } = await import(
+  const { isDedicatedGuestEmail, ensureGuestCredentialAccount } = await import(
     '../lib/guest-auth'
   )
   if (!isDedicatedGuestEmail(GUEST_USER_EMAIL)) {
@@ -125,7 +125,8 @@ async function ensureGuestUser(pool: Pool) {
       `UPDATE "user" SET name = $1, "updatedAt" = NOW() WHERE email = $2 AND name IS DISTINCT FROM $1`,
       [GUEST_USER_NAME, GUEST_USER_EMAIL]
     )
-    const synced = await syncGuestCredentialPassword().catch(() => false)
+    const { ensureGuestCredentialAccount } = await import('../lib/guest-auth')
+    const synced = await ensureGuestCredentialAccount().catch(() => false)
     console.log(
       synced
         ? '[ensure-db] Guest user exists; credential password synced.'
