@@ -6,6 +6,16 @@ import {
   openPinScreen,
 } from './helpers/dashboard2'
 
+test.use({
+  launchOptions: {
+    args: [
+      '--use-fake-ui-for-media-stream',
+      '--use-fake-device-for-media-stream',
+    ],
+  },
+  permissions: ['camera'],
+})
+
 /**
  * Tests for agent work on /dashboard2:
  * - welcome layout + product cards

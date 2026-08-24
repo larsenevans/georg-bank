@@ -218,6 +218,28 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
     await expect(noteInput).toHaveValue('Platba za material 1234');
   });
 
+  test('QR-15: SPAYD scan does NOT POST /api/transactions', async ({ page }) => {
+    const postUrls: string[] = [];
+    page.on('request', (req) => {
+      if (req.method() === 'POST') {
+        postUrls.push(req.url());
+      }
+    });
+
+    await openPaymentQrScanner(page);
+    const fileInput = page.locator('input[type="file"]');
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-spayd-5fields.png');
+    const postsBefore = postUrls.length;
+
+    await fileInput.setInputFiles(fixturePath);
+
+    await expect(page.locator('#pay-recipient')).toHaveValue('Peter Ziak', { timeout: 10000 });
+    await expect(page.locator('#pay-iban')).toHaveValue('SK3109000000005012345678');
+
+    const postsAfterScan = postUrls.slice(postsBefore);
+    expect(postsAfterScan.filter((url) => url.includes('/api/transactions')).length).toBe(0);
+  });
+
   test('QR-11: scanner closes and tracks stop', async ({ page }) => {
     await openPaymentQrScanner(page);
     await page.getByRole('button', { name: /Skenovať kamerou|Scan QR Code/i }).click();

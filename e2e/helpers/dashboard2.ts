@@ -41,8 +41,8 @@ export async function loginWithPin(page: Page, pin = '666666', options?: Dashboa
 }
 
 /**
- * Mock face-api CDN (+ optional fake webcam).
- * Call before navigation or before Face ID click.
+ * Mock face-api (+ optional camera deny) before navigation.
+ * Injects window.faceapi via addInitScript so initFaceApi never hits CDN in CI.
  */
 export async function installFaceIdMocks(
   page: Page,
@@ -51,31 +51,34 @@ export async function installFaceIdMocks(
   const detectFace = options?.detectFace !== false
   const camera = options?.camera ?? 'fake'
 
-  if (camera === 'fake') {
-    await page.addInitScript(() => {
-      if (!navigator.mediaDevices) return
-      navigator.mediaDevices.getUserMedia = async (constraints?: MediaStreamConstraints) => {
-        if (constraints && 'video' in constraints && constraints.video) {
-          const canvas = document.createElement('canvas')
-          canvas.width = 320
-          canvas.height = 320
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            ctx.fillStyle = '#222'
-            ctx.fillRect(0, 0, 320, 320)
-            ctx.fillStyle = '#f5c6a5'
-            ctx.beginPath()
-            ctx.arc(160, 160, 70, 0, Math.PI * 2)
-            ctx.fill()
-          }
-          if (typeof canvas.captureStream === 'function') {
-            return canvas.captureStream(15)
-          }
-        }
-        throw new Error('getUserMedia not available')
-      }
-    })
-  } else if (camera === 'deny') {
+  await page.addInitScript((detect: boolean) => {
+    const net = {
+      isLoaded: false,
+      loadFromUri: function loadFromUri() {
+        net.isLoaded = true
+        return Promise.resolve()
+      },
+    }
+    ;(window as unknown as { faceapi: unknown }).faceapi = {
+      tf: {
+        setBackend: function setBackend() {
+          return Promise.resolve()
+        },
+        ready: function ready() {
+          return Promise.resolve()
+        },
+      },
+      nets: { tinyFaceDetector: net },
+      TinyFaceDetectorOptions: function TinyFaceDetectorOptions() {},
+      detectSingleFace: function detectSingleFace() {
+        return Promise.resolve(
+          detect ? { score: 0.95, box: { x: 0, y: 0, width: 100, height: 100 } } : undefined
+        )
+      },
+    }
+  }, detectFace)
+
+  if (camera === 'deny') {
     await page.addInitScript(() => {
       if (!navigator.mediaDevices) return
       navigator.mediaDevices.getUserMedia = async () => {
@@ -83,36 +86,5 @@ export async function installFaceIdMocks(
       }
     })
   }
-
-  // Intercept face-api script and serve a minimal mock
-  await page.route('**/face-api@*/dist/face-api.js', async (route) => {
-    const body = `
-(function (global) {
-  var detect = ${detectFace ? 'true' : 'false'};
-  var net = {
-    isLoaded: false,
-    loadFromUri: function () {
-      net.isLoaded = true;
-      return Promise.resolve();
-    }
-  };
-  global.faceapi = {
-    tf: {
-      setBackend: function () { return Promise.resolve(); },
-      ready: function () { return Promise.resolve(); }
-    },
-    nets: { tinyFaceDetector: net },
-    TinyFaceDetectorOptions: function TinyFaceDetectorOptions() {},
-    detectSingleFace: function () {
-      return Promise.resolve(detect ? { score: 0.95, box: { x: 0, y: 0, width: 100, height: 100 } } : undefined);
-    }
-  };
-})(typeof window !== 'undefined' ? window : globalThis);
-`
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/javascript; charset=utf-8',
-      body,
-    })
-  })
+  // camera === 'fake': use Chromium --use-fake-device-for-media-stream from test.use
 }

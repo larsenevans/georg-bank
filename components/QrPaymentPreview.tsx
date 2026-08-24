@@ -153,8 +153,9 @@ export function QrPaymentPreview({
               Payment Information
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {draft.qrFormat === 'pay-by-square' ? 'PAY by square' : 
-               draft.qrFormat === 'epc-sepa' ? 'EPC/SEPA QR' : 'QR Code'}
+              {draft.qrFormat === 'pay-by-square' ? 'PAY by square' :
+               draft.qrFormat === 'epc-sepa' ? 'EPC/SEPA QR' :
+               draft.qrFormat === 'spayd' ? 'QR Platba (SPAYD)' : 'QR Code'}
             </p>
           </div>
           <button

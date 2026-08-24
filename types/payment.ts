@@ -42,6 +42,8 @@ export interface PaymentDraft {
   note: string | null; // Max 140 characters
   paymentReference: string | null; // Reference from QR code
   dueDate: Date | null; // Due date for the payment
+  /** SPAYD PT:IP — request immediate payment when supported by bank */
+  immediatePayment?: boolean;
   
   // Source data for debugging and validation
   rawQrData: string | null; // Original QR data string

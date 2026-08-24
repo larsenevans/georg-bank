@@ -12,6 +12,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3030'
 const mobileFolderIgnore = [
   /production-check\.spec\.ts/,
   /prod-safari-smoke\.spec\.ts/,
+  /prod-smoke-qr\.spec\.ts/,
   /iphone\//,
   /iphone-14-plus\//,
   /iphone-17-air\//,

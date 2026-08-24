@@ -277,7 +277,7 @@ export function validatePaymentDraft(
   }
 
   // Check if QR format is valid
-  if (!['pay-by-square', 'epc-sepa', 'unknown'].includes(draft.qrFormat)) {
+  if (!['pay-by-square', 'epc-sepa', 'spayd', 'unknown'].includes(draft.qrFormat)) {
     errors.push({
       field: 'qrFormat',
       message: 'Invalid QR format',

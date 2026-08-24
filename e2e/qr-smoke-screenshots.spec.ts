@@ -1,10 +1,17 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
 import path from 'path';
-import { gotoApp, login } from './helpers/app';
+import { login } from './helpers/app';
 
-const artifactDir = '/Users/skip/.gemini/antigravity/brain/dffa88f4-0db8-42ca-8ab9-7b01a657bb12';
+const artifactDir =
+  process.env.QR_SMOKE_ARTIFACT_DIR ??
+  path.join(process.cwd(), 'test-results', 'qr-smoke-screenshots');
 
 test.describe('QR Smoke Test & 5x Screenshot Verification', () => {
+  test.beforeAll(() => {
+    fs.mkdirSync(artifactDir, { recursive: true });
+  });
+
   test('Capture 5-step smoke test proof', async ({ page }) => {
     // 1. Prihlásenie a Dashboard2
     await login(page);

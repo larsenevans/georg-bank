@@ -660,23 +660,47 @@ export default function GeorgePrototypePage() {
     setPayAmount('')
     setPayVs('')
     setPayNote('')
+    setPaymentOptions([])
+    setScannedDraft(null)
   }
 
-  // QR Code Scanning Handlers
-  const handleScanSuccess = useCallback((draft: PaymentDraft) => {
-    setShowQrScanner(false)
-    setShowQrPreview(false)
-    setScannedDraft(null)
-
-    // Directly populate all available fields in the "Nová platba" form
+  const applyDraftToPaymentForm = useCallback((draft: PaymentDraft) => {
     setPayRecipient(draft.recipientName || '')
     setPayIban(draft.iban || '')
     setPayAmount(draft.amount !== null && draft.amount !== undefined ? draft.amount.toFixed(2) : '')
     setPayVs(draft.variableSymbol ? draft.variableSymbol.substring(0, 10) : '')
     setPayNote(draft.note ? draft.note.substring(0, 140) : '')
-
-    showToast('Údaje z QR kódu boli vyplnené do formulára!')
+    setScannedDraft(draft)
   }, [])
+
+  // QR Code Scanning Handlers
+  const handleScanSuccess = useCallback((draft: PaymentDraft) => {
+    setShowQrScanner(false)
+    setShowQrPreview(false)
+    setPaymentOptions([])
+
+    applyDraftToPaymentForm(draft)
+    showToast('Údaje z QR kódu boli vyplnené do formulára!')
+  }, [applyDraftToPaymentForm])
+
+  const handleMultipleQrOptions = useCallback((options: PaymentOption[]) => {
+    setShowQrScanner(false)
+    setShowQrPreview(false)
+    setPaymentOptions(options)
+    applyDraftToPaymentForm(options[0].draft)
+    showToast(
+      options.length > 1
+        ? 'QR kód obsahuje viac účtov — vyberte príjemcu nižšie.'
+        : 'Údaje z QR kódu boli vyplnené do formulára!'
+    )
+  }, [applyDraftToPaymentForm])
+
+  const handleQrAccountSelect = useCallback((optionId: string) => {
+    const selected = paymentOptions.find((opt) => opt.id === optionId)
+    if (selected) {
+      applyDraftToPaymentForm(selected.draft)
+    }
+  }, [paymentOptions, applyDraftToPaymentForm])
 
   const handleScanError = useCallback((error: Error) => {
     console.error('QR scanning error:', error)
@@ -713,6 +737,7 @@ export default function GeorgePrototypePage() {
   }, [])
 
   const openQrScanner = useCallback(() => {
+    setScannedDraft(null)
     setShowQrScanner(true)
   }, [])
 
@@ -3052,6 +3077,28 @@ export default function GeorgePrototypePage() {
               </div>
 
               <div className="space-y-4 overflow-y-auto no-scrollbar flex-1 min-h-0 px-6">
+                {paymentOptions.length > 1 && (
+                  <div>
+                    <label
+                      htmlFor="pay-account-select"
+                      className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold"
+                    >
+                      Účet príjemcu (ALT-ACC)
+                    </label>
+                    <select
+                      id="pay-account-select"
+                      defaultValue={paymentOptions[0]?.id}
+                      onChange={(e) => handleQrAccountSelect(e.target.value)}
+                      className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                    >
+                      {paymentOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label} — {option.draft.iban}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
                     Meno príjemcu
@@ -3139,10 +3186,11 @@ export default function GeorgePrototypePage() {
               {showQrScanner && scannedDraft === null && (
                 <PaymentQrScanner
                   onScanSuccess={handleScanSuccess}
+                  onMultipleOptions={handleMultipleQrOptions}
                   onError={handleScanError}
                   onClose={handleScannerClose}
                   title="Skenovať platobný QR kód"
-                  description="Namierte kameru na platobný QR kód (EPC/SEPA, PAY by square)"
+                  description="Namierte kameru na platobný QR kód (QR Platba / SPAYD, EPC/SEPA, PAY by square)"
                   showImageUpload={true}
                 />
               )}

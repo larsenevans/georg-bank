@@ -208,20 +208,20 @@ describe('QR Payment Scanner — 50 Testovacích Scenárov', () => {
       expect(result.drafts[0].note).toBe('Platba za sluzby s.r.o.');
     });
 
-    it('27. Maximálne dlhý MSG (140 znakov)', async () => {
-      const longMsg = 'A'.repeat(140);
+    it('27. Maximálne dlhý MSG (60 znakov podľa SPAYD spec)', async () => {
+      const longMsg = 'A'.repeat(60);
       const payload = `SPD*1.0*ACC:CZ5508000000001234567890*MSG:${longMsg}*`;
       const result = await decodeQrCode(payload);
       expect(result.success).toBe(true);
-      expect(result.drafts[0].note?.length).toBe(140);
+      expect(result.drafts[0].note?.length).toBe(60);
     });
 
-    it('28. Maximálne dlhý recipient (70 znakov)', async () => {
-      const longName = 'B'.repeat(70);
+    it('28. Maximálne dlhý recipient (35 znakov podľa SPAYD spec)', async () => {
+      const longName = 'B'.repeat(35);
       const payload = `SPD*1.0*ACC:CZ5508000000001234567890*RN:${longName}*`;
       const result = await decodeQrCode(payload);
       expect(result.success).toBe(true);
-      expect(result.drafts[0].recipientName.length).toBe(70);
+      expect(result.drafts[0].recipientName.length).toBe(35);
     });
 
     it('29. VS začínajúci nulami — 0000123456', async () => {
@@ -362,6 +362,89 @@ describe('QR Payment Scanner — 50 Testovacích Scenárov', () => {
       const result = await decodeQrCode(payload);
       expect(result.success).toBe(true);
       expect(result.drafts[0].note).toBe("' OR 1=1 --");
+    });
+  });
+
+  // ==========================================
+  // E. CZ SPAYD EXTENSIONS (ALT-ACC, PT:IP, CRC32)
+  // ==========================================
+  describe('E. CZ SPAYD EXTENSIONS', () => {
+    it('51. SPAYD so všetkými poľami — kompletný CZ QR', async () => {
+      const payload =
+        'SPD*1.0*ACC:CZ5508000000001234567890+GIBACZPX*AM:480.55*CC:CZK*RN:PETR DVORAK*DT:20260915*MSG:PLATBA ZA ZBOZI*X-VS:0012345678*X-KS:0308*X-SS:123456*PT:IP*RF:9876543210*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.format).toBe('spayd');
+      const d = result.drafts[0];
+      expect(d.iban).toBe('CZ5508000000001234567890');
+      expect(d.bic).toBe('GIBACZPX');
+      expect(d.amount).toBe(480.55);
+      expect(d.currency).toBe('CZK');
+      expect(d.recipientName).toBe('PETR DVORAK');
+      expect(d.variableSymbol).toBe('0012345678');
+      expect(d.constantSymbol).toBe('0308');
+      expect(d.specificSymbol).toBe('123456');
+      expect(d.note).toBe('PLATBA ZA ZBOZI');
+      expect(d.immediatePayment).toBe(true);
+      expect(d.paymentReference).toBe('9876543210');
+      expect(d.dueDate?.getFullYear()).toBe(2026);
+    });
+
+    it('52. ALT-ACC — viac účtov, prvý ACC ako default', async () => {
+      const payload =
+        'SPD*1.0*ACC:CZ5508000000001234567890*ALT-ACC:CZ6508000000192000145399+GIBACZPX,CZ5855000000001265098001*AM:100.00*CC:CZK*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.drafts.length).toBe(3);
+      expect(result.drafts[0].iban).toBe('CZ5508000000001234567890');
+      expect(result.drafts[1].iban).toBe('CZ6508000000192000145399');
+      expect(result.drafts[1].bic).toBe('GIBACZPX');
+      expect(result.drafts[2].iban).toBe('CZ5855000000001265098001');
+      expect(result.warnings?.length).toBeGreaterThan(0);
+    });
+
+    it('53. PT:IP — okamžitá platba sa nezahodí', async () => {
+      const payload = 'SPD*1.0*ACC:CZ5508000000001234567890*PT:IP*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.drafts[0].immediatePayment).toBe(true);
+    });
+
+    it('54. CRC32 — platný checksum prejde', async () => {
+      const payload = 'SPD*1.0*ACC:CZ5508000000001234567890*AM:500.00*CC:CZK*CRC32:C798A0B4*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.drafts[0].amount).toBe(500);
+    });
+
+    it('55. CRC32 — neplatný checksum sa odmietne', async () => {
+      const payload = 'SPD*1.0*ACC:CZ5508000000001234567890*AM:500.00*CC:CZK*CRC32:00000000*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('CRC32');
+    });
+
+    it('56. RF bez VS — RF ide do variableSymbol', async () => {
+      const payload = 'SPD*1.0*ACC:CZ5508000000001234567890*RF:000012345678*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.drafts[0].variableSymbol).toBe('0000123456');
+      expect(result.drafts[0].paymentReference).toBe('000012345678');
+    });
+
+    it('57. X-URL sa ignoruje — neovplyvní parsovanie', async () => {
+      const payload =
+        'SPD*1.0*ACC:CZ5508000000001234567890*X-URL:https://example.com/pay*RN:Test*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.drafts[0].recipientName).toBe('Test');
+    });
+
+    it('58. Percent-encoding hviezdičky v MSG (%2A)', async () => {
+      const payload = 'SPD*1.0*ACC:CZ5508000000001234567890*MSG:Ref%2A123*';
+      const result = await decodeQrCode(payload);
+      expect(result.success).toBe(true);
+      expect(result.drafts[0].note).toBe('Ref*123');
     });
   });
 

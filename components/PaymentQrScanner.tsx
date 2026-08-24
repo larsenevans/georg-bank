@@ -72,7 +72,7 @@ export function PaymentQrScanner({
   onClose,
   onMultipleOptions,
   title = 'Skenovať platobný QR kód',
-  description = 'Namierte kameru na platobný QR kód (EPC/SEPA, PAY by square)',
+  description = 'Namierte kameru na platobný QR kód (QR Platba / SPAYD, EPC/SEPA, PAY by square)',
   showImageUpload = true,
   maxImageSize = 5 * 1024 * 1024, // 5MB
   allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'],
@@ -167,7 +167,7 @@ export function PaymentQrScanner({
         if (result.drafts.length > 1 && onMultipleOptions) {
           const options: PaymentOption[] = result.drafts.map((draft, index) => ({
             id: `option-${index}`,
-            label: draft.recipientName || `Možnosť ${index + 1}`,
+            label: draft.recipientName || draft.iban || `Možnosť ${index + 1}`,
             draft,
           }));
           onMultipleOptions(options);

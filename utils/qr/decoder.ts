@@ -386,12 +386,157 @@ function tryDecodeEpcSepa(qrData: string): QrDecodingResult {
   }
 }
 
+/** SPAYD field length limits per qr-platba.cz spec */
+const SPAYD_MAX_RN = 35;
+const SPAYD_MAX_MSG = 60;
+const SPAYD_MAX_RF = 16;
+
+interface SpaydRawPair {
+  key: string;
+  rawValue: string;
+}
+
+/**
+ * Safely URL-decode a SPAYD attribute value (%20, %2A, UTF-8, …)
+ */
+function decodeSpaydValue(rawValue: string): string {
+  try {
+    return decodeURIComponent(rawValue);
+  } catch {
+    return rawValue;
+  }
+}
+
+/**
+ * Parse SPAYD segments into key/rawValue pairs (first occurrence wins)
+ */
+function parseSpaydRawPairs(trimmed: string): SpaydRawPair[] {
+  const segments = trimmed.split('*');
+  const pairs: SpaydRawPair[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 2; i < segments.length; i++) {
+    const seg = segments[i];
+    if (!seg) continue;
+    const colonIdx = seg.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = seg.substring(0, colonIdx).trim().toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    pairs.push({ key, rawValue: seg.substring(colonIdx + 1) });
+  }
+
+  return pairs;
+}
+
+/**
+ * Build decoded SPAYD pairs map, ignoring URL-only fields (X-URL, URL)
+ */
+function buildSpaydPairs(rawPairs: SpaydRawPair[]): Record<string, string> {
+  const pairs: Record<string, string> = {};
+  for (const { key, rawValue } of rawPairs) {
+    if (key === 'X-URL' || key === 'URL') continue;
+    pairs[key] = decodeSpaydValue(rawValue);
+  }
+  return pairs;
+}
+
+/**
+ * CRC-32 (IEEE / Ethernet polynomial) for SPAYD CRC32 attribute validation
+ */
+function computeCrc32(input: string): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < input.length; i++) {
+    crc ^= input.charCodeAt(i);
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Build canonical SPAYD string for CRC32 verification (qr-platba.cz spec)
+ */
+function buildSpaydCrcBase(rawPairs: SpaydRawPair[]): string {
+  const sorted = [...rawPairs]
+    .filter((p) => p.key !== 'CRC32')
+    .sort((a, b) => a.key.localeCompare(b.key) || a.rawValue.localeCompare(b.rawValue));
+
+  let base = 'SPD*1.0*';
+  for (const { key, rawValue } of sorted) {
+    base += `${key}:${rawValue}*`;
+  }
+  return base;
+}
+
+function verifySpaydCrc32(rawPairs: SpaydRawPair[]): string | null {
+  const crcPair = rawPairs.find((p) => p.key === 'CRC32');
+  if (!crcPair) return null;
+
+  const expected = crcPair.rawValue.trim().toUpperCase();
+  if (!/^[A-F0-9]{8}$/.test(expected)) {
+    return 'Invalid SPAYD CRC32 format';
+  }
+
+  const computed = computeCrc32(buildSpaydCrcBase(rawPairs)).toString(16).toUpperCase().padStart(8, '0');
+  if (computed !== expected) {
+    return 'SPAYD CRC32 checksum mismatch';
+  }
+  return null;
+}
+
+/**
+ * Parse ACC / ALT-ACC account value: IBAN or IBAN+BIC
+ */
+function parseSpaydAccount(rawAcc: string): { iban: string; bic: string | null } | null {
+  const accVal = decodeSpaydValue(rawAcc).trim();
+  const parts = accVal.split('+');
+  const iban = parts[0]?.replace(/\s+/g, '').toUpperCase() || '';
+  if (!iban || !isValidIbanFormat(iban)) return null;
+  const bic = parts[1] ? normalizeBic(parts[1]) : null;
+  return { iban, bic };
+}
+
+/**
+ * Collect all accounts from ACC (primary) and ALT-ACC (alternatives)
+ */
+function collectSpaydAccounts(rawPairs: SpaydRawPair[]): Array<{ iban: string; bic: string | null }> {
+  const accounts: Array<{ iban: string; bic: string | null }> = [];
+  const seenIbans = new Set<string>();
+
+  const addAccount = (rawAcc: string) => {
+    const parsed = parseSpaydAccount(rawAcc);
+    if (!parsed || seenIbans.has(parsed.iban)) return;
+    seenIbans.add(parsed.iban);
+    accounts.push(parsed);
+  };
+
+  const accPair = rawPairs.find((p) => p.key === 'ACC');
+  if (accPair) addAccount(accPair.rawValue);
+
+  const altPair = rawPairs.find((p) => p.key === 'ALT-ACC');
+  if (altPair) {
+    const decoded = decodeSpaydValue(altPair.rawValue);
+    for (const part of decoded.split(',')) {
+      if (part.trim()) addAccount(part);
+    }
+  }
+
+  return accounts;
+}
+
+function normalizeSpaydSymbol(value: string | undefined, maxLen = 10): string | null {
+  if (value === undefined) return null;
+  const digits = value.replace(/\D/g, '').substring(0, maxLen);
+  return digits || null;
+}
+
 /**
  * Attempts to decode a SPAYD (Short Payment Descriptor) QR code
  * Czech banking standard (SPD*1.0*...)
- * 
- * Spec:
- * SPD*1.0*ACC:CZ5508000000001234567890*AM:500.00*CC:CZK*RN:Jan Novak*X-VS:0012345678*MSG:Poznamka*
+ *
+ * Spec: https://qr-platba.cz/pro-vyvojare/specifikace-formatu/
  */
 function tryDecodeSpayd(qrData: string): QrDecodingResult {
   try {
@@ -405,7 +550,6 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
       return { success: false, format: null, drafts: [] };
     }
 
-    // Version check (segments[1])
     const version = segments[1];
     if (version !== '1.0') {
       return {
@@ -416,48 +560,30 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
       };
     }
 
-    const pairs: Record<string, string> = {};
-    for (let i = 2; i < segments.length; i++) {
-      const seg = segments[i];
-      if (!seg) continue;
-      const colonIdx = seg.indexOf(':');
-      if (colonIdx === -1) continue;
-      const key = seg.substring(0, colonIdx).trim().toUpperCase();
-      let rawVal = seg.substring(colonIdx + 1);
-      // Safe percent decoding
-      try {
-        rawVal = decodeURIComponent(rawVal);
-      } catch {
-        // Keep as is if decodeURIComponent fails
-      }
-      // First occurrence wins or deterministic assignment
-      if (!pairs[key]) {
-        pairs[key] = rawVal;
-      }
+    const rawPairs = parseSpaydRawPairs(trimmed);
+    const crcError = verifySpaydCrc32(rawPairs);
+    if (crcError) {
+      return {
+        success: false,
+        format: 'spayd',
+        drafts: [],
+        error: crcError,
+      };
     }
 
-    let iban = '';
-    let bic: string | null = null;
+    const pairs = buildSpaydPairs(rawPairs);
+    const accounts = collectSpaydAccounts(rawPairs);
 
-    if (pairs['ACC']) {
-      // ACC format: IBAN or IBAN+BIC or prefix-number/bank
-      const accVal = pairs['ACC'].trim();
-      const parts = accVal.split('+');
-      iban = parts[0]?.replace(/\s+/g, '').toUpperCase() || '';
-      if (parts[1]) {
-        bic = normalizeBic(parts[1]);
+    if (accounts.length === 0) {
+      // Legacy fallback keys
+      let fallbackIban = pairs['IBAN']?.replace(/\s+/g, '').toUpperCase() || '';
+      const fallbackBic = pairs['BIC'] ? normalizeBic(pairs['BIC']) : null;
+      if (fallbackIban && isValidIbanFormat(fallbackIban)) {
+        accounts.push({ iban: fallbackIban, bic: fallbackBic });
       }
     }
 
-    if (!iban && pairs['IBAN']) {
-      iban = pairs['IBAN'].replace(/\s+/g, '').toUpperCase();
-    }
-
-    if (!bic && pairs['BIC']) {
-      bic = normalizeBic(pairs['BIC']);
-    }
-
-    if (!iban || !isValidIbanFormat(iban)) {
+    if (accounts.length === 0) {
       return {
         success: false,
         format: 'spayd',
@@ -466,54 +592,37 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
       };
     }
 
-    // Parse amount
-    let amount: number | null = null;
-    if (pairs['AM'] !== undefined) {
-      amount = normalizeAmount(pairs['AM']);
-    }
-
-    // Currency
+    const amount = pairs['AM'] !== undefined ? normalizeAmount(pairs['AM']) : null;
     const currency = pairs['CC'] ? normalizeCurrency(pairs['CC']) || pairs['CC'].toUpperCase() : 'CZK';
 
-    // VS, KS, SS (preserve leading zeros as strings!)
-    const variableSymbol = pairs['X-VS']
-      ? pairs['X-VS'].replace(/\D/g, '').substring(0, 10) || null
-      : pairs['VS']
-      ? pairs['VS'].replace(/\D/g, '').substring(0, 10) || null
-      : null;
+    let variableSymbol =
+      normalizeSpaydSymbol(pairs['X-VS']) ??
+      normalizeSpaydSymbol(pairs['VS']);
 
-    const constantSymbol = pairs['X-KS']
-      ? pairs['X-KS'].replace(/\D/g, '').substring(0, 10) || null
-      : pairs['KS']
-      ? pairs['KS'].replace(/\D/g, '').substring(0, 10) || null
-      : null;
+    const constantSymbol =
+      normalizeSpaydSymbol(pairs['X-KS']) ??
+      normalizeSpaydSymbol(pairs['KS']);
 
-    const specificSymbol = pairs['X-SS']
-      ? pairs['X-SS'].replace(/\D/g, '').substring(0, 10) || null
-      : pairs['SS']
-      ? pairs['SS'].replace(/\D/g, '').substring(0, 10) || null
-      : null;
+    const specificSymbol =
+      normalizeSpaydSymbol(pairs['X-SS']) ??
+      normalizeSpaydSymbol(pairs['SS']);
 
-    // Recipient Name
-    const recipientName = normalizeText(pairs['RN'] || pairs['NAME'] || '', 70) || '';
+    const rfValue = pairs['RF']?.replace(/\D/g, '').substring(0, SPAYD_MAX_RF) || null;
+    const paymentReference = rfValue;
 
-    // Message / Note
-    const note = normalizeText(pairs['MSG'] || pairs['NOTE'] || null, 140);
-
-    // Due Date: DT:YYYYMMDD
-    let dueDate: Date | null = null;
-    if (pairs['DT']) {
-      dueDate = normalizeDate(pairs['DT']);
+    // RF → VS when no explicit variable symbol (CZ domestic prefill)
+    if (!variableSymbol && rfValue) {
+      variableSymbol = rfValue.substring(0, 10) || null;
     }
 
-    // Payment reference: RF
-    const paymentReference = normalizeText(pairs['RF'] || null, 35);
+    const recipientName = normalizeText(pairs['RN'] || pairs['NAME'] || '', SPAYD_MAX_RN) || '';
+    const note = normalizeText(pairs['MSG'] || pairs['NOTE'] || null, SPAYD_MAX_MSG);
+    const dueDate = pairs['DT'] ? normalizeDate(pairs['DT']) : null;
+    const immediatePayment = pairs['PT']?.trim().toUpperCase() === 'IP';
 
-    const draft: PaymentDraft = {
-      qrFormat: 'spayd',
+    const sharedFields = {
+      qrFormat: 'spayd' as const,
       recipientName,
-      iban: normalizeIban(iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || iban,
-      bic,
       amount,
       currency,
       variableSymbol,
@@ -522,13 +631,25 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
       note,
       paymentReference,
       dueDate,
+      immediatePayment,
       rawQrData: qrData,
     };
+
+    const drafts: PaymentDraft[] = [];
+    for (const account of accounts) {
+      drafts.push({
+        ...sharedFields,
+        iban: normalizeIban(account.iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || account.iban,
+        bic: account.bic,
+      });
+    }
 
     return {
       success: true,
       format: 'spayd',
-      drafts: [draft],
+      drafts,
+      warnings:
+        drafts.length > 1 ? ['Multiple payment account options found, user must select one'] : undefined,
     };
   } catch (error) {
     return {
