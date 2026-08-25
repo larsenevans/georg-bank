@@ -3,12 +3,13 @@ import { pool } from '@/lib/db'
 import { resolveDatabaseUrl } from '@/lib/db/resolve-database-url'
 import { getGuestConfig, isDedicatedGuestEmail } from '@/lib/guest-auth'
 import { isAppPinConfigured } from '@/lib/app-pin'
+import { computeHealthOk } from '@/lib/health-readiness'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Public readiness probe (no secrets). Used to diagnose prod guest-auth failures
- * without needing a session cookie.
+ * Public readiness probe (no secrets). Reports guest/PIN config flags for diagnostics;
+ * PIN-only deployments stay 200 when core infra is up even if guest env is invalid.
  */
 export async function GET() {
   const hasDatabaseUrl = Boolean(resolveDatabaseUrl())
@@ -42,12 +43,15 @@ export async function GET() {
     }
   }
 
-  const ok =
-    database === 'ok' &&
-    hasBetterAuthSecret &&
-    guestConfig.ok &&
-    Boolean(betterAuthUrl) &&
-    isAppPinConfigured()
+  const pinConfigured = isAppPinConfigured()
+
+  const ok = computeHealthOk({
+    database,
+    hasBetterAuthSecret,
+    betterAuthUrlConfigured: Boolean(betterAuthUrl),
+    pinConfigured,
+    guestConfigured: guestConfig.ok,
+  })
 
   return NextResponse.json(
     {
@@ -77,8 +81,8 @@ export async function GET() {
         invalidEnvKeys: guestConfig.ok ? [] : guestConfig.invalidKeys,
       },
       pin: {
-        configured: isAppPinConfigured(),
-        missingEnvKeys: isAppPinConfigured() ? [] : ['APP_PIN'],
+        configured: pinConfigured,
+        missingEnvKeys: pinConfigured ? [] : ['APP_PIN'],
       },
       vercel: {
         env: process.env.VERCEL_ENV ?? null,
