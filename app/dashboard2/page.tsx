@@ -1101,10 +1101,69 @@ export default function GeorgePrototypePage() {
     setIsDemoDrawerOpen(prev => !prev)
   }
 
-  const simulateIncomingCredit = (_amount: number) => {
-    showToast(
-      'Dobíjanie € je zakázané. Automatické obnovenie zostatku je možné až po 24 hodinách.'
-    )
+  const simulateIncomingCredit = async (amount: number) => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast('Neplatná suma pre vklad.')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: 'Simulovaný vklad / Bonus',
+          amount,
+          type: 'deposit',
+          category: 'Dobitie',
+          note: 'Simulovaný vklad',
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success === false) {
+        showToast(data.error || 'Vklad sa nepodarilo zapísať.')
+        return
+      }
+
+      const serverTxn = data.transaction || {}
+      const balanceAfter = serverTxn.balanceAfter ?? state.spaceBalance + amount
+      const balanceBefore = serverTxn.balanceBefore ?? state.spaceBalance
+      const txn: Transaction = {
+        id: serverTxn.id || newTxnId('in'),
+        recipient: 'Simulovaný vklad / Bonus',
+        amount,
+        date: 'Dnes',
+        createdAt: serverTxn.createdAt || new Date().toISOString(),
+        type: 'deposit',
+        status: 'Spracované',
+        balanceBefore,
+        balanceAfter,
+        category: 'Dobitie',
+        note: 'Simulovaný vklad',
+      }
+
+      setState((prev) => ({
+        ...prev,
+        spaceBalance: balanceAfter,
+        transactions: [txn, ...prev.transactions],
+      }))
+      notifyPohybyLive({ type: 'payment', transactionId: serverTxn.id || txn.id })
+      showToast(`Úspešne pripísaná platba: +${amount.toFixed(2)} €.`)
+    } catch (err) {
+      console.warn('[dashboard2] deposit persist error:', err)
+      showToast('Chyba siete — vklad nebol zapísaný.')
+    }
+  }
+
+  const promptCustomIncomingCredit = () => {
+    const sumStr = prompt('Zadajte sumu v EUR (bez limitu):', '100')
+    if (sumStr === null) return
+    const sum = parseFloat(sumStr.replace(/\s/g, '').replace(',', '.'))
+    if (!Number.isFinite(sum) || sum <= 0) {
+      showToast('Neplatná suma pre vklad.')
+      return
+    }
+    void simulateIncomingCredit(sum)
   }
 
   const simulateCashbackBonus = (amount: number) => {
@@ -2904,24 +2963,27 @@ export default function GeorgePrototypePage() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              disabled
-              onClick={() => simulateIncomingCredit(50.00)}
-              className="bg-slate-700/40 text-slate-500 border border-slate-600/40 font-semibold py-2 rounded-xl text-[11px] cursor-not-allowed opacity-60"
-              title="Dobíjanie zakázané — auto obnovenie max 1× / 24 h"
+              onClick={() => void simulateIncomingCredit(50.0)}
+              className="bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30 font-semibold py-2 rounded-xl text-[11px] hover:bg-[#10b981]/30 active:scale-95 transition-all"
             >
-              + Prijať 50,00 € (zakázané)
+              + Prijať 50,00 €
             </button>
             <button
               type="button"
-              disabled
-              onClick={() => simulateIncomingCredit(1000.00)}
-              className="bg-slate-700/40 text-slate-500 border border-slate-600/40 font-semibold py-2 rounded-xl text-[11px] cursor-not-allowed opacity-60"
-              title="Dobíjanie zakázané — auto obnovenie max 1× / 24 h"
+              onClick={() => void simulateIncomingCredit(1000.0)}
+              className="bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30 font-semibold py-2 rounded-xl text-[11px] hover:bg-[#10b981]/30 active:scale-95 transition-all"
             >
-              + Prijať 1 000,00 € (zakázané)
+              + Prijať 1 000,00 €
             </button>
-            <p className="col-span-2 text-[10px] text-amber-200/90 leading-snug rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-              Pravidlo: manuálne dobíjanie € je vypnuté. Automatické obnovenie zostatku na 6 660 € je možné najviac 1× za 24 hodín.
+            <button
+              type="button"
+              onClick={promptCustomIncomingCredit}
+              className="col-span-2 bg-emerald-600/20 text-emerald-200 border border-emerald-500/30 font-semibold py-2 rounded-xl text-[11px] hover:bg-emerald-600/30 active:scale-95 transition-all"
+            >
+              + Vlastná suma € (bez limitu)
+            </button>
+            <p className="col-span-2 text-[10px] text-emerald-200/90 leading-snug rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2">
+              Sandbox: manuálne dobíjanie € je zapnuté bez stropu. Automatické obnovenie zostatku na 8 850 € max 1× / 24 h.
             </p>
             <button onClick={() => simulateCashbackBonus(5.50)} className="bg-purple-600/20 text-purple-300 border border-purple-500/30 font-semibold py-2 rounded-xl text-[11px] hover:bg-purple-600/30 active:scale-95 transition-all">
               Zarobiť Cashback 5,50 €

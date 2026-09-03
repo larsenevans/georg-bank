@@ -18,6 +18,8 @@ import {
   AUTO_REFILL_MARKER,
   AUTO_REFILL_TARGET_CENTS,
   MANUAL_TOPUP_BLOCKED_MESSAGE,
+  MANUAL_TOPUP_DISABLED,
+  MANUAL_TOPUP_ENABLED_MESSAGE,
   autoRefillInfoMessage,
   canAutoRefillNow,
   isManualTopupType,
@@ -227,10 +229,12 @@ export async function listMovementsViaSupabase(limit = 100) {
     transactions: (data ?? []).map(mapTxn),
     dailyLimit: dailyLimitSnapshot(usedToday || usedCents),
     topupPolicy: {
-      manualTopupDisabled: true,
+      manualTopupDisabled: MANUAL_TOPUP_DISABLED,
       autoRefillEveryHours: 24,
       autoRefillAllowedInMs: waitMs,
-      message: autoRefillInfoMessage(latestRefillAt),
+      message: MANUAL_TOPUP_DISABLED
+        ? autoRefillInfoMessage(latestRefillAt)
+        : `${MANUAL_TOPUP_ENABLED_MESSAGE} ${autoRefillInfoMessage(latestRefillAt)}`,
     },
     accounts: account
       ? [
@@ -342,8 +346,7 @@ export async function createMovementViaSupabase(input: {
   const newTxnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
   const defaultUserId = DEMO_DEFAULT_USER_ID
 
-  // Hard rule: no manual € top-ups (deposit / incoming).
-  if (isManualTopupType(type)) {
+  if (MANUAL_TOPUP_DISABLED && isManualTopupType(type)) {
     const last = await getLastAutoRefillAt(supabase, defaultUserId)
     return {
       error: `${MANUAL_TOPUP_BLOCKED_MESSAGE} ${autoRefillInfoMessage(last)}`,

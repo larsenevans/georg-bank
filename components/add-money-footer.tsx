@@ -48,11 +48,37 @@ export function AddMoneyFooter({
   }
 
   const handleSubmit = async () => {
-    setError(
-      'Dobíjanie € je zakázané. Automatické obnovenie zostatku je možné až po 24 hodinách.'
-    )
+    setError(null)
     setMessage(null)
-    setLoading(false)
+
+    const normalized = normalizeAmount(amount)
+    const parsed = Number(normalized)
+
+    if (!accountId) {
+      setError('Účet ešte nie je pripravený.')
+      return
+    }
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setError('Zadajte sumu väčšiu ako 0,00.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await depositFunds(
+        accountId,
+        parsed.toFixed(2),
+        'Pridanie peňazí|Dobitie cez spodné menu|Ostatné nepravidelné príjmy'
+      )
+      setAmount('')
+      setMessage(`Pridané ${parsed.toFixed(2).replace('.', ',')} ${currency}`)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Peniaze sa nepodarilo pridať.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

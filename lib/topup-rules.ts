@@ -3,8 +3,8 @@ import {
   DEMO_ACCOUNT_TARGET_BALANCE_EUR,
 } from '@/lib/daily-payment-limit'
 
-/** Manual top-up / deposit is permanently disabled. */
-export const MANUAL_TOPUP_DISABLED = true
+/** When true, manual deposit/incoming top-ups are blocked (sandbox default: unlocked). */
+export const MANUAL_TOPUP_DISABLED = process.env.MANUAL_TOPUP_DISABLED === 'true'
 
 /** Automatic balance restore is allowed only once per this interval. */
 export const AUTO_REFILL_COOLDOWN_MS = 24 * 60 * 60 * 1000
@@ -17,6 +17,9 @@ export const AUTO_REFILL_MARKER = '[auto-refill-24h]'
 
 export const MANUAL_TOPUP_BLOCKED_MESSAGE =
   'Dobíjanie € je zakázané. Automatické obnovenie zostatku je možné až po 24 hodinách.'
+
+export const MANUAL_TOPUP_ENABLED_MESSAGE =
+  'Manuálne dobíjanie € je povolené (sandbox). Automatické obnovenie zostatku max 1× / 24 h.'
 
 export function isManualTopupType(type: string | null | undefined): boolean {
   const t = (type || '').toLowerCase()

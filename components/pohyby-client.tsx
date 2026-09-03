@@ -191,7 +191,9 @@ export function PohybyClient() {
             <p className="font-semibold text-amber-200">Pravidlo dobíjania</p>
             <p className="mt-1 leading-relaxed">
               {topupPolicy?.message ||
-                'Manuálne dobíjanie € je zakázané. Automatické obnovenie zostatku je možné až po 24 hodinách (max 1×).'}
+                (topupPolicy?.manualTopupDisabled
+                  ? 'Manuálne dobíjanie € je zakázané. Automatické obnovenie zostatku je možné až po 24 hodinách (max 1×).'
+                  : 'Manuálne dobíjanie € je povolené (sandbox). Automatické obnovenie zostatku max 1× / 24 h.')}
             </p>
           </div>
         </section>

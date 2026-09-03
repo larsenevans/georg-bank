@@ -212,12 +212,57 @@ export async function createTransaction(
 }
 
 export async function depositFunds(
-  _accountId: string,
-  _amount: string,
-  _description?: string
+  accountId: string,
+  amount: string,
+  description?: string
 ) {
-  const { MANUAL_TOPUP_BLOCKED_MESSAGE } = await import('@/lib/topup-rules')
-  throw new Error(MANUAL_TOPUP_BLOCKED_MESSAGE)
+  const { MANUAL_TOPUP_BLOCKED_MESSAGE, MANUAL_TOPUP_DISABLED } = await import(
+    '@/lib/topup-rules'
+  )
+  if (MANUAL_TOPUP_DISABLED) {
+    throw new Error(MANUAL_TOPUP_BLOCKED_MESSAGE)
+  }
+
+  const userId = await getUserId()
+
+  const account = await db
+    .select()
+    .from(bankAccount)
+    .where(and(eq(bankAccount.id, accountId), eq(bankAccount.userId, userId)))
+    .limit(1)
+
+  if (!account[0]) {
+    throw new Error('Account not found')
+  }
+
+  const currentBalance = account[0].balance as number
+  const depositAmount = Math.round(parseFloat(amount) * 100)
+  if (!Number.isFinite(depositAmount) || depositAmount <= 0) {
+    throw new Error('Suma musí byť väčšia ako 0.')
+  }
+
+  const newBalance = currentBalance + depositAmount
+
+  await db.insert(transaction).values({
+    id: uuidv4(),
+    userId,
+    fromAccountId: accountId,
+    toAccountId: null,
+    amount: depositAmount,
+    balanceBefore: currentBalance,
+    balanceAfter: newBalance,
+    type: 'deposit',
+    description: description || 'Deposit',
+    status: 'completed',
+  })
+
+  await db
+    .update(bankAccount)
+    .set({ balance: newBalance })
+    .where(eq(bankAccount.id, accountId))
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/dashboard/accounts/${accountId}`)
 }
 
 // Internal transfer by email

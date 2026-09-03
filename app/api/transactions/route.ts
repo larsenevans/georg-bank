@@ -22,6 +22,8 @@ import {
 } from '@/lib/demo-transactions-supabase'
 import {
   MANUAL_TOPUP_BLOCKED_MESSAGE,
+  MANUAL_TOPUP_DISABLED,
+  MANUAL_TOPUP_ENABLED_MESSAGE,
   isManualTopupType,
 } from '@/lib/topup-rules'
 import { desc, eq, inArray } from 'drizzle-orm'
@@ -78,6 +80,13 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       dailyLimit,
+      topupPolicy: {
+        manualTopupDisabled: MANUAL_TOPUP_DISABLED,
+        autoRefillEveryHours: 24,
+        message: MANUAL_TOPUP_DISABLED
+          ? MANUAL_TOPUP_BLOCKED_MESSAGE
+          : MANUAL_TOPUP_ENABLED_MESSAGE,
+      },
       transactions: records.map((t) => ({
         id: t.id,
         recipient: t.description || 'Platba',
@@ -109,7 +118,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Zadajte platnú sumu' }, { status: 400 })
     }
 
-    if (isManualTopupType(type)) {
+    if (MANUAL_TOPUP_DISABLED && isManualTopupType(type)) {
       return NextResponse.json(
         {
           success: false,
