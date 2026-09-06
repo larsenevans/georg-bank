@@ -26,15 +26,31 @@ export function isManualTopupType(type: string | null | undefined): boolean {
   return t === 'deposit' || t === 'incoming' || t === 'topup' || t === 'top-up'
 }
 
-export function msUntilAutoRefillAllowed(lastRefillAt: Date | string | null | undefined): number {
-  if (!lastRefillAt) return 0
-  const last = typeof lastRefillAt === 'string' ? new Date(lastRefillAt) : lastRefillAt
-  const elapsed = Date.now() - last.getTime()
+function toTimestamp(at: Date | string | null | undefined): number | null {
+  if (!at) return null
+  const d = typeof at === 'string' ? new Date(at) : at
+  const ms = d.getTime()
+  return Number.isFinite(ms) ? ms : null
+}
+
+/** Cooldown anchor = most recent auto-refill OR outgoing payment. */
+export function msUntilAutoRefillAllowed(
+  lastRefillAt: Date | string | null | undefined,
+  lastOutgoingAt?: Date | string | null | undefined
+): number {
+  const anchors = [toTimestamp(lastRefillAt), toTimestamp(lastOutgoingAt)].filter(
+    (ms): ms is number => ms != null
+  )
+  if (anchors.length === 0) return 0
+  const elapsed = Date.now() - Math.max(...anchors)
   return Math.max(0, AUTO_REFILL_COOLDOWN_MS - elapsed)
 }
 
-export function canAutoRefillNow(lastRefillAt: Date | string | null | undefined): boolean {
-  return msUntilAutoRefillAllowed(lastRefillAt) === 0
+export function canAutoRefillNow(
+  lastRefillAt: Date | string | null | undefined,
+  lastOutgoingAt?: Date | string | null | undefined
+): boolean {
+  return msUntilAutoRefillAllowed(lastRefillAt, lastOutgoingAt) === 0
 }
 
 export function formatAutoRefillWait(ms: number): string {
@@ -47,8 +63,11 @@ export function formatAutoRefillWait(ms: number): string {
   return `${h} h ${m} min`
 }
 
-export function autoRefillInfoMessage(lastRefillAt: Date | string | null | undefined): string {
-  const wait = msUntilAutoRefillAllowed(lastRefillAt)
+export function autoRefillInfoMessage(
+  lastRefillAt: Date | string | null | undefined,
+  lastOutgoingAt?: Date | string | null | undefined
+): string {
+  const wait = msUntilAutoRefillAllowed(lastRefillAt, lastOutgoingAt)
   if (wait <= 0) {
     return `Automatické obnovenie na ${DEMO_ACCOUNT_TARGET_BALANCE_EUR} € je pripravené (max 1× / 24 h).`
   }
