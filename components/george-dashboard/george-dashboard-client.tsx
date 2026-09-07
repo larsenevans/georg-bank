@@ -2257,11 +2257,9 @@ export function GeorgeDashboardClient({
                       </button>
                     </div>
                     <button onClick={showQuickActions} className="w-8 h-8 rounded-full border border-[#327bf5]/45 hover:bg-[#327bf5]/10 flex items-center justify-center text-[#327bf5] transition-all focus:outline-none active:scale-90" aria-label="Možnosti">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                        <circle cx="6" cy="12" r="1.7" />
-                        <circle cx="12" cy="12" r="1.7" />
-                        <circle cx="18" cy="12" r="1.7" />
-                      </svg>
+                      <span className="text-[18px] font-black leading-none tracking-[0.08em]" aria-hidden>
+                        ···
+                      </span>
                     </button>
                   </div>
                 </motion.div>
