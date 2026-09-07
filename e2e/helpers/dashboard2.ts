@@ -53,6 +53,11 @@ export async function loginWithPin(page: Page, pin = E2E_APP_PIN, options?: Dash
   })
 }
 
+/** PIN login into the light /dashboard3 Prehľad. */
+export async function loginWithPinLight(page: Page, pin = E2E_APP_PIN) {
+  await loginWithPin(page, pin, { path: '/dashboard3' })
+}
+
 /**
  * Mock face-api (+ optional camera deny) before navigation.
  * Injects window.faceapi via addInitScript so initFaceApi never hits CDN in CI.

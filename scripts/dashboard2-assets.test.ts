@@ -60,6 +60,15 @@ assert(
   fs.readFileSync(path.join(root, 'proxy.ts'), 'utf8').includes('/dashboard3'),
   'proxy allows dashboard3 guest skip'
 )
+assert(
+  /pathname === '\/dashboard2' \|\| pathname === '\/dashboard3'/.test(proxySrc),
+  'proxy skip covers dashboard2 and dashboard3'
+)
+const dashCss = fs.readFileSync(
+  path.join(root, 'components/george-dashboard/george-dashboard.css'),
+  'utf8'
+)
+assert(dashCss.includes('.george-dash--light'), 'light dashboard CSS tokens exist')
 
 if (failed > 0) {
   console.error(`\n${failed} check(s) failed`)

@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
-import { loginWithPin } from './helpers/dashboard2'
+import { loginWithPinLight } from './helpers/dashboard2'
 
 test.describe('dashboard3 – svetlý dashboard, vklad a PDF', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test('PIN odomkne Prehľad so svetlým Business účtom', async ({ page }) => {
-    await loginWithPin(page, undefined, { path: '/dashboard3' })
+  test('PIN odomkne Prehľad so svetlým Business účtom a theme-color', async ({ page }) => {
+    await loginWithPinLight(page)
     await expect(page).toHaveURL(/\/dashboard3/)
     await expect(page.getByTestId('george-dashboard')).toHaveAttribute('data-variant', 'light')
     await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible()
@@ -20,10 +20,24 @@ test.describe('dashboard3 – svetlý dashboard, vklad a PDF', () => {
       return window.getComputedStyle(el).backgroundColor
     })
     expect(bg).toMatch(/244,\s*246,\s*250|255,\s*255,\s*255/)
+
+    const themeColor = await page.locator('meta[name="theme-color"]').getAttribute('content')
+    expect(themeColor?.toLowerCase()).toBe('#f4f6fa')
+  })
+
+  test('prázdny vklad ostane na sheete a ukáže chybu', async ({ page }) => {
+    await loginWithPinLight(page)
+    await page.getByTestId('add-money-open').click()
+    await expect(page.getByTestId('add-money-sheet-panel')).toBeVisible()
+    await page.getByTestId('add-money-submit').click()
+    await expect(page.getByText(/Zadajte sumu väčšiu ako 0,00/i).first()).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(page.getByTestId('add-money-sheet-panel')).toBeVisible()
   })
 
   test('Pridať peniaze pripíše vklad na Business účet', async ({ page }) => {
-    await loginWithPin(page, undefined, { path: '/dashboard3' })
+    await loginWithPinLight(page)
     await expect(page.getByTestId('space-balance')).toBeVisible({ timeout: 15000 })
 
     const before = await page.evaluate(async () => {
@@ -58,7 +72,7 @@ test.describe('dashboard3 – svetlý dashboard, vklad a PDF', () => {
     await expect(page.getByText('Vklad na "Business účet"').first()).toBeVisible()
   })
 
-  test('Nová platba vygeneruje PDF/HTML doklad', async ({ page }) => {
+  test('Nová platba vygeneruje PDF/HTML doklad a ukáže sandbox', async ({ page }) => {
     await page.addInitScript(() => {
       const nav = navigator as Navigator & {
         canShare?: (d?: ShareData) => boolean
@@ -70,7 +84,9 @@ test.describe('dashboard3 – svetlý dashboard, vklad a PDF', () => {
       }
     })
 
-    await loginWithPin(page, undefined, { path: '/dashboard3' })
+    await loginWithPinLight(page)
+    await expect(page.getByTestId('receipts-sandbox')).toBeVisible({ timeout: 15000 })
+
     await page.getByRole('button', { name: /Nová platba/i }).click()
     await expect(page.getByRole('heading', { name: 'Nová platba' })).toBeVisible({ timeout: 10000 })
 
@@ -101,5 +117,9 @@ test.describe('dashboard3 – svetlý dashboard, vklad a PDF', () => {
       expect(fs.readFileSync(tempPath).subarray(0, 4).toString('utf8')).toBe('%PDF')
     }
     fs.unlinkSync(tempPath)
+
+    await expect(
+      page.getByTestId('receipts-sandbox-list').getByText('wur q').first()
+    ).toBeVisible({ timeout: 15000 })
   })
 })
