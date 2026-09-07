@@ -10,14 +10,17 @@ export const SWAPPED_CARD_ENDINGS = ['1234', '4321', '4444'] as const
 /** Routes that use classic DashboardHeader (Menu / Odhlásenie). */
 export const PROTECTED_DASHBOARD_ROUTES = [
   '/dashboard2',
+  '/dashboard3',
   '/dashboard/payment-orders',
 ] as const
 
-/** Full-bleed dashboard2 (or legacy /dashboard redirect target) — no outer Menu chrome. */
+/** Full-bleed George dashboard (or legacy /dashboard redirect target) — no outer Menu chrome. */
 function isDashboard2FullBleed(pathname: string) {
   return (
     pathname === '/dashboard2' ||
     pathname.startsWith('/dashboard2?') ||
+    pathname === '/dashboard3' ||
+    pathname.startsWith('/dashboard3?') ||
     pathname === '/dashboard' ||
     pathname === '/dashboard/'
   )
