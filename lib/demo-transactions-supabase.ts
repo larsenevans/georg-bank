@@ -215,15 +215,8 @@ export async function listMovementsViaSupabase(limit = 100) {
   )
 
   const lastAutoRefillAt = await getLastAutoRefillAt(supabase, DEMO_DEFAULT_USER_ID)
-  // Automatic restore only when cooldown elapsed (never on free manual top-up).
-  if (account && canAutoRefillNow(lastAutoRefillAt)) {
-    const refilled = await performAutoRefill(supabase, account, DEMO_DEFAULT_USER_ID)
-    if (refilled) account = refilled
-  }
-
-  const latestRefillAt =
-    (await getLastAutoRefillAt(supabase, DEMO_DEFAULT_USER_ID)) ?? lastAutoRefillAt
-  const waitMs = msUntilAutoRefillAllowed(latestRefillAt)
+  const lastOutgoingAt = await getLastOutgoingAt(supabase, DEMO_DEFAULT_USER_ID)
+  const waitMs = msUntilAutoRefillAllowed(lastAutoRefillAt, lastOutgoingAt)
 
   return {
     transactions: (data ?? []).map(mapTxn),
@@ -233,8 +226,8 @@ export async function listMovementsViaSupabase(limit = 100) {
       autoRefillEveryHours: 24,
       autoRefillAllowedInMs: waitMs,
       message: MANUAL_TOPUP_DISABLED
-        ? autoRefillInfoMessage(latestRefillAt)
-        : `${MANUAL_TOPUP_ENABLED_MESSAGE} ${autoRefillInfoMessage(latestRefillAt)}`,
+        ? autoRefillInfoMessage(lastAutoRefillAt, lastOutgoingAt)
+        : `${MANUAL_TOPUP_ENABLED_MESSAGE} ${autoRefillInfoMessage(lastAutoRefillAt, lastOutgoingAt)}`,
     },
     accounts: account
       ? [
@@ -247,6 +240,22 @@ export async function listMovementsViaSupabase(limit = 100) {
         ]
       : [],
   }
+}
+
+async function getLastOutgoingAt(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('transaction')
+    .select('createdAt, type')
+    .eq('userId', userId)
+    .order('createdAt', { ascending: false })
+    .limit(50)
+
+  if (error) return null
+  const hit = (data ?? []).find((t) => isOutgoingPaymentType(t.type))
+  return hit?.createdAt ?? null
 }
 
 async function getLastAutoRefillAt(
@@ -378,7 +387,8 @@ export async function createMovementViaSupabase(input: {
   }
 
   const lastAutoRefillAt = await getLastAutoRefillAt(supabase, defaultUserId)
-  if (canAutoRefillNow(lastAutoRefillAt)) {
+  const lastOutgoingAt = await getLastOutgoingAt(supabase, defaultUserId)
+  if (canAutoRefillNow(lastAutoRefillAt, lastOutgoingAt)) {
     const refilled = await performAutoRefill(supabase, account, defaultUserId)
     if (refilled) account = refilled
   }

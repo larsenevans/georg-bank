@@ -69,11 +69,19 @@ export async function GET() {
     }
 
     const records = await db.query.transaction.findMany({
+      where: (fields, { eq: eqFn }) => eqFn(fields.userId, DEMO_DEFAULT_USER_ID),
       orderBy: [desc(transaction.createdAt)],
       limit: 100,
     })
 
-    const accounts = await db.query.bankAccount.findMany()
+    const demoAccount =
+      (await db.query.bankAccount.findFirst({
+        where: (t, { eq }) => eq(t.accountNumber, DEMO_ACCOUNT_NUMBER),
+      })) ??
+      (await db.query.bankAccount.findFirst({
+        where: (t, { eq }) => eq(t.userId, DEMO_DEFAULT_USER_ID),
+      }))
+    const accounts = demoAccount ? [demoAccount] : []
     const usedCents = await getTodayOutgoingUsedCents(DEMO_DEFAULT_USER_ID)
     const dailyLimit = dailyLimitSnapshot(usedCents)
 
@@ -313,31 +321,31 @@ export async function POST(req: Request) {
       }
     }
 
-    // Update account balance in Supabase DB
-    if (accountRecord) {
-      await db
-        .update(bankAccount)
-        .set({ balance: newBalanceCents, updatedAt: new Date() })
-        .where(eq(bankAccount.id, accountRecord.id))
-    }
-
     const fullDescription = [recipient, note ? `(${note})` : '', iban ? `IBAN: ${iban}` : '', vs ? `VS: ${vs}` : '']
       .filter(Boolean)
       .join(' ')
 
-    // Insert transaction into Supabase DB
-    await db.insert(transaction).values({
-      id: newTxnId,
-      userId: defaultUserId,
-      fromAccountId: accountRecord?.id,
-      amount: amountInCents,
-      balanceBefore: currentBalanceCents,
-      balanceAfter: newBalanceCents,
-      type: type,
-      description: fullDescription,
-      status: 'completed',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    await db.transaction(async (tx) => {
+      if (accountRecord) {
+        await tx
+          .update(bankAccount)
+          .set({ balance: newBalanceCents, updatedAt: new Date() })
+          .where(eq(bankAccount.id, accountRecord.id))
+      }
+
+      await tx.insert(transaction).values({
+        id: newTxnId,
+        userId: defaultUserId,
+        fromAccountId: accountRecord?.id,
+        amount: amountInCents,
+        balanceBefore: currentBalanceCents,
+        balanceAfter: newBalanceCents,
+        type: type,
+        description: fullDescription,
+        status: 'completed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
     })
 
     if (isOutgoing) {

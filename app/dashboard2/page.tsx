@@ -19,7 +19,7 @@ import {
   isOutgoingPaymentType,
   startOfLocalDay,
 } from '@/lib/daily-payment-limit'
-import { DEMO_ACCOUNT_NUMBER } from '@/lib/demo-user'
+import { DEMO_ACCOUNT_NUMBER, pickDemoBankAccount, resolveSpaceBalanceFromApi } from '@/lib/demo-user'
 import { notifyPohybyLive } from '@/lib/pohyby-live'
 import { syncWidgetFromTransactionsApi } from '@/lib/widget'
 
@@ -535,16 +535,17 @@ export default function GeorgePrototypePage() {
         if (res.ok) {
           const data = await res.json()
           if (data.success) {
-            const accBalance =
-              data.accounts?.[0]?.balance !== undefined
-                ? data.accounts[0].balance / 100
-                : undefined
-            const accNumber =
-              typeof data.accounts?.[0]?.accountNumber === 'string' &&
-              data.accounts[0].accountNumber.trim()
-                ? String(data.accounts[0].accountNumber).replace(/\s+/g, '').toUpperCase()
-                : undefined
             const rawTxns = Array.isArray(data.transactions) ? data.transactions : []
+            const demoAccount = pickDemoBankAccount(data.accounts)
+            const accBalance = resolveSpaceBalanceFromApi(
+              data.accounts,
+              rawTxns[0]?.balanceAfter
+            )
+            const accNumber =
+              typeof demoAccount?.accountNumber === 'string' &&
+              demoAccount.accountNumber.trim()
+                ? String(demoAccount.accountNumber).replace(/\s+/g, '').toUpperCase()
+                : undefined
             if (rawTxns.length > 0) {
               setState((prev) => ({
                 ...prev,
