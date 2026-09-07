@@ -1113,11 +1113,11 @@ export default function GeorgePrototypePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipient: 'Simulovaný vklad / Bonus',
+          recipient: 'Vklad na "Business účet"',
           amount,
           type: 'deposit',
           category: 'Dobitie',
-          note: 'Simulovaný vklad',
+          note: 'Vklad na "Business účet"',
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -1131,7 +1131,7 @@ export default function GeorgePrototypePage() {
       const balanceBefore = serverTxn.balanceBefore ?? state.spaceBalance
       const txn: Transaction = {
         id: serverTxn.id || newTxnId('in'),
-        recipient: 'Simulovaný vklad / Bonus',
+        recipient: 'Vklad na "Business účet"',
         amount,
         date: 'Dnes',
         createdAt: serverTxn.createdAt || new Date().toISOString(),
@@ -1140,7 +1140,7 @@ export default function GeorgePrototypePage() {
         balanceBefore,
         balanceAfter,
         category: 'Dobitie',
-        note: 'Simulovaný vklad',
+        note: 'Vklad na "Business účet"',
       }
 
       setState((prev) => ({
