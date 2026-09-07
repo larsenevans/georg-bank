@@ -250,15 +250,14 @@ async function ensureDemoAccountBalance(pool: Pool) {
       await pool.query(
         `UPDATE "bank_account"
          SET "userId" = $1,
-             balance = GREATEST(balance, $2),
              "productLabel" = COALESCE("productLabel", 'Osobný účet'),
              "holderAddressLine1" = COALESCE("holderAddressLine1", 'Tomášikova 12'),
              "holderAddressLine2" = COALESCE("holderAddressLine2", '831 04 Bratislava'),
              "updatedAt" = NOW()
-         WHERE id = $3`,
-        [defaultUserId, SEED_CENTS, byIban.rows[0].id]
+         WHERE id = $2`,
+        [defaultUserId, byIban.rows[0].id]
       )
-      console.log('[ensure-db] Demo bank account reclaimed onto peter and topped up.')
+      console.log('[ensure-db] Demo bank account reclaimed onto peter (balance preserved).')
       return
     }
 
@@ -277,7 +276,6 @@ async function ensureDemoAccountBalance(pool: Pool) {
              "productLabel" = COALESCE("bank_account"."productLabel", EXCLUDED."productLabel"),
              "holderAddressLine1" = COALESCE("bank_account"."holderAddressLine1", EXCLUDED."holderAddressLine1"),
              "holderAddressLine2" = COALESCE("bank_account"."holderAddressLine2", EXCLUDED."holderAddressLine2"),
-             balance = GREATEST("bank_account".balance, EXCLUDED.balance),
              "updatedAt" = NOW()`,
       ['acc-demo-default', defaultUserId, SEED_CENTS]
     )
@@ -288,19 +286,14 @@ async function ensureDemoAccountBalance(pool: Pool) {
   const current = Number(existing.rows[0].balance ?? 0)
   await pool.query(
     `UPDATE "bank_account"
-     SET balance = GREATEST(balance, $1),
-         "productLabel" = COALESCE("productLabel", 'Osobný účet'),
+     SET "productLabel" = COALESCE("productLabel", 'Osobný účet'),
          "holderAddressLine1" = COALESCE("holderAddressLine1", 'Tomášikova 12'),
          "holderAddressLine2" = COALESCE("holderAddressLine2", '831 04 Bratislava'),
          "updatedAt" = NOW()
-     WHERE id = $2`,
-    [SEED_CENTS, existing.rows[0].id]
+     WHERE id = $1`,
+    [existing.rows[0].id]
   )
-  if (current < SEED_CENTS) {
-    console.log(`[ensure-db] Demo account topped up ${current} → ${SEED_CENTS} cents.`)
-  } else {
-    console.log('[ensure-db] Demo account balance OK.')
-  }
+  console.log(`[ensure-db] Demo account balance preserved (${current} cents).`)
 }
 
 /**
@@ -359,7 +352,6 @@ async function ensureGuestBankAccount(pool: Pool) {
              "productLabel" = COALESCE("bank_account"."productLabel", EXCLUDED."productLabel"),
              "holderAddressLine1" = COALESCE("bank_account"."holderAddressLine1", EXCLUDED."holderAddressLine1"),
              "holderAddressLine2" = COALESCE("bank_account"."holderAddressLine2", EXCLUDED."holderAddressLine2"),
-             balance = GREATEST("bank_account".balance, EXCLUDED.balance),
              "updatedAt" = NOW()`,
       [GUEST_ACCOUNT_ID, guestUserId, GUEST_IBAN, SEED_CENTS]
     )
@@ -371,20 +363,15 @@ async function ensureGuestBankAccount(pool: Pool) {
   const current = Number(row.balance ?? 0)
   await pool.query(
     `UPDATE "bank_account"
-     SET balance = GREATEST(balance, $1),
-         "displayName" = COALESCE(NULLIF("displayName", ''), 'SPACE účet'),
+     SET "displayName" = COALESCE(NULLIF("displayName", ''), 'SPACE účet'),
          "productLabel" = COALESCE("productLabel", 'SPACE účet'),
          "holderAddressLine1" = COALESCE("holderAddressLine1", 'Testovacia 1'),
          "holderAddressLine2" = COALESCE("holderAddressLine2", '811 01 Bratislava'),
          "updatedAt" = NOW()
-     WHERE id = $2`,
-    [SEED_CENTS, row.id]
+     WHERE id = $1`,
+    [row.id]
   )
-  if (current < SEED_CENTS) {
-    console.log(`[ensure-db] Guest account topped up ${current} → ≥${SEED_CENTS} cents.`)
-  } else {
-    console.log('[ensure-db] Guest account balance OK.')
-  }
+  console.log(`[ensure-db] Guest account balance preserved (${current} cents).`)
 }
 
 export async function ensureDatabase() {

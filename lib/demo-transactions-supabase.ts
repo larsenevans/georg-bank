@@ -171,7 +171,7 @@ function mapTxn(t: {
   }
 }
 
-export async function listMovementsViaSupabase(limit = 100) {
+export async function listMovementsViaSupabase(limit = 100, payerUserId = DEMO_DEFAULT_USER_ID) {
   const supabase = createServiceSupabase()
   if (!supabase) return null
 
@@ -180,6 +180,7 @@ export async function listMovementsViaSupabase(limit = 100) {
     .select(
       'id, description, amount, createdAt, type, status, balanceBefore, balanceAfter, userId, pdfUrl'
     )
+    .eq('userId', payerUserId)
     .order('createdAt', { ascending: false })
     .limit(limit)
 
@@ -189,7 +190,6 @@ export async function listMovementsViaSupabase(limit = 100) {
   const usedCents = (data ?? [])
     .filter(
       (t) =>
-        t.userId === DEMO_DEFAULT_USER_ID &&
         isOutgoingPaymentType(t.type) &&
         t.createdAt >= todayStart
     )
@@ -199,7 +199,7 @@ export async function listMovementsViaSupabase(limit = 100) {
   const { data: todayRows, error: todayErr } = await supabase
     .from('transaction')
     .select('amount, type, userId, createdAt')
-    .eq('userId', DEMO_DEFAULT_USER_ID)
+    .eq('userId', payerUserId)
     .gte('createdAt', todayStart)
 
   if (todayErr) throw new Error(todayErr.message)
@@ -208,14 +208,30 @@ export async function listMovementsViaSupabase(limit = 100) {
     .filter((t) => isOutgoingPaymentType(t.type))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
-  let account = await ensureDemoBankAccount(
-    supabase,
-    DEMO_DEFAULT_USER_ID,
-    DEMO_ACCOUNT_TARGET_BALANCE_CENTS
-  )
+  const { data: owned } = await supabase
+    .from('bank_account')
+    .select('*')
+    .eq('userId', payerUserId)
 
-  const lastAutoRefillAt = await getLastAutoRefillAt(supabase, DEMO_DEFAULT_USER_ID)
-  const lastOutgoingAt = await getLastOutgoingAt(supabase, DEMO_DEFAULT_USER_ID)
+  let account =
+    (owned && owned.length
+      ? (owned.find((row) =>
+          String(row.displayName || row.productLabel || '')
+            .toLowerCase()
+            .includes('space')
+        ) ?? owned[0])
+      : null) as BankAccountRow | null
+
+  if (!account && payerUserId === DEMO_DEFAULT_USER_ID) {
+    account = await ensureDemoBankAccount(
+      supabase,
+      DEMO_DEFAULT_USER_ID,
+      DEMO_ACCOUNT_TARGET_BALANCE_CENTS
+    )
+  }
+
+  const lastAutoRefillAt = await getLastAutoRefillAt(supabase, payerUserId)
+  const lastOutgoingAt = await getLastOutgoingAt(supabase, payerUserId)
   const waitMs = msUntilAutoRefillAllowed(lastAutoRefillAt, lastOutgoingAt)
 
   return {
@@ -341,6 +357,7 @@ export async function createMovementViaSupabase(input: {
   note?: string
   type?: string
   category?: string
+  userId?: string
 }) {
   const supabase = createServiceSupabase()
   if (!supabase) return null
@@ -353,7 +370,7 @@ export async function createMovementViaSupabase(input: {
   const type = input.type || 'outgoing'
   const isOutgoing = isOutgoingPaymentType(type)
   const newTxnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-  const defaultUserId = DEMO_DEFAULT_USER_ID
+  const defaultUserId = input.userId || DEMO_DEFAULT_USER_ID
 
   if (MANUAL_TOPUP_DISABLED && isManualTopupType(type)) {
     const last = await getLastAutoRefillAt(supabase, defaultUserId)
@@ -368,27 +385,46 @@ export async function createMovementViaSupabase(input: {
     }
   }
 
-  await supabase.from('user').upsert(
-    {
-      id: defaultUserId,
-      name: DEMO_DEFAULT_USER_NAME,
-      email: DEMO_DEFAULT_USER_EMAIL,
-      emailVerified: true,
-      updatedAt: new Date().toISOString(),
-    },
-    { onConflict: 'id' }
-  )
+  if (defaultUserId === DEMO_DEFAULT_USER_ID) {
+    await supabase.from('user').upsert(
+      {
+        id: defaultUserId,
+        name: DEMO_DEFAULT_USER_NAME,
+        email: DEMO_DEFAULT_USER_EMAIL,
+        emailVerified: true,
+        updatedAt: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    )
+  }
 
   // New accounts start with full 24h allowance; auto-refill only after 24h cooldown.
   const SEED_BALANCE_CENTS = DEMO_ACCOUNT_TARGET_BALANCE_CENTS
-  let account = await ensureDemoBankAccount(supabase, defaultUserId, SEED_BALANCE_CENTS)
+  const { data: owned } = await supabase
+    .from('bank_account')
+    .select('*')
+    .eq('userId', defaultUserId)
+    .limit(10)
+  let account = (owned && owned.length
+    ? (owned.find((row) =>
+        String(row.displayName || row.productLabel || '')
+          .toLowerCase()
+          .includes('space')
+      ) ?? owned[0])
+    : null) as BankAccountRow | null
+  if (!account && defaultUserId === DEMO_DEFAULT_USER_ID) {
+    account = await ensureDemoBankAccount(supabase, defaultUserId, SEED_BALANCE_CENTS)
+  }
   if (!account) {
     return { error: 'Nepodarilo sa pripraviť demo účet', status: 500 as const }
   }
 
   const lastAutoRefillAt = await getLastAutoRefillAt(supabase, defaultUserId)
   const lastOutgoingAt = await getLastOutgoingAt(supabase, defaultUserId)
-  if (canAutoRefillNow(lastAutoRefillAt, lastOutgoingAt)) {
+  if (
+    defaultUserId === DEMO_DEFAULT_USER_ID &&
+    canAutoRefillNow(lastAutoRefillAt, lastOutgoingAt)
+  ) {
     const refilled = await performAutoRefill(supabase, account, defaultUserId)
     if (refilled) account = refilled
   }

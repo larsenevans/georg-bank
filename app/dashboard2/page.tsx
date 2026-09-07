@@ -2096,7 +2096,10 @@ export default function GeorgePrototypePage() {
                       <h3 className="text-[15px] font-semibold text-slate-200">SPACE účet</h3>
 
                       {/* Suma s reálnou trávovo-zelenou farbou George #179f42 */}
-                      <div className="text-[32px] font-extrabold text-[#179f42] mt-1.5 tracking-tight flex items-start select-none leading-none">
+                      <div
+                        data-testid="space-balance"
+                        className="text-[32px] font-extrabold text-[#179f42] mt-1.5 tracking-tight flex items-start select-none leading-none"
+                      >
                         <span id="space-balance-main">{spaceBal.main}</span>
                         <span id="space-balance-cents" className="text-lg font-bold" style={{ verticalAlign: 'super', lineHeight: 1.1, marginTop: '-1px' }}>{spaceBal.cents}</span>
                         <span className="text-3xl font-normal ml-1.5">€</span>

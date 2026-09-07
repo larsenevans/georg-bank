@@ -8,6 +8,8 @@ import {
   canAutoRefillNow,
   msUntilAutoRefillAllowed,
 } from '../lib/topup-rules'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -19,15 +21,23 @@ function assert(condition: boolean, message: string) {
 
 const guestAccount = {
   accountNumber: 'SK3109000000005012345679',
+  displayName: 'SPACE účet',
+  productLabel: 'SPACE účet',
+  accountType: 'checking',
   balance: 1_157_645_0,
 }
 const demoAccount = {
   accountNumber: DEMO_ACCOUNT_NUMBER,
+  displayName: 'Osobný účet',
+  accountType: 'checking',
   balance: 9_000,
 }
 
 const picked = pickDemoBankAccount([guestAccount, demoAccount])
-assert(picked?.accountNumber === DEMO_ACCOUNT_NUMBER, 'should pick demo IBAN, not guest')
+assert(picked?.accountNumber === guestAccount.accountNumber, 'should pick SPACE-labeled guest account over demo IBAN')
+
+const singleGuest = pickDemoBankAccount([guestAccount])
+assert(singleGuest?.accountNumber === guestAccount.accountNumber, 'single returned account wins')
 
 // --- balance resolution after payment --------------------------------------
 
@@ -61,6 +71,12 @@ assert(
 assert(
   canAutoRefillNow(null, null) === true,
   'no refill and no outgoing → refill allowed'
+)
+
+const ensureDb = readFileSync(resolve('scripts/ensure-db.ts'), 'utf8')
+assert(
+  !ensureDb.includes('GREATEST'),
+  'ensure-db must not restore spent balances with GREATEST(balance, seed)'
 )
 
 console.log('transactions-balance-refresh.test.ts: all assertions passed')
