@@ -16,7 +16,7 @@ setup('authenticate', async ({ page }) => {
   await page.waitForURL(/dashboard2/, { timeout: 30000 })
   // dashboard2 lands on the George kľúč PIN screen first; session cookie is already set
   await expect(
-    page.getByText(/Zadajte bezpečnostný PIN|Prehľad|SPACE účet/i).first()
+    page.getByText(/Zadajte bezpečnostný PIN|Prehľad|Business účet|SPACE účet/i).first()
   ).toBeVisible({ timeout: 20000 })
 
   await page.context().storageState({ path: authFile })

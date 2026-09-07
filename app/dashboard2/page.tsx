@@ -19,7 +19,12 @@ import {
   isOutgoingPaymentType,
   startOfLocalDay,
 } from '@/lib/daily-payment-limit'
-import { DEMO_ACCOUNT_NUMBER, pickDemoBankAccount, resolveSpaceBalanceFromApi } from '@/lib/demo-user'
+import {
+  BUSINESS_ACCOUNT_LABEL,
+  DEMO_ACCOUNT_NUMBER,
+  pickDemoBankAccount,
+  resolveSpaceBalanceFromApi,
+} from '@/lib/demo-user'
 import { notifyPohybyLive } from '@/lib/pohyby-live'
 import { syncWidgetFromTransactionsApi } from '@/lib/widget'
 
@@ -763,7 +768,7 @@ export default function GeorgePrototypePage() {
     }
 
     if (amount > state.spaceBalance) {
-      showToast('Nedostatok vlastných zdrojov na SPACE účte pre túto platbu.')
+      showToast('Nedostatok vlastných zdrojov na Business účte pre túto platbu.')
       return
     }
 
@@ -1095,7 +1100,7 @@ export default function GeorgePrototypePage() {
   }
 
   const showQuickActions = () => {
-    showToast('Zobrazené detailné informácie a nastavenia SPACE účtu.')
+    showToast('Zobrazené detailné informácie a nastavenia Business účtu.')
   }
 
   const toggleDemoDrawer = () => {
@@ -1186,7 +1191,7 @@ export default function GeorgePrototypePage() {
     }
 
     if (sum > state.spaceBalance) {
-      showToast('Nedostatok vlastných zdrojov na SPACE účte.')
+      showToast('Nedostatok vlastných zdrojov na Business účte.')
       return
     }
 
@@ -2089,11 +2094,11 @@ export default function GeorgePrototypePage() {
 
               <div className="space-y-3.5">
 
-                {/* KARTA 1: SPACE účet */}
+                {/* KARTA 1: Business účet */}
                 <div className="george-card glow-purple rounded-[18px] p-5 shadow-lg relative overflow-hidden transition-all duration-300">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-[15px] font-semibold text-slate-200">SPACE účet</h3>
+                      <h3 className="text-[15px] font-semibold text-slate-200">{BUSINESS_ACCOUNT_LABEL}</h3>
 
                       {/* Suma s reálnou trávovo-zelenou farbou George #179f42 */}
                       <div
@@ -2829,7 +2834,7 @@ export default function GeorgePrototypePage() {
                     <img src="/images/profile-avatar.png" alt="Avatar" className="w-full h-full object-cover" />
                   </div>
                   <h4 className="text-base font-bold text-white">{user.name || 'Peter Novotný'}</h4>
-                  <p className="text-xs text-[#7f8596] mt-1">SPACE účet</p>
+                  <p className="text-xs text-[#7f8596] mt-1">{BUSINESS_ACCOUNT_LABEL}</p>
                   <div className="mt-4 pt-4 border-t border-slate-800 space-y-2.5 text-left text-xs">
                     <div className="flex justify-between"><span className="text-[#7f8596]">George Kľúč:</span> <span className="text-emerald-400 font-bold">Aktívny</span></div>
                     <div className="flex justify-between"><span className="text-[#7f8596]">Verzia aplikácie:</span> <span className="text-slate-200">2026.4.2 (Prototyp)</span></div>

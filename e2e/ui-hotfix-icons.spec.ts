@@ -30,7 +30,7 @@ test.describe('Dashboard2 Action Icons UI Hotfix', () => {
       expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 
       // Verify presence of all cards via distinct headings
-      await expect(page.getByRole('heading', { name: 'SPACE účet' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Business účet' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Moneyback' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Poistenie osobných vecí a karty' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Investície' })).toBeVisible();

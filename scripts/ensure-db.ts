@@ -342,8 +342,8 @@ async function ensureGuestBankAccount(pool: Pool) {
          "productLabel", "holderAddressLine1", "holderAddressLine2",
          balance, currency, "isActive", "createdAt", "updatedAt"
        ) VALUES (
-         $1, $2, $3, 'SPACE účet', 'checking',
-         'SPACE účet', 'Testovacia 1', '811 01 Bratislava',
+         $1, $2, $3, 'Business účet', 'checking',
+         'Business účet', 'Testovacia 1', '811 01 Bratislava',
          $4, 'EUR', true, NOW(), NOW()
        )
        ON CONFLICT ("accountNumber") DO UPDATE
@@ -355,7 +355,7 @@ async function ensureGuestBankAccount(pool: Pool) {
              "updatedAt" = NOW()`,
       [GUEST_ACCOUNT_ID, guestUserId, GUEST_IBAN, SEED_CENTS]
     )
-    console.log('[ensure-db] Guest checking account seeded with funded SPACE účet.')
+    console.log('[ensure-db] Guest checking account seeded with funded Business účet.')
     return
   }
 
@@ -363,8 +363,8 @@ async function ensureGuestBankAccount(pool: Pool) {
   const current = Number(row.balance ?? 0)
   await pool.query(
     `UPDATE "bank_account"
-     SET "displayName" = COALESCE(NULLIF("displayName", ''), 'SPACE účet'),
-         "productLabel" = COALESCE("productLabel", 'SPACE účet'),
+     SET "displayName" = 'Business účet',
+         "productLabel" = COALESCE(NULLIF("productLabel", ''), 'Business účet'),
          "holderAddressLine1" = COALESCE("holderAddressLine1", 'Testovacia 1'),
          "holderAddressLine2" = COALESCE("holderAddressLine2", '811 01 Bratislava'),
          "updatedAt" = NOW()

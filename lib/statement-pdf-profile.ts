@@ -47,7 +47,8 @@ export function resolveProductLabel(account: BankAccountStatementProfile): strin
   if (account.productLabel?.trim()) return account.productLabel.trim()
   if (account.accountType === 'savings') return 'Sporenie'
   if (account.displayName?.toLowerCase().includes('osobn')) return 'Osobný účet'
-  if (account.displayName?.toLowerCase().includes('space')) return 'SPACE účet'
+  if (account.displayName?.toLowerCase().includes('space')) return 'Business účet'
+  if (account.displayName?.toLowerCase().includes('business')) return 'Business účet'
   return 'Business účet S'
 }
 

@@ -92,7 +92,7 @@ export function AddMoneyFooter({
                   Pridať peniaze
                 </p>
                 <p className="mt-1 text-sm font-bold text-white">
-                  SPACE účet | {formatBalance(balance)} {currency}
+                  Business účet | {formatBalance(balance)} {currency}
                 </p>
                 {accountNumber && (
                   <p className="mt-0.5 text-[11px] text-slate-400">{accountNumber}</p>

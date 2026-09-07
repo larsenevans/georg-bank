@@ -21,8 +21,8 @@ function assert(condition: boolean, message: string) {
 
 const guestAccount = {
   accountNumber: 'SK3109000000005012345679',
-  displayName: 'SPACE účet',
-  productLabel: 'SPACE účet',
+  displayName: 'Business účet',
+  productLabel: 'Business účet',
   accountType: 'checking',
   balance: 1_157_645_0,
 }
@@ -34,7 +34,7 @@ const demoAccount = {
 }
 
 const picked = pickDemoBankAccount([guestAccount, demoAccount])
-assert(picked?.accountNumber === guestAccount.accountNumber, 'should pick SPACE-labeled guest account over demo IBAN')
+assert(picked?.accountNumber === guestAccount.accountNumber, 'should pick Business-labeled guest account over demo IBAN')
 
 const singleGuest = pickDemoBankAccount([guestAccount])
 assert(singleGuest?.accountNumber === guestAccount.accountNumber, 'single returned account wins')

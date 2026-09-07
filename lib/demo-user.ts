@@ -14,12 +14,15 @@ export function normalizeIban(iban: string | null | undefined): string {
   return String(iban || '').replace(/\s+/g, '').toUpperCase()
 }
 
+/** User-facing product name for the primary checking account. */
+export const BUSINESS_ACCOUNT_LABEL = 'Business účet'
+
 export function isSpaceLabeled(account: {
   displayName?: string | null
   productLabel?: string | null
 }): boolean {
   const blob = `${account.displayName || ''} ${account.productLabel || ''}`.toLowerCase()
-  return blob.includes('space')
+  return blob.includes('space') || blob.includes('business')
 }
 
 /**

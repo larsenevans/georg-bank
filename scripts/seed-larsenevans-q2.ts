@@ -74,7 +74,7 @@ async function seedQ2() {
       INSERT INTO bank_account (id, "userId", "accountNumber", "displayName", "accountType", balance, currency, "isActive")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT ("accountNumber") DO NOTHING
-    `, [accountId, userId, 'SK1122334455667788990011', 'SPACE účet Larsen', 'checking', 0, 'EUR', true])
+    `, [accountId, userId, 'SK1122334455667788990011', 'Business účet Larsen', 'checking', 0, 'EUR', true])
 
     await client.query('DELETE FROM transaction WHERE "fromAccountId" = $1 OR "toAccountId" = $1', [accountId])
 

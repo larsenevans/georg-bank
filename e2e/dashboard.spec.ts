@@ -20,7 +20,7 @@ test.describe('Dashboard', () => {
       timeout: 15000,
     })
     await expect(page.getByRole('heading', { name: 'Prehľad prevodov' })).toBeVisible()
-    await expect(page.getByText('SPACE účet').first()).toBeVisible()
+    await expect(page.getByText('Business účet').first()).toBeVisible()
   })
 
   test('DashboardHeader má logo a Odhlásenie na mobile', async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Dashboard', () => {
 
   test('Produktové karty zobrazujú SPACE a Moneyback', async ({ page }) => {
     await loginWithPin(page)
-    await expect(page.getByRole('heading', { name: 'SPACE účet' })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('heading', { name: 'Business účet' })).toBeVisible({ timeout: 15000 })
     await expect(page.getByRole('heading', { name: 'Moneyback' })).toBeVisible()
   })
 
@@ -45,12 +45,12 @@ test.describe('Dashboard', () => {
     await expect(page).toHaveURL(/dashboard2/)
   })
 
-  test('Menu sub-header zobrazuje SPACE účet a reálny zostatok', async ({ page }) => {
+  test('Menu sub-header zobrazuje Business účet a reálny zostatok', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await gotoApp(page, '/dashboard/payment-orders')
     await openDashboardMenu(page)
-    // Guest seed must provide funded checking account → "SPACE účet | € x,xx"
-    const subHeader = page.getByText(/SPACE účet\s*\|\s*€/)
+    // Guest seed must provide funded checking account → "Business účet | € x,xx"
+    const subHeader = page.getByText(/Business účet\s*\|\s*€/)
     await expect(subHeader.first()).toBeVisible({ timeout: 15000 })
     await expect(subHeader.first()).not.toHaveText(/€ 0,85/)
   })

@@ -26,7 +26,7 @@ export default async function StatementGeneratorPage() {
         balance: account.balance,
         currency: account.currency,
       }))}
-      defaultAccountName={session.user.name || 'SPACE účet'}
+      defaultAccountName={session.user.name || 'Business účet'}
     />
   )
 }

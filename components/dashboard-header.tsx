@@ -29,7 +29,7 @@ export function DashboardHeader({ account }: DashboardHeaderProps) {
   const t = useTranslation()
   const headerRef = useRef<HTMLElement>(null)
 
-  const accountLabel = account?.displayName ?? 'SPACE účet'
+  const accountLabel = account?.displayName ?? 'Business účet'
   const balanceLabel =
     account?.balance !== undefined ? `€ ${formatBalance(account.balance)}` : null
 

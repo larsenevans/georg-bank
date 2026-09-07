@@ -35,7 +35,7 @@ async function run() {
       const balanceCents = await page.locator('#space-balance-cents').first()
       const balanceVal = await balanceMain.textContent()
       const centsVal = await balanceCents.textContent()
-      console.log(`   SPACE účet zostatok: ${balanceVal?.trim()}${centsVal?.trim()} €`)
+      console.log(`   Business účet zostatok: ${balanceVal?.trim()}${centsVal?.trim()} €`)
       
       console.log('✅ PRODUKČNÝ SMOKE TEST ÚSPEŠNÝ: Mobilný George na Verceli beží bez chýb a zostatok je správny!')
     } else {

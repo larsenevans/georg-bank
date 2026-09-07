@@ -21,7 +21,7 @@ async function readApiBalance(page: import('@playwright/test').Page) {
 test.describe('dashboard2 – platba ostane odpísaná po refreshi', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test('GET/POST používajú rovnaký SPACE účet a refresh nevráti sumu', async ({ page }) => {
+  test('GET/POST používajú rovnaký Business účet a refresh nevráti sumu', async ({ page }) => {
     await loginWithPin(page)
     await expect(page.getByTestId('space-balance')).toBeVisible({ timeout: 15000 })
 

@@ -188,7 +188,7 @@ export function AccountDetailsClient({ user, account, initialTransactions }: Acc
       <DashboardHeader
         user={user}
         account={{
-          displayName: 'SPACE účet',
+          displayName: 'Business účet',
           balance: account.balance,
           currency: account.currency,
         }}
@@ -197,7 +197,7 @@ export function AccountDetailsClient({ user, account, initialTransactions }: Acc
       {/* Account Info Dark Sub-Header */}
       <div className="bg-[#0a0a10] text-center pt-2.5 pb-3.5 border-t border-slate-900/40 text-white select-none">
         <div className="text-xs text-slate-400 font-semibold tracking-wider">
-          SPACE účet | € {formatBalance(account.balance)}
+          Business účet | € {formatBalance(account.balance)}
         </div>
         <button 
           type="button"

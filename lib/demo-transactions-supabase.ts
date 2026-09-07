@@ -218,7 +218,10 @@ export async function listMovementsViaSupabase(limit = 100, payerUserId = DEMO_D
       ? (owned.find((row) =>
           String(row.displayName || row.productLabel || '')
             .toLowerCase()
-            .includes('space')
+            .includes('space') ||
+            String(row.displayName || row.productLabel || '')
+              .toLowerCase()
+              .includes('business')
         ) ?? owned[0])
       : null) as BankAccountRow | null
 
@@ -409,7 +412,10 @@ export async function createMovementViaSupabase(input: {
     ? (owned.find((row) =>
         String(row.displayName || row.productLabel || '')
           .toLowerCase()
-          .includes('space')
+          .includes('space') ||
+        String(row.displayName || row.productLabel || '')
+          .toLowerCase()
+          .includes('business')
       ) ?? owned[0])
     : null) as BankAccountRow | null
   if (!account && defaultUserId === DEMO_DEFAULT_USER_ID) {
