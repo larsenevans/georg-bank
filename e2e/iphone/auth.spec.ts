@@ -33,7 +33,7 @@ test.describe('iPhone – Auth', () => {
   test('auth-003: guest auto-login lands on dashboard2', async ({ page }) => {
     await loginWithPin(page)
     await expect(page).toHaveURL(/dashboard2/)
-    await expect(page.getByText('SPACE účet').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('Business účet').first()).toBeVisible({ timeout: 15000 })
     await expectNoHorizontalOverflow(page)
   })
 

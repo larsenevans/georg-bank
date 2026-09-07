@@ -70,7 +70,7 @@ export async function gotoAbsolute(page: Page, url: string) {
 export async function login(page: Page) {
   await gotoApp(page, '/dashboard2')
   await page.waitForURL(/dashboard2/, { timeout: 30000 })
-  await expect(page.getByText(/Zadajte bezpečnostný PIN|Prehľad|SPACE účet/i).first()).toBeVisible({
+  await expect(page.getByText(/Zadajte bezpečnostný PIN|Prehľad|Business účet|SPACE účet/i).first()).toBeVisible({
     timeout: 20000,
   })
 }

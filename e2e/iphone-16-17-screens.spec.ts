@@ -42,7 +42,7 @@ test.describe('iPhone 16 & iPhone 17 — All Screen Viewports Verification', () 
       await expect(profileAvatar).toBeVisible({ timeout: 10000 });
 
       // 3. Overenie 4 akčných kariet/ikon
-      await expect(page.getByRole('heading', { name: 'SPACE účet' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Business účet' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Moneyback' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Poistenie osobných vecí a karty' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Investície' })).toBeVisible();

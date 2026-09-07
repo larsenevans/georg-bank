@@ -45,7 +45,7 @@ test.describe('iPhone – Dashboard', () => {
     await loginWithPin(page)
     await expect(page.getByRole('heading', { name: 'Vaše produkty' })).toBeVisible({ timeout: 15000 })
     await expect(page.getByText('Prehľad prevodov')).toBeVisible()
-    await expect(page.getByText('SPACE účet').first()).toBeVisible()
+    await expect(page.getByText('Business účet').first()).toBeVisible()
   })
 
   test('dashboard-006: card number masking', async ({ page }) => {
@@ -72,15 +72,15 @@ test.describe('iPhone – Dashboard', () => {
     await expectNoHorizontalOverflow(page)
   })
 
-  test('dashboard-008: menu shows SPACE účet and live balance', async ({ page }) => {
+  test('dashboard-008: menu shows Business účet and live balance', async ({ page }) => {
     await loginWithPin(page)
     const shell = page.locator('.d2-phone-shell').first()
     if (await shell.isVisible().catch(() => false)) {
-      await expect(page.getByText('SPACE účet').first()).toBeVisible()
+      await expect(page.getByText('Business účet').first()).toBeVisible()
       return
     }
     await openDashboardMenu(page)
-    const subHeader = page.locator('text=/SPACE účet \\| €/')
+    const subHeader = page.locator('text=/Business účet \\| €/')
     await expect(subHeader.first()).toBeVisible()
     await expect(subHeader.first()).not.toHaveText(/€ 0,85/)
   })

@@ -41,7 +41,7 @@ export function StatementGeneratorClient({
   const defaultAccount = accounts[0]
   const [accountId, setAccountId] = useState(defaultAccount?.id ?? '')
   const [accountDisplayName, setAccountDisplayName] = useState(
-    defaultAccount?.displayName || defaultAccountName || 'SPACE účet',
+    defaultAccount?.displayName || defaultAccountName || 'Business účet',
   )
   const [transactionsPerMonth, setTransactionsPerMonth] = useState(20)
   const [averageMonthlyTurnover, setAverageMonthlyTurnover] = useState(3000)

@@ -23,7 +23,7 @@ export default async function PaymentOrdersPage() {
       <DashboardHeader
         user={session.user}
         account={checkingAccount ? {
-          displayName: 'SPACE účet',
+          displayName: 'Business účet',
           balance: checkingAccount.balance,
           currency: checkingAccount.currency,
         } : undefined}

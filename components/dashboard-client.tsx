@@ -202,7 +202,7 @@ export function DashboardClient({ accounts, transactions }: DashboardClientProps
                 </button>
               </div>
 
-              {/* SPACE účet clickable card */}
+              {/* Business účet clickable card */}
               <div 
                 onClick={() => {
                   if (activeAccountId) {
@@ -221,7 +221,7 @@ export function DashboardClient({ accounts, transactions }: DashboardClientProps
 
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-400 font-medium">Peter</p>
-                  <h4 className="font-bold text-sm text-white mt-0.5">SPACE účet</h4>
+                  <h4 className="font-bold text-sm text-white mt-0.5">Business účet</h4>
                   <p className="text-[11px] text-slate-400 font-medium tracking-wide mt-0.5">{activeAccount?.accountNumber ?? 'SK67 0900 0000 0050 4463 0752'}</p>
                   <p className="text-sm font-bold text-[#179f42] mt-1">€ {formatBalance(activeAccount?.balance ?? 85)}</p>
                 </div>

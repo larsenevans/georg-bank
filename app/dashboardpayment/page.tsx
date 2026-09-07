@@ -70,7 +70,7 @@ export default async function DashboardPaymentPage() {
       <DashboardHeader
         user={session.user}
         account={{
-          displayName: account.displayName || 'SPACE účet',
+          displayName: account.displayName || 'Business účet',
           balance: account.balance,
           currency: account.currency,
         }}

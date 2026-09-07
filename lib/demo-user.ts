@@ -14,11 +14,35 @@ export function normalizeIban(iban: string | null | undefined): string {
   return String(iban || '').replace(/\s+/g, '').toUpperCase()
 }
 
-/** Prefer the demo SPACE account row over arbitrary accounts[0]. */
-export function pickDemoBankAccount<T extends { accountNumber?: string | null }>(
+/** User-facing product name for the primary checking account. */
+export const BUSINESS_ACCOUNT_LABEL = 'Business účet'
+
+export function isSpaceLabeled(account: {
+  displayName?: string | null
+  productLabel?: string | null
+}): boolean {
+  const blob = `${account.displayName || ''} ${account.productLabel || ''}`.toLowerCase()
+  return blob.includes('space') || blob.includes('business')
+}
+
+/**
+ * Prefer the SPACE checking account of the current payer.
+ * Demo IBAN is only a fallback when nothing is labeled SPACE.
+ */
+export function pickDemoBankAccount<T extends {
+  accountNumber?: string | null
+  displayName?: string | null
+  productLabel?: string | null
+  accountType?: string | null
+}>(
   accounts: T[] | undefined | null
 ): T | undefined {
   if (!accounts?.length) return undefined
+  if (accounts.length === 1) return accounts[0]
+  const space = accounts.find(isSpaceLabeled)
+  if (space) return space
+  const checking = accounts.find((a) => a.accountType === 'checking')
+  if (checking) return checking
   const target = normalizeIban(DEMO_ACCOUNT_NUMBER)
   return accounts.find((a) => normalizeIban(a.accountNumber) === target) ?? accounts[0]
 }

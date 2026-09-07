@@ -296,7 +296,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
         </div>
         <div className="text-center flex-[3]">
           <p className="text-[11px] text-slate-400 font-semibold tracking-wider">
-            SPACE účet | € {formatBalance(currentBalance)}
+            Business účet | € {formatBalance(currentBalance)}
           </p>
           <h1 className="font-bold text-[18px] text-white tracking-wide mt-0.5">
             Nová platba

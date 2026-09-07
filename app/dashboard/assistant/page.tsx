@@ -54,7 +54,7 @@ export default async function AssistantDashboardPage() {
       <DashboardHeader
         user={session.user}
         account={checkingAccount ? {
-          displayName: 'SPACE účet',
+          displayName: 'Business účet',
           balance: checkingAccount.balance,
           currency: checkingAccount.currency,
         } : undefined}

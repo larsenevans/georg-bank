@@ -55,7 +55,7 @@ test.describe('Production check – george-dev.vercel.app', () => {
     const { loginWithPin } = await import('./helpers/dashboard2')
     await loginWithPin(page)
 
-    await expect(page.getByText('SPACE účet').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.getByText('Business účet').first()).toBeVisible({ timeout: 20000 })
     await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible()
 
     const consoleErrors: string[] = []
@@ -68,7 +68,7 @@ test.describe('Production check – george-dev.vercel.app', () => {
       line.includes('Minified React error #418') || line.includes('Hydration')
     )
     expect(hydrationErrors).toEqual([])
-    await expect(page.getByText('SPACE účet').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.getByText('Business účet').first()).toBeVisible({ timeout: 20000 })
   })
 
   test('potvrdenie o platbe a overenie responzivity na mobile', async ({ page }) => {
