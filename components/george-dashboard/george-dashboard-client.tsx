@@ -1350,7 +1350,13 @@ export function GeorgeDashboardClient({
       direction,
       label: isOutgoing ? 'Odchádzajúca' : isDeposit ? 'Dobitie' : 'Prichádzajúca',
       filterLabel: isOutgoing ? 'Odoslané' : isDeposit ? 'Dobitie' : 'Prijaté',
-      amountClass: isOutgoing ? 'text-red-400' : 'text-emerald-400',
+      amountClass: isOutgoing
+        ? isLight
+          ? 'text-red-600'
+          : 'text-red-400'
+        : isLight
+          ? 'text-emerald-600'
+          : 'text-emerald-400',
       signedAmount: `${isOutgoing ? '-' : '+'} ${formatEurSk(Math.abs(txn.amount))} €`,
     }
   }
@@ -1404,7 +1410,13 @@ export function GeorgeDashboardClient({
             <div className="d2-desktop-chrome hidden lg:block">
               <DashboardHeader user={user} />
             </div>
-            <div className="d2-desktop-chrome hidden lg:block w-full bg-[#0a0a10] border-b border-slate-900/40 px-6 py-3.5 text-[15px] font-bold text-white tracking-tight select-none">
+            <div
+              className={`d2-desktop-chrome hidden lg:block w-full border-b px-6 py-3.5 text-[15px] font-bold tracking-tight select-none ${
+                isLight
+                  ? 'bg-white border-slate-200 text-slate-900'
+                  : 'bg-[#0a0a10] border-slate-900/40 text-white'
+              }`}
+            >
               Domov
             </div>
           </>
@@ -1855,7 +1867,9 @@ export function GeorgeDashboardClient({
                             setPasscode('')
                             setLoginError(null)
                           }}
-                          className="text-slate-400 hover:text-white transition-colors min-h-11 min-w-11 flex items-center justify-center"
+                          className={`text-slate-400 transition-colors min-h-11 min-w-11 flex items-center justify-center ${
+                            isLight ? 'hover:text-slate-900' : 'hover:text-white'
+                          }`}
                           aria-label="Späť"
                         >
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1889,7 +1903,13 @@ export function GeorgeDashboardClient({
                           return (
                             <div
                               key={idx}
-                              className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${isFilled ? 'bg-[#327bf5] border-[#327bf5] scale-110' : 'border-slate-700'}`}
+                              className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${
+                                isFilled
+                                  ? 'bg-[#327bf5] border-[#327bf5] scale-110'
+                                  : isLight
+                                    ? 'border-slate-300'
+                                    : 'border-slate-700'
+                              }`}
                             />
                           )
                         })}
@@ -1902,7 +1922,11 @@ export function GeorgeDashboardClient({
                           <button
                             key={num}
                             onClick={() => handleKeypadPress(num)}
-                            className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b] text-lg font-bold flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer"
+                            className={`w-14 h-14 mx-auto rounded-full text-lg font-bold flex items-center justify-center active:scale-90 transition-all cursor-pointer ${
+                              isLight
+                                ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:bg-slate-50'
+                                : 'bg-[#171821] hover:bg-[#1d1e2b] text-white'
+                            }`}
                           >
                             {num}
                           </button>
@@ -1910,7 +1934,11 @@ export function GeorgeDashboardClient({
 
                         <button
                           onClick={triggerBiometrics}
-                          className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b]/80 flex items-center justify-center text-[#327bf5] active:scale-90 transition-all cursor-pointer shadow-sm"
+                          className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-[#327bf5] active:scale-90 transition-all cursor-pointer shadow-sm ${
+                            isLight
+                              ? 'bg-white shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:bg-slate-50'
+                              : 'bg-[#171821] hover:bg-[#1d1e2b]/80'
+                          }`}
                           aria-label="Prihlásiť sa tvárou"
                         >
                           <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1921,14 +1949,20 @@ export function GeorgeDashboardClient({
 
                         <button
                           onClick={() => handleKeypadPress('0')}
-                          className="w-14 h-14 mx-auto rounded-full bg-[#171821] hover:bg-[#1d1e2b] text-lg font-bold flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer"
+                          className={`w-14 h-14 mx-auto rounded-full text-lg font-bold flex items-center justify-center active:scale-90 transition-all cursor-pointer ${
+                            isLight
+                              ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:bg-slate-50'
+                              : 'bg-[#171821] hover:bg-[#1d1e2b] text-white'
+                          }`}
                         >
                           0
                         </button>
 
                         <button
                           onClick={handleKeypadBackspace}
-                          className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-slate-400 hover:text-slate-200 active:scale-90 transition-all cursor-pointer"
+                          className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-slate-400 active:scale-90 transition-all cursor-pointer ${
+                            isLight ? 'hover:text-slate-700' : 'hover:text-slate-200'
+                          }`}
                         >
                           <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.41-6.41A2 2 0 0110.83 5H20a2 2 0 012 2v10a2 2 0 01-2 2h-9.17a2 2 0 01-1.42-.59L3 12z" />
@@ -1943,7 +1977,7 @@ export function GeorgeDashboardClient({
               {/* 35: iOS home indicator — hidden on full-height PIN so screen stays 100vh */}
               {!isPasscodeScreen && (
               <div className="shrink-0 flex justify-center pb-2 pt-1 pointer-events-none" aria-hidden>
-                <div className="w-30 h-1 rounded-full bg-white/35" />
+                <div className={`w-30 h-1 rounded-full ${isLight ? 'bg-slate-300' : 'bg-white/35'}`} />
               </div>
               )}
 
@@ -2036,7 +2070,13 @@ export function GeorgeDashboardClient({
       <div className="d2-desktop-chrome hidden lg:block shrink-0">
         <DashboardHeader user={user} />
       </div>
-      <div className="d2-desktop-chrome hidden lg:block shrink-0 w-full bg-[#0a0a10] border-b border-slate-900/40 px-6 py-3.5 text-[15px] font-bold text-white tracking-tight select-none">
+      <div
+        className={`d2-desktop-chrome hidden lg:block shrink-0 w-full border-b px-6 py-3.5 text-[15px] font-bold tracking-tight select-none ${
+          isLight
+            ? 'bg-white border-slate-200 text-slate-900'
+            : 'bg-[#0a0a10] border-slate-900/40 text-white'
+        }`}
+      >
         Domov
       </div>
 
@@ -2217,10 +2257,10 @@ export function GeorgeDashboardClient({
                       </button>
                     </div>
                     <button onClick={showQuickActions} className="w-8 h-8 rounded-full border border-[#327bf5]/45 hover:bg-[#327bf5]/10 flex items-center justify-center text-[#327bf5] transition-all focus:outline-none active:scale-90" aria-label="Možnosti">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="5" cy="12" r={2} />
-                        <circle cx="12" cy="12" r={2} />
-                        <circle cx="19" cy="12" r={2} />
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <circle cx="6" cy="12" r="1.7" />
+                        <circle cx="12" cy="12" r="1.7" />
+                        <circle cx="18" cy="12" r="1.7" />
                       </svg>
                     </button>
                   </div>
@@ -2411,7 +2451,9 @@ export function GeorgeDashboardClient({
                         className={`h-9 min-w-18 shrink-0 rounded-full border px-3 text-xs font-bold transition-all duration-200 ${
                           transactionFilter === item.value
                             ? 'border-[#327bf5] bg-[#327bf5] text-white'
-                            : 'border-slate-800 bg-[#1b1b26] text-slate-400 hover:border-slate-700'
+                            : isLight
+                              ? 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                              : 'border-slate-800 bg-[#1b1b26] text-slate-400 hover:border-slate-700'
                         }`}
                       >
                         {item.label}
@@ -2432,7 +2474,11 @@ export function GeorgeDashboardClient({
                           type="button"
                           data-testid={`txn-row-${txn.id}`}
                           onClick={() => setSelectedTransaction(txn)}
-                          className="w-full px-4 py-3.5 text-left transition-all duration-200 hover:bg-[#1b1b26]/55 focus-visible:outline-none focus-visible:bg-[#1b1b26]/55"
+                          className={`w-full px-4 py-3.5 text-left transition-all duration-200 focus-visible:outline-none ${
+                            isLight
+                              ? 'hover:bg-slate-50 focus-visible:bg-slate-50'
+                              : 'hover:bg-[#1b1b26]/55 focus-visible:bg-[#1b1b26]/55'
+                          }`}
                         >
                           <div className="flex items-center gap-3">
                             <div
@@ -2814,16 +2860,26 @@ export function GeorgeDashboardClient({
         >
           {selectedTransaction && (
             <div
-              className="bg-[#12131b] w-full lg:rounded-3xl rounded-t-3xl border border-slate-800 shadow-2xl relative max-h-[min(85dvh,85%)] overflow-y-auto no-scrollbar pb-[max(0px,env(safe-area-inset-bottom))]"
+              className={`w-full lg:rounded-3xl rounded-t-3xl shadow-2xl relative max-h-[min(85dvh,85%)] overflow-y-auto no-scrollbar pb-[max(0px,env(safe-area-inset-bottom))] ${
+                isLight ? 'bg-white border border-slate-200' : 'bg-[#12131b] border border-slate-800'
+              }`}
               onClick={(e) => e.stopPropagation()}
               data-testid="txn-detail-modal"
             >
-              <div className="sticky top-0 bg-[#12131b]/95 backdrop-blur-md flex items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3 border-b border-slate-800/40">
+              <div
+                className={`sticky top-0 backdrop-blur-md flex items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3 ${
+                  isLight
+                    ? 'bg-white/95 border-b border-slate-200'
+                    : 'bg-[#12131b]/95 border-b border-slate-800/40'
+                }`}
+              >
                 <h3 className="text-base font-bold text-white">Detail prevodu</h3>
                 <button
                   type="button"
                   onClick={() => setSelectedTransaction(null)}
-                  className="min-h-11 min-w-11 rounded-full p-2 text-slate-400 hover:text-white hover:bg-[#1b1b26]"
+                  className={`min-h-11 min-w-11 rounded-full p-2 text-slate-400 ${
+                    isLight ? 'hover:text-slate-900 hover:bg-slate-100' : 'hover:text-white hover:bg-[#1b1b26]'
+                  }`}
                   aria-label="Zavrieť detail"
                 >
                   <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -3095,7 +3151,11 @@ export function GeorgeDashboardClient({
         {/* Tlačidlo pre Sandbox */}
         <button
           onClick={toggleDemoDrawer}
-          className="absolute right-4 bg-slate-800/80 hover:bg-blue-600 text-slate-300 hover:text-white p-2.5 rounded-full shadow-lg z-30 transition-all border border-slate-700 active:scale-90 duration-300"
+          className={`absolute right-4 p-2.5 rounded-full shadow-lg z-30 transition-all active:scale-90 duration-300 ${
+            isLight
+              ? 'bg-white text-slate-500 border border-slate-200 hover:bg-[#327bf5] hover:text-white'
+              : 'bg-slate-800/80 hover:bg-blue-600 text-slate-300 hover:text-white border border-slate-700'
+          }`}
           style={{ bottom: isDemoDrawerOpen ? '252px' : '96px' }}
           title="Otvoriť Sandbox"
         >
@@ -3128,9 +3188,9 @@ export function GeorgeDashboardClient({
             />
             <div
               data-testid="add-money-sheet-panel"
-              className={`absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-lg rounded-t-3xl border border-slate-800 bg-[#12131b] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out ${
+              className={`absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-lg rounded-t-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out ${
                 isAddMoneyOpen ? 'translate-y-0' : 'translate-y-full'
-              }`}
+              } ${isLight ? 'border border-slate-200 bg-white' : 'border border-slate-800 bg-[#12131b]'}`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-start justify-between gap-3">
@@ -3213,9 +3273,9 @@ export function GeorgeDashboardClient({
 
             <div
               data-testid="payment-sheet-panel"
-              className={`absolute inset-0 z-10 flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-[#12131b] pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out ${
+              className={`absolute inset-0 z-10 flex h-dvh max-h-dvh w-full flex-col overflow-hidden pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out ${
                 isPaymentSheetOpen ? 'translate-y-0' : 'translate-y-full'
-              }`}
+              } ${isLight ? 'bg-white' : 'bg-[#12131b]'}`}
               onClick={(e) => e.stopPropagation()}
             >
               <div

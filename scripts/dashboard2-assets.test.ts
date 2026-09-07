@@ -51,6 +51,7 @@ assert(
 )
 assert(fs.existsSync(path.join(root, 'app/dashboard2/page.tsx')), 'dashboard2 page exists')
 assert(fs.existsSync(path.join(root, 'app/dashboard3/page.tsx')), 'dashboard3 page exists')
+assert(fs.existsSync(path.join(root, 'app/dashboard3/layout.tsx')), 'dashboard3 layout exists')
 assert(
   fs.readFileSync(path.join(root, 'app/dashboard3/page.tsx'), 'utf8').includes('variant="light"'),
   'dashboard3 uses light variant'
