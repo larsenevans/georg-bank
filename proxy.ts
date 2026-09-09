@@ -32,7 +32,7 @@ function shouldSkipAuth(request: NextRequest) {
 function shouldSkipGuestRedirect(request: NextRequest) {
   const { pathname } = request.nextUrl
   return (
-    pathname === '/dashboard2' &&
+    (pathname === '/dashboard2' || pathname === '/dashboard3') &&
     request.cookies.get(GUEST_BOOTSTRAP_SKIP_COOKIE)?.value === '1'
   )
 }

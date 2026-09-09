@@ -1,5 +1,5 @@
 import { GeorgeDashboardClient } from '@/components/george-dashboard/george-dashboard-client'
 
-export default function Dashboard2Page() {
-  return <GeorgeDashboardClient variant="dark" />
+export default function Dashboard3Page() {
+  return <GeorgeDashboardClient variant="light" />
 }

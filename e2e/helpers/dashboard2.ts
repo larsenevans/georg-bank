@@ -4,6 +4,12 @@ import { gotoApp, E2E_APP_PIN } from './app'
 type Dashboard2Options = {
   /** Absolute origin (e.g. https://george-….vercel.app) or omit for baseURL. */
   origin?: string
+  /** Dashboard path — `/dashboard2` (dark) or `/dashboard3` (light). */
+  path?: '/dashboard2' | '/dashboard3'
+}
+
+function dashboardPath(options?: Dashboard2Options) {
+  return options?.path ?? '/dashboard2'
 }
 
 /** PIN-only screen: no email/password login or password fallback. */
@@ -19,7 +25,8 @@ export async function expectPinOnlyScreen(page: Page) {
  * (isPasscodeScreen defaults to true). Site gate + guest handled by gotoApp.
  */
 export async function openDashboard2Welcome(page: Page, options?: Dashboard2Options) {
-  const path = options?.origin ? `${options.origin.replace(/\/$/, '')}/dashboard2` : '/dashboard2'
+  const route = dashboardPath(options)
+  const path = options?.origin ? `${options.origin.replace(/\/$/, '')}${route}` : route
   await gotoApp(page, path)
   await expectPinOnlyScreen(page)
 }
@@ -44,6 +51,11 @@ export async function loginWithPin(page: Page, pin = E2E_APP_PIN, options?: Dash
   await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible({
     timeout: 15000,
   })
+}
+
+/** PIN login into the light /dashboard3 Prehľad. */
+export async function loginWithPinLight(page: Page, pin = E2E_APP_PIN) {
+  await loginWithPin(page, pin, { path: '/dashboard3' })
 }
 
 /**
