@@ -179,7 +179,7 @@ function testPaymentTransactionRow() {
         date: '15. 08. 2026',
         type: 'withdrawal',
         description:
-          'Ján Kovác|Platba za tovar|Platby|SK8090000000001234567890|123456|||',
+          'Ján Kovác|Platba za tovar|Platby|SK9609000000000233473298|123456|||',
         amount: 10_000,
         balanceAfter: 4_024_000,
       },
@@ -190,7 +190,7 @@ function testPaymentTransactionRow() {
     assert.ok(content.includes('Platba pre: Ján Kovác'))
     assert.ok(content.includes('Var. symbol: 123456'))
     assert.ok(content.includes('Poznámka: Platba za tovar'))
-    assert.ok(content.includes('SK80 9000 0000 0012 3456 7890'))
+    assert.ok(content.includes('SK96 0900 0000 0002 3347 3298'))
     assert.ok(content.includes('- 100,00'))
   })
 }
@@ -234,7 +234,7 @@ function testStatementFromPayment() {
       id: 'pay-1',
       date: '2026-08-06T09:30:00.000Z',
       recipientName: 'Ján Kovác',
-      recipientIban: 'SK8090000000001234567890',
+      recipientIban: 'SK9609000000000233473298',
       amountCents: 10_000,
       variableSymbol: '123456',
       note: 'Platba za tovar',
@@ -246,7 +246,7 @@ function testStatementFromPayment() {
   )
 
   assert.equal(statement.accountName, 'Ján Kovác')
-  assert.equal(statement.accountNumber, 'SK8090000000001234567890')
+  assert.equal(statement.accountNumber, 'SK9609000000000233473298')
   assert.equal(statement.statementDate, '06. 08. 2026')
   assert.equal(statement.accountingPeriod, '06. 08. 2026 - 06. 08. 2026')
   assert.equal(statement.statementNumber, '8/2026')
@@ -279,7 +279,7 @@ async function testPaymentStatementRendersPaymentValues() {
       id: 'pay-2',
       date: '2026-08-06T09:30:00.000Z',
       recipientName: 'Ján Kovác',
-      recipientIban: 'SK8090000000001234567890',
+      recipientIban: 'SK9609000000000233473298',
       amountCents: 10_000,
       variableSymbol: '123456',
       note: 'Platba za tovar',
@@ -293,10 +293,34 @@ async function testPaymentStatementRendersPaymentValues() {
   const html = await generateTransactionsPdf(statement)
 
   assert.ok(html.includes('Platba pre: Ján Kovác'))
-  assert.ok(html.includes('SK80 9000 0000 0012 3456 7890'))
+  assert.ok(html.includes('SK96 0900 0000 0002 3347 3298'))
   assert.ok(html.includes('Var. symbol: 123456'))
   assert.ok(html.includes('- 0,40 EUR'))
   assert.ok(!html.includes('{{'), 'rendered statement keeps no placeholders')
+}
+
+async function testPaymentStatementIncludesExpectedIban() {
+  const expectedIban = 'SK9609000000000233473298'
+  const statement = buildStatementFromPayment(
+    {
+      id: 'pay-iban',
+      date: '2026-08-06T09:30:00.000Z',
+      recipientName: 'Ján Kovác',
+      recipientIban: expectedIban,
+      amountCents: 10_000,
+      note: 'Kontrola IBAN',
+    },
+    {
+      currency: 'EUR',
+      holderAddressLines: ['Hlavná 1', '811 01 Bratislava'],
+    },
+  )
+
+  const html = await generateTransactionsPdf(statement)
+  const matches = html.match(/IBAN:\s*(SK\d{2}\s\d{4}\s\d{4}\s\d{4}\s\d{4}\s\d{4})/g) || []
+
+  assert.equal(matches.length, 1, 'statement should render exactly one recipient IBAN')
+  assert.ok(matches[0]?.includes('SK96 0900 0000 0002 3347 3298'))
 }
 
 async function run() {
@@ -309,6 +333,7 @@ async function run() {
   testSkeletonHasNoData()
   testStatementFromPayment()
   await testPaymentStatementRendersPaymentValues()
+  await testPaymentStatementIncludesExpectedIban()
   await testPaymentConfirmationDate()
   console.log('pdf-generator.test.ts: all tests passed')
 }
