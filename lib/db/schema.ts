@@ -77,6 +77,48 @@ export const verification = pgTable('verification', {
   updatedAt: timestamp('updatedAt').defaultNow(),
 })
 
+// --- Access flow (welcome screen + manual admin approval) ------------------
+
+export const accessRequest = pgTable(
+  'access_request',
+  {
+    id: text('id').primaryKey(),
+    code: text('code').notNull(),
+    status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+    deviceHint: text('deviceHint'),
+    ipHash: text('ipHash'),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    decidedAt: timestamp('decidedAt'),
+    sessionToken: text('sessionToken'),
+  },
+  (t) => [
+    index('idx_access_request_status').on(t.status),
+    index('idx_access_request_createdAt').on(t.createdAt),
+  ],
+)
+
+export const accessSession = pgTable(
+  'access_session',
+  {
+    id: text('id').primaryKey(),
+    sessionToken: text('sessionToken').notNull().unique(),
+    requestId: text('requestId')
+      .notNull()
+      .references(() => accessRequest.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('active'), // 'active' | 'ended'
+    transactionUsed: boolean('transactionUsed').notNull().default(false),
+    pdfGenerated: boolean('pdfGenerated').notNull().default(false),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    logoutAt: timestamp('logoutAt'),
+    endedAt: timestamp('endedAt'),
+    expiresAt: timestamp('expiresAt').notNull(),
+  },
+  (t) => [
+    index('idx_access_session_sessionToken').on(t.sessionToken),
+    index('idx_access_session_requestId').on(t.requestId),
+  ],
+)
+
 // --- Banking app tables ------------------------------------------------
 
 export const bankAccount = pgTable(

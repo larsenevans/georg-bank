@@ -1,0 +1,13 @@
+# Access flow (welcome screen + manual admin approval)
+# Admin secret token — required for /api/access/decide (e-mail buttons)
+ACCESS_ADMIN_SECRET=
+# Admin e-mail that receives access requests
+ACCESS_ADMIN_EMAIL=
+# E-mail sender for Resend (optional, default: onboarding@resend.dev)
+ACCESS_EMAIL_FROM=
+# Resend API key for sending admin e-mails
+RESEND_API_KEY=
+# Set to "false" to disable the welcome access gate (default: enabled)
+ACCESS_FLOW_ENABLED=
+# Public base URL used in admin e-mail buttons (optional; derived from request when unset)
+ACCESS_BASE_URL=

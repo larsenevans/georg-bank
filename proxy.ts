@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GUEST_BOOTSTRAP_SKIP_COOKIE } from '@/lib/guest-auth'
 import { isSiteGateEnabled, SITE_GATE_COOKIE, SITE_GATE_TOKEN, isTailscaleRequest } from '@/lib/site-gate'
+const ACCESS_COOKIE = 'access_granted'
+const ACCESS_FLOW_DISABLED = process.env.ACCESS_FLOW_ENABLED === 'false'
 
 const SESSION_COOKIE = '__Secure-better-auth.session_token'
 const SESSION_COOKIE_INSECURE = 'better-auth.session_token'
@@ -71,6 +73,26 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
+
+  // Access flow welcome gate — runs BEFORE the legacy site gate.
+  // Every visitor must hold a valid access session (approved by admin).
+  if (!ACCESS_FLOW_DISABLED) {
+    const accessCookie = request.cookies.get(ACCESS_COOKIE)?.value
+    const accessPublicPath =
+      pathname === '/welcome' ||
+      pathname.startsWith('/api/access') ||
+      pathname.startsWith('/api/health') ||
+      pathname.startsWith('/api/auth') ||
+      pathname.startsWith('/api/pin') ||
+      pathname.startsWith('/api/gate')
+    if (!accessCookie && !accessPublicPath) {
+      const welcomeUrl = request.nextUrl.clone()
+      welcomeUrl.pathname = '/welcome'
+      welcomeUrl.search = ''
+      return addSecurityHeaders(NextResponse.redirect(welcomeUrl))
+    }
+  }
+
 
   // Prefer dashboard2 — block opening the legacy /dashboard shell.
   if (pathname === '/dashboard' || pathname === '/dashboard/') {
