@@ -18,6 +18,11 @@ import {
   formatSlspStatementNumber,
 } from '@/lib/format-date'
 import { checkStatementGenerationRateLimit } from '@/lib/statement-rate-limit'
+import {
+  afterPdfSuccess,
+  readAccessCookieToken,
+  requireAccessForPdf,
+} from '@/lib/access-session'
 
 export interface BulkStatementRequest {
   accountId: string
@@ -61,6 +66,14 @@ function validateRequest(config: BulkStatementRequest) {
 export async function generateBulkStatementsAction(
   config: BulkStatementRequest,
 ): Promise<BulkStatementResult[]> {
+  const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
+  if (!pdfGate.ok) {
+    throw new Error(pdfGate.error === 'pdf_already_generated'
+      ? 'Táto session už vygenerovala PDF.'
+      : 'Vyžaduje sa aktívna access session.')
+  }
+  const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
+
   const userId = await getUserId()
   validateRequest(config)
 
@@ -126,7 +139,7 @@ export async function generateBulkStatementsAction(
     }
   }
 
-  return Promise.all(
+  const results = await Promise.all(
     statements.map(async (statement) => {
       const profile = buildStatementAccountFields({
         ...account,
@@ -158,4 +171,9 @@ export async function generateBulkStatementsAction(
       }
     }),
   )
+
+  if (accessSessionRow) {
+    await afterPdfSuccess(accessSessionRow)
+  }
+  return results
 }

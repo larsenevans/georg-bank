@@ -8,6 +8,11 @@ import { transaction } from '@/lib/db/schema'
 import { DEMO_DEFAULT_USER_ID } from '@/lib/demo-user'
 import { isOutgoingPaymentType } from '@/lib/daily-payment-limit'
 import { createServiceSupabase } from '@/lib/demo-transactions-supabase'
+import {
+  afterPdfSuccess,
+  readAccessCookieToken,
+  requireAccessForPdf,
+} from '@/lib/access-session'
 
 export const runtime = 'nodejs'
 
@@ -51,6 +56,12 @@ async function setPdfUrl(transactionId: string, pdfUrl: string) {
 
 export async function POST(req: Request) {
   try {
+    const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
+    if (!pdfGate.ok) {
+      return NextResponse.json({ success: false, error: pdfGate.error }, { status: pdfGate.status })
+    }
+    const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
+
     const form = await req.formData()
     const transactionId = String(form.get('transactionId') || '').trim()
     const file = form.get('file')
@@ -127,6 +138,10 @@ export async function POST(req: Request) {
     }
 
     await setPdfUrl(transactionId, pdfUrl)
+
+    if (accessSessionRow) {
+      await afterPdfSuccess(accessSessionRow)
+    }
 
     return NextResponse.json({ success: true, pdfUrl, transactionId })
   } catch (error) {

@@ -8,9 +8,20 @@ import {
   generatePaymentConfirmationHtml,
   getPaymentConfirmationFilename,
 } from '@/lib/payment-confirmation-pdf'
+import {
+  afterPdfSuccess,
+  readAccessCookieToken,
+  requireAccessForPdf,
+} from '@/lib/access-session'
 
 export async function GET(req: Request) {
   try {
+    const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
+    if (!pdfGate.ok) {
+      return NextResponse.json({ error: pdfGate.error }, { status: pdfGate.status })
+    }
+    const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
+
     const url = new URL(req.url)
     const transactionId = url.searchParams.get('transactionId')
 
@@ -67,6 +78,10 @@ export async function GET(req: Request) {
 
     const confirmation = buildPaymentConfirmationFromTransaction(txn, account)
     const htmlContent = generatePaymentConfirmationHtml(confirmation)
+
+    if (accessSessionRow) {
+      await afterPdfSuccess(accessSessionRow)
+    }
 
     return new NextResponse(htmlContent, {
       status: 200,

@@ -28,6 +28,11 @@ import {
   isManualTopupType,
 } from '@/lib/topup-rules'
 import { desc, eq, inArray } from 'drizzle-orm'
+import {
+  afterTransactionSuccess,
+  readAccessCookieToken,
+  requireAccessForTransaction,
+} from '@/lib/access-session'
 
 async function getTodayOutgoingUsedCents(userId: string) {
   const todayStart = startOfLocalDay()
@@ -115,6 +120,15 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
+    if (!accessGate.ok) {
+      return NextResponse.json(
+        { success: false, error: accessGate.error },
+        { status: accessGate.status },
+      )
+    }
+    const accessSessionRow = accessGate.skipped ? null : accessGate.session
+
     const body = await req.json()
     const { recipient, iban, vs, amount, note, type = 'outgoing', category = 'Platba' } = body
 
@@ -160,6 +174,9 @@ export async function POST(req: Request) {
         )
       }
       if (remote && 'transaction' in remote) {
+        if (accessSessionRow) {
+          await afterTransactionSuccess(accessSessionRow)
+        }
         return NextResponse.json({
           success: true,
           dailyLimit: remote.dailyLimit,
@@ -378,6 +395,10 @@ export async function POST(req: Request) {
       dailyLimit = dailyLimitSnapshot(
         dailyLimit.usedCents + amountInCents
       )
+    }
+
+    if (accessSessionRow) {
+      await afterTransactionSuccess(accessSessionRow)
     }
 
     return NextResponse.json({

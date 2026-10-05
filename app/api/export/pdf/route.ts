@@ -11,9 +11,20 @@ import {
   formatSlspStatementDate,
   formatSlspStatementNumber,
 } from '@/lib/format-date'
+import {
+  afterPdfSuccess,
+  readAccessCookieToken,
+  requireAccessForPdf,
+} from '@/lib/access-session'
 
 export async function GET(req: Request) {
   try {
+    const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
+    if (!pdfGate.ok) {
+      return NextResponse.json({ error: pdfGate.error }, { status: pdfGate.status })
+    }
+    const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
+
     const url = new URL(req.url)
     const accountId = url.searchParams.get('accountId')
     const month = url.searchParams.get('month')
@@ -144,6 +155,10 @@ export async function GET(req: Request) {
 
     const htmlContent = await generateTransactionsPdf(pdfData)
     const filenameMonth = month ? month.replace('-', '') : new Date().toISOString().split('T')[0].replace(/-/g, '')
+
+    if (accessSessionRow) {
+      await afterPdfSuccess(accessSessionRow)
+    }
 
     return new NextResponse(htmlContent, {
       status: 200,

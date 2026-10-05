@@ -1,0 +1,112 @@
+import {
+  isValidAccessCode,
+  generateSessionToken,
+  checkAccessRequestRateLimit,
+  getRemainingAccessRequests,
+  hashIp,
+  formatAccessCode,
+  isAccessRequestExpired,
+  ACCESS_REQUEST_MAX_PER_HOUR,
+  ACCESS_AUTO_LOGOUT_SECONDS,
+} from '@/lib/access-flow'
+import {
+  shouldScheduleLogout,
+  computeLogoutAt,
+  buildEndSessionValues,
+} from '@/lib/access-session'
+
+function assert(condition: boolean, message: string) {
+  if (!condition) throw new Error(message)
+}
+
+// --- Contract: 16-digit regex -------------------------------------------------
+assert(/^[0-9]{16}$/.test('1234567890123456') === true, '16-digit regex must match 16 digits')
+assert(isValidAccessCode('1234567890123456') === true, '16 digits valid')
+assert(isValidAccessCode('123456789012345') === false, '15 digits invalid')
+assert(isValidAccessCode('abcdefghijklmnop') === false, 'letters invalid')
+
+// --- Contract: rate limit 5/h -------------------------------------------------
+const rateKey = `regression-rate-${Date.now()}`
+const savedDisable = process.env.DISABLE_RATE_LIMIT
+delete process.env.DISABLE_RATE_LIMIT
+for (let i = 0; i < ACCESS_REQUEST_MAX_PER_HOUR; i++) {
+  assert(checkAccessRequestRateLimit(rateKey) === true, `allow ${i + 1}`)
+}
+assert(checkAccessRequestRateLimit(rateKey) === false, '6th request blocked')
+assert(ACCESS_REQUEST_MAX_PER_HOUR === 5, 'rate limit must be 5/h')
+assert(getRemainingAccessRequests(rateKey) === 0, 'remaining 0')
+if (savedDisable === undefined) delete process.env.DISABLE_RATE_LIMIT
+else process.env.DISABLE_RATE_LIMIT = savedDisable
+
+// --- Contract: hashIp ---------------------------------------------------------
+const hashed = hashIp('10.0.0.1')
+assert(hashed.length === 32, 'hashIp returns 32 hex chars')
+assert(!hashed.includes('10.0.0.1'), 'hashIp must not leak raw IP')
+assert(hashIp('10.0.0.1') === hashed, 'hashIp stable')
+assert(hashIp('') === '', 'empty IP hashes to empty')
+
+// --- Contract: UUID token -----------------------------------------------------
+const token = generateSessionToken()
+assert(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(token),
+  'session token must be UUID',
+)
+
+// --- Contract: maybeScheduleLogout +60s idempotent ----------------------------
+assert(ACCESS_AUTO_LOGOUT_SECONDS === 60, 'ACCESS_AUTO_LOGOUT_SECONDS===60')
+const now = 1_700_000_000_000
+const scheduled = computeLogoutAt(now)
+assert(scheduled.getTime() === now + 60_000, 'logoutAt is now+60s')
+assert(
+  shouldScheduleLogout({
+    transactionUsed: true,
+    pdfGenerated: true,
+    logoutAt: null,
+  }) === true,
+  'schedule when both flags true and logoutAt null',
+)
+assert(
+  shouldScheduleLogout({
+    transactionUsed: true,
+    pdfGenerated: false,
+    logoutAt: null,
+  }) === false,
+  'do not schedule without pdf',
+)
+assert(
+  shouldScheduleLogout({
+    transactionUsed: false,
+    pdfGenerated: true,
+    logoutAt: null,
+  }) === false,
+  'do not schedule without transaction',
+)
+assert(
+  shouldScheduleLogout({
+    transactionUsed: true,
+    pdfGenerated: true,
+    logoutAt: new Date(now + 30_000),
+  }) === false,
+  'idempotent: do not reschedule when logoutAt set',
+)
+const first = computeLogoutAt(now)
+const second = computeLogoutAt(now)
+assert(first.getTime() === second.getTime(), 'computeLogoutAt deterministic for same now')
+
+// --- Contract: isAccessRequestExpired 24h -------------------------------------
+assert(isAccessRequestExpired(new Date()) === false, 'fresh not expired')
+assert(
+  isAccessRequestExpired(new Date(Date.now() - 25 * 60 * 60 * 1000)) === true,
+  '25h expired',
+)
+assert(isAccessRequestExpired(null) === true, 'null expired')
+
+// --- Contract: endSession values ----------------------------------------------
+const ended = buildEndSessionValues(new Date(now))
+assert(ended.status === 'ended', 'endSession sets status ended')
+assert(ended.endedAt.getTime() === now, 'endSession sets endedAt')
+
+// --- Contract: formatAccessCode -----------------------------------------------
+assert(formatAccessCode('1234567890123456') === '1234 5678 9012 3456', '4x4 format')
+
+console.log('access-flow.regression.test.ts: all assertions passed')

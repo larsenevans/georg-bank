@@ -10,6 +10,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { attachPaymentConfirmationUrl } from '@/lib/banking-pdf-url'
 import { encodeTransactionDescription } from '@/lib/payment-confirmation-from-transaction'
 import { triggerProcessPaymentWebhook } from '@/lib/trigger-process-payment-webhook'
+import {
+  afterTransactionSuccess,
+  readAccessCookieToken,
+  requireAccessForTransaction,
+} from '@/lib/access-session'
 
 /**
  * Resolve the current user id from the Better Auth session.
@@ -148,6 +153,14 @@ export async function createTransaction(
   type: 'transfer' | 'deposit' | 'withdrawal',
   description?: string
 ) {
+  const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
+  if (!accessGate.ok) {
+    throw new Error(accessGate.error === 'transaction_already_used'
+      ? 'Táto session už použila platbu.'
+      : 'Vyžaduje sa aktívna access session.')
+  }
+  const accessSessionRow = accessGate.skipped ? null : accessGate.session
+
   const userId = await getUserId()
 
   // Verify the fromAccount belongs to the user
@@ -205,6 +218,10 @@ export async function createTransaction(
       amount,
       description: description || '',
     })
+  }
+
+  if (accessSessionRow) {
+    await afterTransactionSuccess(accessSessionRow)
   }
 
   revalidatePath('/dashboard')
@@ -272,6 +289,14 @@ export async function internalTransferByEmail(
   amount: string,
   description?: string
 ) {
+  const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
+  if (!accessGate.ok) {
+    throw new Error(accessGate.error === 'transaction_already_used'
+      ? 'Táto session už použila platbu.'
+      : 'Vyžaduje sa aktívna access session.')
+  }
+  const accessSessionRow = accessGate.skipped ? null : accessGate.session
+
   const userId = await getUserId()
   const normalizedEmail = toEmail.trim().toLowerCase()
   const transactionAmount = Math.round(parseFloat(amount) * 100)
@@ -409,6 +434,10 @@ export async function internalTransferByEmail(
 
   if (newTransaction.transaction?.id) {
     await attachPaymentConfirmationUrl(newTransaction.transaction.id)
+  }
+
+  if (accessSessionRow) {
+    await afterTransactionSuccess(accessSessionRow)
   }
 
   revalidatePath('/dashboard')
