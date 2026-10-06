@@ -89,4 +89,19 @@ assert(isAccessRequestExpired(null) === true, 'null createdAt should count as ex
 // --- Contract: auto-logout is exactly 60 seconds -------------------------------
 assert(ACCESS_AUTO_LOGOUT_SECONDS === 60, 'auto-logout must be exactly 60 seconds')
 
+// --- Contract: buildAdminEmailHtml with email & green/red buttons --------------
+import { buildAdminEmailHtml } from '@/lib/access-flow'
+const emailHtml = buildAdminEmailHtml({
+  email: 'test@example.com',
+  deviceHint: 'Windows · Chrome',
+  createdAt: new Date(),
+  decideBaseUrl: 'http://localhost:3000',
+  requestId: 'req-123',
+  token: 'tok-456',
+})
+assert(emailHtml.includes('SCHVÁLIŤ PRÍSTUP'), 'must contain green approve button')
+assert(emailHtml.includes('ZAMIETNUŤ'), 'must contain red reject button')
+assert(emailHtml.includes('test@example.com'), 'must contain email')
+
 console.log('access-flow.test.ts: all assertions passed')
+
