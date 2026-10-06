@@ -1,5 +1,6 @@
 import { test, expect, type Page } from './fixtures';
 import { login, E2E_APP_PIN } from './helpers/app';
+import { resolve } from 'node:path';
 
 /**
  * QR Payment Flow E2E Suite
@@ -126,7 +127,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
   test('QR-08: valid EPC QR image', async ({ page }) => {
     await openPaymentQrScanner(page);
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-epc-qr.png');
+    const fixturePath = resolve(process.cwd(), 'tests/fixtures/qr/valid-epc-qr.png');
 
     await fileInput.setInputFiles(fixturePath);
 
@@ -139,7 +140,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
   test('QR-09: invalid image', async ({ page }) => {
     await openPaymentQrScanner(page);
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/invalid-qr.png');
+    const fixturePath = resolve(process.cwd(), 'tests/fixtures/qr/invalid-qr.png');
 
     await fileInput.setInputFiles(fixturePath);
 
@@ -151,7 +152,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
   test('QR-10: scan fills payment form but DOES NOT submit payment', async ({ page }) => {
     await openPaymentQrScanner(page);
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-epc-qr.png');
+    const fixturePath = resolve(process.cwd(), 'tests/fixtures/qr/valid-epc-qr.png');
 
     await fileInput.setInputFiles(fixturePath);
 
@@ -171,7 +172,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
   test('QR-13: PAY by square — all 5 fields mapped into form (Meno, IBAN, Suma, VS, Poznámka)', async ({ page }) => {
     await openPaymentQrScanner(page);
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-pbs-5fields.png');
+    const fixturePath = resolve(process.cwd(), 'tests/fixtures/qr/valid-pbs-5fields.png');
 
     await fileInput.setInputFiles(fixturePath);
 
@@ -200,7 +201,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
   test('QR-14: SPAYD — all 5 fields mapped with leading zeros on VS', async ({ page }) => {
     await openPaymentQrScanner(page);
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-spayd-5fields.png');
+    const fixturePath = resolve(process.cwd(), 'tests/fixtures/qr/valid-spayd-5fields.png');
 
     await fileInput.setInputFiles(fixturePath);
 
@@ -227,7 +228,7 @@ test.describe('QR Payment Scanner (P0 Finalization)', () => {
 
     await openPaymentQrScanner(page);
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/qr/valid-spayd-5fields.png');
+    const fixturePath = resolve(process.cwd(), 'tests/fixtures/qr/valid-spayd-5fields.png');
     const postsBefore = postUrls.length;
 
     await fileInput.setInputFiles(fixturePath);

@@ -897,7 +897,6 @@ export function GeorgeDashboardClient({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(isE2ETest ? { 'x-e2e-test': '1' } : {}),
         },
         body: JSON.stringify({
           recipient,

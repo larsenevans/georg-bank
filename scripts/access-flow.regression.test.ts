@@ -1,13 +1,13 @@
 import {
   isValidAccessCode,
   generateSessionToken,
-  checkAccessRequestRateLimit,
-  getRemainingAccessRequests,
   hashIp,
   formatAccessCode,
   isAccessRequestExpired,
   ACCESS_REQUEST_MAX_PER_HOUR,
   ACCESS_AUTO_LOGOUT_SECONDS,
+  isTrustedTestMode,
+  getAccessRequestQuota,
 } from '@/lib/access-flow'
 import {
   shouldScheduleLogout,
@@ -25,18 +25,31 @@ assert(isValidAccessCode('1234567890123456') === true, '16 digits valid')
 assert(isValidAccessCode('123456789012345') === false, '15 digits invalid')
 assert(isValidAccessCode('abcdefghijklmnop') === false, 'letters invalid')
 
-// --- Contract: rate limit 5/h -------------------------------------------------
-const rateKey = `regression-rate-${Date.now()}`
-const savedDisable = process.env.DISABLE_RATE_LIMIT
-delete process.env.DISABLE_RATE_LIMIT
-for (let i = 0; i < ACCESS_REQUEST_MAX_PER_HOUR; i++) {
-  assert(checkAccessRequestRateLimit(rateKey) === true, `allow ${i + 1}`)
-}
-assert(checkAccessRequestRateLimit(rateKey) === false, '6th request blocked')
+// --- Contract: test bypass is configured server-side and disabled in prod ----
+const savedTestMode = process.env.E2E_TEST_MODE
+const savedVercelEnv = process.env.VERCEL_ENV
+const savedCi = process.env.CI
+const savedDisableRateLimit = process.env.DISABLE_RATE_LIMIT
+delete process.env.E2E_TEST_MODE
+process.env.VERCEL_ENV = 'preview'
+process.env.CI = 'true'
+process.env.DISABLE_RATE_LIMIT = 'true'
+assert(!isTrustedTestMode(), 'client-independent test flags do not enable bypass')
+process.env.E2E_TEST_MODE = 'true'
+assert(isTrustedTestMode(), 'server test configuration enables bypass')
+process.env.VERCEL_ENV = 'production'
+assert(!isTrustedTestMode(), 'production cannot enable the test bypass')
+if (savedTestMode === undefined) delete process.env.E2E_TEST_MODE
+else process.env.E2E_TEST_MODE = savedTestMode
+if (savedVercelEnv === undefined) delete process.env.VERCEL_ENV
+else process.env.VERCEL_ENV = savedVercelEnv
+if (savedCi === undefined) delete process.env.CI
+else process.env.CI = savedCi
+if (savedDisableRateLimit === undefined) delete process.env.DISABLE_RATE_LIMIT
+else process.env.DISABLE_RATE_LIMIT = savedDisableRateLimit
 assert(ACCESS_REQUEST_MAX_PER_HOUR === 5, 'rate limit must be 5/h')
-assert(getRemainingAccessRequests(rateKey) === 0, 'remaining 0')
-if (savedDisable === undefined) delete process.env.DISABLE_RATE_LIMIT
-else process.env.DISABLE_RATE_LIMIT = savedDisable
+assert(getAccessRequestQuota(4).allowed, 'fifth request is allowed')
+assert(!getAccessRequestQuota(5).allowed, 'sixth request is blocked')
 
 // --- Contract: hashIp ---------------------------------------------------------
 const hashed = hashIp('10.0.0.1')

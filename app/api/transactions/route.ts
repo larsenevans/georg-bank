@@ -34,6 +34,7 @@ import {
   readAccessCookieToken,
   requireAccessForTransaction,
 } from '@/lib/access-session'
+import { isTrustedTestMode } from '@/lib/access-flow'
 
 async function getTodayOutgoingUsedCents(userId: string) {
   const todayStart = startOfLocalDay()
@@ -131,12 +132,7 @@ export async function POST(req: Request) {
 
     const isOutgoing = isOutgoingPaymentType(type)
 
-    const isE2E =
-      process.env.CI === 'true' ||
-      process.env.DISABLE_RATE_LIMIT === 'true' ||
-      req.headers.get('x-e2e-test') === '1' ||
-      req.headers.get('user-agent')?.includes('Playwright') ||
-      req.headers.get('user-agent')?.includes('HeadlessChrome')
+    const isE2E = isTrustedTestMode()
     if (isOutgoing && !isE2E && amount < 1.00) {
       return NextResponse.json(
         { success: false, error: 'Minimálna suma platby je 1,00 €.' },

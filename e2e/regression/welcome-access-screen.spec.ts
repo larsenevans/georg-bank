@@ -92,7 +92,6 @@ test.describe('welcome access screen regression', () => {
   test('prihlásenie: odoslanie kódu, pending stav, schválenie správcom a redirect do bankingu', async ({
     page,
     request,
-    baseURL,
   }) => {
     await page.goto('/welcome')
 
@@ -132,10 +131,6 @@ test.describe('welcome access screen regression', () => {
         token: secret,
         requestId: responseData.requestId,
         decision: 'approved',
-      },
-      headers: {
-        'user-agent': 'playwright-e2e',
-        'x-e2e-test': '1',
       },
     })
     expect(decideRes.status()).toBe(200)

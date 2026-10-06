@@ -1,17 +1,15 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { accessRequest } from '@/lib/db/schema'
+import { createAccessRequestWithinLimit } from '@/lib/access-request-store'
 import {
   isValidAccessCode,
-  checkAccessRequestRateLimit,
-  getRemainingAccessRequests,
   hashIp,
   simplifyUserAgent,
   buildAdminEmailHtml,
   sendAdminEmail,
   getAccessAdminSecret,
   getAccessBaseUrl,
+  isTrustedTestMode,
 } from '@/lib/access-flow'
 
 export async function POST(request: NextRequest) {
@@ -39,13 +37,30 @@ export async function POST(request: NextRequest) {
   const ipHash = hashIp(ip)
 
   const userAgent = request.headers.get('user-agent') ?? ''
-  const isE2ETest =
-    userAgent.includes('playwright') ||
-    request.headers.get('x-e2e-test') === '1' ||
-    process.env.DISABLE_RATE_LIMIT === 'true' ||
-    process.env.CI === 'true'
 
-  if (!isE2ETest && !checkAccessRequestRateLimit(ipHash, isE2ETest)) {
+  const requestId = randomUUID()
+  const deviceHint = simplifyUserAgent(userAgent)
+  const token = getAccessAdminSecret() || randomUUID()
+  let requestQuota: Awaited<ReturnType<typeof createAccessRequestWithinLimit>>
+  try {
+    requestQuota = await createAccessRequestWithinLimit({
+      id: requestId,
+      code: code || null,
+      email: email || null,
+      token,
+      deviceHint,
+      userAgent,
+      ipHash,
+    })
+  } catch (error) {
+    console.error('[access] Failed to store access request:', error)
+    return NextResponse.json(
+      { error: 'request_failed', message: 'Žiadosť sa nepodarilo uložiť.' },
+      { status: 500 },
+    )
+  }
+
+  if (!requestQuota.allowed) {
     return NextResponse.json(
       {
         error: 'rate_limited',
@@ -54,21 +69,6 @@ export async function POST(request: NextRequest) {
       { status: 429 },
     )
   }
-
-  const requestId = randomUUID()
-  const deviceHint = simplifyUserAgent(userAgent)
-  const token = getAccessAdminSecret() || randomUUID()
-
-  await db.insert(accessRequest).values({
-    id: requestId,
-    code: code || null,
-    email: email || null,
-    token,
-    status: 'pending',
-    deviceHint,
-    userAgent,
-    ipHash,
-  })
 
   const emailResult = await sendAdminEmail({
     subject: email
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       requestId,
       token,
     }),
-    isTest: isE2ETest,
+    isTest: isTrustedTestMode(),
   })
 
   if (!emailResult.ok) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     requestId,
-    remainingRequests: getRemainingAccessRequests(ipHash),
+    remainingRequests: requestQuota.remainingRequests,
     emailSent: emailResult.ok,
   })
 }

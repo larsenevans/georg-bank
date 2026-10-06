@@ -4,7 +4,6 @@ import path from 'path'
 
 export const ACCESS_COOKIE = 'access_granted'
 export const ACCESS_REQUEST_MAX_PER_HOUR = 5
-export const ACCESS_REQUEST_WINDOW_MS = 60 * 60 * 1000
 export const ACCESS_REQUEST_EXPIRY_HOURS = 24
 export const ACCESS_SESSION_EXPIRY_DAYS = 30
 export const ACCESS_AUTO_LOGOUT_SECONDS = 60
@@ -19,7 +18,7 @@ export function getAccessAdminSecret(): string | null {
 
   const authUrl = process.env.BETTER_AUTH_URL?.trim()
   if (
-    (process.env.CI === 'true' || process.env.DISABLE_RATE_LIMIT === 'true') &&
+    isTrustedTestMode() &&
     (authUrl?.startsWith('http://localhost:') || !authUrl)
   ) {
     return 'playwright-e2e-access-admin-secret'
@@ -63,35 +62,29 @@ export function simplifyUserAgent(ua: string | null | undefined): string | null 
   return `${system} · ${browser}`
 }
 
-const requestBuckets = new Map<string, number[]>()
-
-export function checkAccessRequestRateLimit(key: string, isTest?: boolean): boolean {
-  if (isTest || process.env.DISABLE_RATE_LIMIT === 'true' || process.env.CI === 'true') {
-    return true
-  }
-  const now = Date.now()
-  const existing = requestBuckets.get(key) ?? []
-  const recent = existing.filter((timestamp) => now - timestamp < ACCESS_REQUEST_WINDOW_MS)
-  if (recent.length >= ACCESS_REQUEST_MAX_PER_HOUR) {
-    return false
-  }
-  recent.push(now)
-  requestBuckets.set(key, recent)
-  return true
+export function isTrustedTestMode(): boolean {
+  return (
+    process.env.E2E_TEST_MODE === 'true' &&
+    process.env.VERCEL_ENV !== 'production'
+  )
 }
 
-export function getRemainingAccessRequests(key: string): number {
-  const now = Date.now()
-  const recent = (requestBuckets.get(key) ?? []).filter(
-    (timestamp) => now - timestamp < ACCESS_REQUEST_WINDOW_MS,
-  )
-  return Math.max(0, ACCESS_REQUEST_MAX_PER_HOUR - recent.length)
+export function getAccessRequestQuota(requestCount: number):
+  | { allowed: true; remainingRequests: number }
+  | { allowed: false; remainingRequests: 0 } {
+  if (requestCount >= ACCESS_REQUEST_MAX_PER_HOUR) {
+    return { allowed: false, remainingRequests: 0 }
+  }
+  return {
+    allowed: true,
+    remainingRequests: ACCESS_REQUEST_MAX_PER_HOUR - requestCount - 1,
+  }
 }
 
 const decideBuckets = new Map<string, number[]>()
 
-export function checkAccessDecideRateLimit(key: string, isTest?: boolean): boolean {
-  if (isTest || process.env.DISABLE_RATE_LIMIT === 'true' || process.env.CI === 'true') {
+export function checkAccessDecideRateLimit(key: string): boolean {
+  if (isTrustedTestMode()) {
     return true
   }
   const now = Date.now()
@@ -222,10 +215,7 @@ export async function sendAdminEmail(params: {
     return { ok: false, error: 'email_not_configured' }
   }
 
-  const isTestRun =
-    params.isTest ||
-    process.env.DISABLE_RATE_LIMIT === 'true' ||
-    process.env.CI === 'true'
+  const isTestRun = params.isTest || isTrustedTestMode()
 
   // Pre testy: odošli presne 1 e-mail na začiatku testovania, ďalších 90+ test požiadaviek preskoč
   if (isTestRun) {

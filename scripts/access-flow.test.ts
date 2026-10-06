@@ -1,14 +1,14 @@
 import {
   isValidAccessCode,
   generateSessionToken,
-  checkAccessRequestRateLimit,
-  getRemainingAccessRequests,
   hashIp,
   simplifyUserAgent,
   formatAccessCode,
   isAccessRequestExpired,
   ACCESS_REQUEST_MAX_PER_HOUR,
   ACCESS_AUTO_LOGOUT_SECONDS,
+  getAccessRequestQuota,
+  isTrustedTestMode,
 } from '@/lib/access-flow'
 
 function assert(condition: boolean, message: string) {
@@ -24,34 +24,33 @@ assert(isValidAccessCode('1234 5678 9012 345') === false, 'spaces should be inva
 assert(isValidAccessCode('') === false, 'empty should be invalid')
 assert(isValidAccessCode('1234567890123456 ') === false, 'trailing space should be invalid')
 
-// --- Contract: rate limit max 5 per hour ------------------------------------
-const rateKey = `test-rate-${Date.now()}`
-const savedDisable = process.env.DISABLE_RATE_LIMIT
-delete process.env.DISABLE_RATE_LIMIT
-for (let i = 0; i < ACCESS_REQUEST_MAX_PER_HOUR; i++) {
-  assert(
-    checkAccessRequestRateLimit(rateKey) === true,
-    `request ${i + 1} should be allowed within limit`,
-  )
-}
-assert(
-  checkAccessRequestRateLimit(rateKey) === false,
-  'request 6 should be rate limited',
-)
-assert(
-  getRemainingAccessRequests(rateKey) === 0,
-  'remaining requests should be 0 after limit',
-)
-const freshKey = `test-fresh-${Date.now()}`
-assert(
-  getRemainingAccessRequests(freshKey) === ACCESS_REQUEST_MAX_PER_HOUR,
-  'fresh key should have full quota',
-)
-if (savedDisable === undefined) {
-  delete process.env.DISABLE_RATE_LIMIT
-} else {
-  process.env.DISABLE_RATE_LIMIT = savedDisable
-}
+// --- Contract: test-only bypass requires server configuration ---------------
+const savedTestMode = process.env.E2E_TEST_MODE
+const savedVercelEnv = process.env.VERCEL_ENV
+const savedCi = process.env.CI
+const savedDisableRateLimit = process.env.DISABLE_RATE_LIMIT
+delete process.env.E2E_TEST_MODE
+process.env.CI = 'true'
+process.env.DISABLE_RATE_LIMIT = 'true'
+process.env.VERCEL_ENV = 'preview'
+assert(!isTrustedTestMode(), 'CI and rate-limit env flags do not enable bypass')
+process.env.E2E_TEST_MODE = 'true'
+assert(isTrustedTestMode(), 'bypass is enabled by trusted test configuration')
+process.env.VERCEL_ENV = 'production'
+assert(!isTrustedTestMode(), 'bypass remains disabled in production')
+if (savedTestMode === undefined) delete process.env.E2E_TEST_MODE
+else process.env.E2E_TEST_MODE = savedTestMode
+if (savedVercelEnv === undefined) delete process.env.VERCEL_ENV
+else process.env.VERCEL_ENV = savedVercelEnv
+if (savedCi === undefined) delete process.env.CI
+else process.env.CI = savedCi
+if (savedDisableRateLimit === undefined) delete process.env.DISABLE_RATE_LIMIT
+else process.env.DISABLE_RATE_LIMIT = savedDisableRateLimit
+assert(ACCESS_REQUEST_MAX_PER_HOUR === 5, 'access request limit is 5 per hour')
+assert(getAccessRequestQuota(0).remainingRequests === 4, 'first request leaves 4')
+assert(getAccessRequestQuota(4).allowed, 'fifth request is allowed')
+assert(getAccessRequestQuota(4).remainingRequests === 0, 'fifth request leaves 0')
+assert(!getAccessRequestQuota(5).allowed, 'sixth request is blocked')
 
 // --- Contract: session token is a UUID ----------------------------------------
 const token = generateSessionToken()
@@ -104,4 +103,3 @@ assert(emailHtml.includes('ZAMIETNUŤ'), 'must contain red reject button')
 assert(emailHtml.includes('test@example.com'), 'must contain email')
 
 console.log('access-flow.test.ts: all assertions passed')
-

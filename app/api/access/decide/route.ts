@@ -32,14 +32,7 @@ export async function GET(request: NextRequest) {
   const requestId = params.get('requestId')?.trim() ?? ''
   const decision = params.get('decision') ?? ''
 
-  const userAgent = request.headers.get('user-agent') ?? ''
-  const isE2ETest =
-    userAgent.includes('playwright') ||
-    request.headers.get('x-e2e-test') === '1' ||
-    process.env.DISABLE_RATE_LIMIT === 'true' ||
-    process.env.CI === 'true'
-
-  if (!isE2ETest && !checkAccessDecideRateLimit(request.headers.get('x-forwarded-for') || 'unknown', isE2ETest)) {
+  if (!checkAccessDecideRateLimit(request.headers.get('x-forwarded-for') || 'unknown')) {
     return new NextResponse(decidePageHtml('Príliš veľa pokusov.', false), {
       status: 429,
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
