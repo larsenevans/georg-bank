@@ -1,22 +1,7 @@
 import { test, expect } from './fixtures'
 import { loginWithPin } from './helpers/dashboard2'
 import { E2E_APP_PIN } from './helpers/app'
-
-async function readApiBalance(page: import('@playwright/test').Page) {
-  return page.evaluate(async () => {
-    const res = await fetch('/api/transactions', { cache: 'no-store' })
-    const data = await res.json()
-    return {
-      ok: Boolean(data.success),
-      cents: data.accounts?.[0]?.balance as number | undefined,
-      accountNumber: data.accounts?.[0]?.accountNumber as string | undefined,
-      latestAfter:
-        typeof data.transactions?.[0]?.balanceAfter === 'number'
-          ? Math.round(data.transactions[0].balanceAfter * 100)
-          : undefined,
-    }
-  })
-}
+import { readApiBalance } from './helpers/transactions'
 
 test.describe('dashboard2 – platba ostane odpísaná po refreshi', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
