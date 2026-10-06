@@ -17,6 +17,8 @@ function hasSessionCookie(request: NextRequest) {
 function shouldSkipAuth(request: NextRequest) {
   const { pathname } = request.nextUrl
   return (
+    pathname === '/welcome' ||
+    pathname === '/robots.txt' ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/pin') ||
     // Access-flow API (welcome gate): request/status/decide/session/logout authorize via the
@@ -48,6 +50,7 @@ function shouldSkipGuestRedirect(request: NextRequest) {
  * Security headers helper - adds camera permissions and security headers
  */
 function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
   response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
@@ -85,6 +88,8 @@ export function proxy(request: NextRequest) {
     const accessCookie = request.cookies.get(ACCESS_COOKIE)?.value
     const accessPublicPath =
       pathname === '/welcome' ||
+      pathname === '/robots.txt' ||
+      pathname === '/gate' ||
       pathname.startsWith('/api/access') ||
       pathname.startsWith('/api/health') ||
       pathname.startsWith('/api/auth') ||
@@ -116,6 +121,8 @@ export function proxy(request: NextRequest) {
     // Payments from george-*.vercel.app must reach Supabase so the dashboard can show them.
     const gatePublicPath =
       pathname === '/gate' ||
+      pathname === '/welcome' ||
+      pathname.startsWith('/api/access') ||
       pathname.startsWith('/api/gate') ||
       pathname.startsWith('/api/health') ||
       pathname.startsWith('/api/test-db') ||
