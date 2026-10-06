@@ -19,6 +19,11 @@ function shouldSkipAuth(request: NextRequest) {
   return (
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/pin') ||
+    // Access-flow API (welcome gate): request/status/decide/session/logout authorize via the
+    // access cookie or admin secret themselves and must not bounce through guest bootstrap
+    // (e.g. dashboard polling /api/access/session while guest_bootstrap_skip is set).
+    pathname === '/api/access' ||
+    pathname.startsWith('/api/access/') ||
     pathname === '/gate' ||
     pathname.startsWith('/api/gate') ||
     pathname.startsWith('/api/health') ||
