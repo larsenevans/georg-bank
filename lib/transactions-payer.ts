@@ -24,7 +24,7 @@ async function sessionUserId(): Promise<string | null> {
 }
 
 /**
- * Prefer the logged-in guest SPACE account. Fall back to the demo Peter
+ * Prefer the logged-in guest SPACE account. Fall back to the demo Business účet L
  * account only when there is no session (scripts / unauthenticated GET).
  */
 export async function resolveTransactionsPayer(): Promise<TransactionsPayer> {

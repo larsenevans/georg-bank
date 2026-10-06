@@ -51,7 +51,7 @@ export function PaymentOrdersClient() {
               <div className="flex items-start justify-between w-full">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-white font-bold text-[15px] leading-tight">Peter</span>
+                    <span className="text-white font-bold text-[15px] leading-tight">Business účet L</span>
                     <HelpCircle className="w-3.5 h-3.5 text-[#8e9bb5]" strokeWidth={2} />
                   </div>
                   <span className="text-[#e0e4f0] text-[13px] mt-0.5">21. jún</span>

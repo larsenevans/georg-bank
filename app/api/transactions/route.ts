@@ -29,6 +29,7 @@ import {
 } from '@/lib/topup-rules'
 import { desc, eq, inArray } from 'drizzle-orm'
 import {
+  type AccessSessionRow,
   afterTransactionSuccess,
   readAccessCookieToken,
   requireAccessForTransaction,
@@ -88,6 +89,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      currentBalanceEur: payer.account?.balance != null ? payer.account.balance / 100 : undefined,
       dailyLimit,
       topupPolicy: {
         manualTopupDisabled: MANUAL_TOPUP_DISABLED,
@@ -120,20 +122,36 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
-    if (!accessGate.ok) {
-      return NextResponse.json(
-        { success: false, error: accessGate.error },
-        { status: accessGate.status },
-      )
-    }
-    const accessSessionRow = accessGate.skipped ? null : accessGate.session
-
     const body = await req.json()
     const { recipient, iban, vs, amount, note, type = 'outgoing', category = 'Platba' } = body
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Zadajte platnú sumu' }, { status: 400 })
+    }
+
+    const isOutgoing = isOutgoingPaymentType(type)
+
+    if (isOutgoing && amount < 1.00) {
+      return NextResponse.json(
+        { success: false, error: 'Minimálna suma platby je 1,00 €.' },
+        { status: 400 }
+      )
+    }
+
+    let accessSessionRow: AccessSessionRow | null = null
+    if (isOutgoing) {
+      const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
+      if (!accessGate.ok) {
+        const errorMsg =
+          accessGate.error === 'transaction_already_used'
+            ? 'Máte povolenie spraviť iba jednu platbu na túto session.'
+            : accessGate.error
+        return NextResponse.json(
+          { success: false, error: errorMsg },
+          { status: accessGate.status },
+        )
+      }
+      accessSessionRow = accessGate.skipped ? null : accessGate.session
     }
 
     if (MANUAL_TOPUP_DISABLED && isManualTopupType(type)) {
@@ -188,7 +206,6 @@ export async function POST(req: Request) {
 
     const amountInCents = Math.round(Number(amount) * 100)
     const newTxnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const isOutgoing = type === 'outgoing' || type === 'withdrawal' || type === 'transfer'
 
     let defaultUserId = payer.userId
     let accountRecord = payer.account
@@ -344,6 +361,15 @@ export async function POST(req: Request) {
     }
 
     const currentBalanceCents = accountRecord?.balance ?? SEED_BALANCE_CENTS
+    if (isOutgoing && amountInCents > currentBalanceCents) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Nedostatok vlastných zdrojov na Business účte pre túto platbu.',
+        },
+        { status: 400 }
+      )
+    }
     const newBalanceCents = type === 'incoming' || type === 'deposit'
       ? currentBalanceCents + amountInCents
       : currentBalanceCents - amountInCents
@@ -397,7 +423,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (accessSessionRow) {
+    if (isOutgoing && accessSessionRow) {
       await afterTransactionSuccess(accessSessionRow)
     }
 

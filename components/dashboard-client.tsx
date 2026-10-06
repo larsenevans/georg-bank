@@ -132,37 +132,37 @@ export function DashboardClient({ accounts, transactions }: DashboardClientProps
   const cards = [
     {
       name: 'VISA elektronická',
-      owner: 'PETER',
+      owner: 'Business účet L',
       status: 'BLOKOVANÁ',
       type: 'visa-electron'
     },
     {
       name: 'VISA elektronická Vlastná karta',
-      owner: 'PETER',
+      owner: 'Business účet L',
       status: 'BLOKOVANÁ',
       type: 'visa-electron'
     },
     {
       name: 'VISA elektronická',
-      owner: 'PETER',
+      owner: 'Business účet L',
       number: '4544 12** **** 1234',
       type: 'visa-electron'
     },
     {
       name: 'VISA elektronická Vlastná karta',
-      owner: 'PETER',
+      owner: 'Business účet L',
       number: '4544 12** **** 4321',
       type: 'visa-electron'
     },
     {
       name: 'VISA Platinum',
-      owner: 'PETER',
+      owner: 'Business účet L',
       number: '4544 12** **** 4444',
       type: 'visa-platinum'
     },
     {
       name: 'VISA elektronická Vlastná karta',
-      owner: 'PETER',
+      owner: 'Business účet L',
       status: 'BLOKOVANÁ',
       type: 'visa-electron'
     }
@@ -220,7 +220,7 @@ export function DashboardClient({ accounts, transactions }: DashboardClientProps
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-400 font-medium">Peter</p>
+                  <p className="text-xs text-slate-400 font-medium">Business účet L</p>
                   <h4 className="font-bold text-sm text-white mt-0.5">Business účet</h4>
                   <p className="text-[11px] text-slate-400 font-medium tracking-wide mt-0.5">{activeAccount?.accountNumber ?? 'SK67 0900 0000 0050 4463 0752'}</p>
                   <p className="text-sm font-bold text-[#179f42] mt-1">€ {formatBalance(activeAccount?.balance ?? 85)}</p>

@@ -392,7 +392,7 @@ export function generatePaymentConfirmationHtml(data: PaymentConfirmationPdfData
               <div class="details-row row-large">
                 <span class="marker"></span>
                 <span class="label">Názov Účtu</span>
-                <span class="value value-large">Peter Novotný</span>
+                <span class="value value-large">Business účet L</span>
               </div>
               <div class="details-row">
                 <span class="marker"></span>

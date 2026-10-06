@@ -56,7 +56,7 @@ struct WidgetSnapshot: Codable, Equatable {
     static let placeholder = WidgetSnapshot(
         version: 1,
         updatedAt: ISO8601DateFormatter().string(from: Date()),
-        profile: Profile(displayName: "Peter", gender: "male", greetingStyle: "informal"),
+        profile: Profile(displayName: "Business účet L", gender: "male", greetingStyle: "informal"),
         money: Money(
             currency: "EUR",
             balanceCents: 666_000,

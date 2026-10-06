@@ -163,7 +163,7 @@ test.describe.serial('Safari prod smoke – platba + pohyby', () => {
       const compact = html.replace(/\s+/g, '')
       expect(html).toMatch(/<!DOCTYPE html>/i)
       expect(html).toMatch(/Výpis z Účtu|Potvrdenie o platbe/i)
-      expect(html).toMatch(/Peter Novotn[yý]/i)
+      expect(html).toMatch(/Business účet L/i)
       expect(html).toContain(payment.recipient)
       expect(html).toMatch(/0[,.]11/)
       expect(compact).toMatch(/SK8090000000001234567890/i)

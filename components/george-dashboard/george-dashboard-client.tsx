@@ -29,6 +29,7 @@ import {
 } from '@/lib/demo-user'
 import { notifyPohybyLive } from '@/lib/pohyby-live'
 import { syncWidgetFromTransactionsApi } from '@/lib/widget'
+import { generateRandomLoginBalanceEur } from '@/lib/random-balance'
 
 export type GeorgeDashboardVariant = 'dark' | 'light'
 
@@ -176,14 +177,14 @@ export function GeorgeDashboardClient({
 }) {
   const { data: sessionData } = useSession()
   const user = {
-    name: sessionData?.user?.name ?? 'Peter Novotný',
-    email: sessionData?.user?.email ?? 'peter@example.com',
+    name: sessionData?.user?.name ?? 'Business účet L',
+    email: sessionData?.user?.email ?? 'larsenevans89@gmail.com',
     image: sessionData?.user?.image || '/images/profile-avatar.png',
   }
 
   // GLOBÁLNY STAV
   const [state, setState] = useState({
-    spaceBalance: 0.53,
+    spaceBalance: generateRandomLoginBalanceEur(),
     moneybackBalance: 0.00,
     investBalance: 0.00,
     activeTab: 'prehlad',
@@ -476,6 +477,21 @@ export function GeorgeDashboardClient({
             stopWebcam()
 
             setTimeout(() => {
+              void fetch('/api/pin/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ biometrics: true }),
+              })
+                .then((r) => r.json())
+                .then((resData) => {
+                  if (typeof resData?.balanceEur === 'number') {
+                    setState((prev) => ({
+                      ...prev,
+                      spaceBalance: resData.balanceEur,
+                    }))
+                  }
+                })
+                .catch(() => {})
               setIsSimulatorLoggedIn(true)
               setIsBiometricsActive(false)
               setBiometricsSuccess(false)
@@ -614,10 +630,13 @@ export function GeorgeDashboardClient({
           if (data.success) {
             const rawTxns = Array.isArray(data.transactions) ? data.transactions : []
             const demoAccount = pickDemoBankAccount(data.accounts)
-            const accBalance = resolveSpaceBalanceFromApi(
-              data.accounts,
-              rawTxns[0]?.balanceAfter
-            )
+            const accBalance =
+              typeof data.currentBalanceEur === 'number'
+                ? data.currentBalanceEur
+                : resolveSpaceBalanceFromApi(
+                    data.accounts,
+                    rawTxns[0]?.balanceAfter
+                  )
             const accNumber =
               typeof demoAccount?.accountNumber === 'string' &&
               demoAccount.accountNumber.trim()
@@ -650,6 +669,8 @@ export function GeorgeDashboardClient({
                 dailyLimit: data.dailyLimit,
                 accounts: data.accounts,
               })
+              setIsLoaded(true)
+              return
             }
           }
         }
@@ -836,6 +857,11 @@ export function GeorgeDashboardClient({
 
     if (!recipient || !iban || isNaN(amount) || amount <= 0) {
       showToast('Prosím vyplňte správne meno príjemcu, IBAN a kladnú sumu.')
+      return
+    }
+
+    if (amount < 1.00) {
+      showToast('Minimálna suma platby je 1,00 €.')
       return
     }
 
@@ -1106,6 +1132,13 @@ export function GeorgeDashboardClient({
           body: JSON.stringify({ pin: newPasscode }),
         })
         if (response.ok) {
+          const resData = await response.json().catch(() => ({}))
+          if (typeof resData?.balanceEur === 'number') {
+            setState((prev) => ({
+              ...prev,
+              spaceBalance: resData.balanceEur,
+            }))
+          }
           setIsSimulatorLoggedIn(true)
           setPasscode('')
         } else {
@@ -1367,7 +1400,7 @@ export function GeorgeDashboardClient({
 
   const resetSandbox = () => {
     setState({
-      spaceBalance: 0.53,
+      spaceBalance: generateRandomLoginBalanceEur(),
       moneybackBalance: 0.0,
       investBalance: 0.0,
       activeTab: 'prehlad',
@@ -3056,13 +3089,24 @@ export function GeorgeDashboardClient({
                   <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 shadow-md">
                     <img src="/images/profile-avatar.png" alt="Avatar" className="w-full h-full object-cover" />
                   </div>
-                  <h4 className="text-base font-bold text-white">{user.name || 'Peter Novotný'}</h4>
+                  <h4 className="text-base font-bold text-white">{user.name || 'Business účet L'}</h4>
                   <p className="text-xs text-[#7f8596] mt-1">{BUSINESS_ACCOUNT_LABEL}</p>
                   <div className="mt-4 pt-4 border-t border-slate-800 space-y-2.5 text-left text-xs">
                     <div className="flex justify-between"><span className="text-[#7f8596]">George Kľúč:</span> <span className="text-emerald-400 font-bold">Aktívny</span></div>
                     <div className="flex justify-between"><span className="text-[#7f8596]">Verzia aplikácie:</span> <span className="text-slate-200">2026.4.2 (Prototyp)</span></div>
                     <div className="flex justify-between"><span className="text-[#7f8596]">Posledné prihlásenie:</span> <span className="text-slate-200">Dnes o 02:14</span></div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await fetch('/api/pin/logout', { method: 'POST' }).catch(() => {})
+                      setIsSimulatorLoggedIn(false)
+                      setModalType(null)
+                    }}
+                    className="mt-4 w-full py-2.5 rounded-xl bg-red-600/20 text-red-400 border border-red-500/30 text-xs font-bold hover:bg-red-600/30 transition-colors"
+                  >
+                    Odhlásiť sa
+                  </button>
                 </>
               )}
               {modalType === 'moneyback-modal' && (

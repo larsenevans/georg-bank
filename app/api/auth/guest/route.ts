@@ -6,6 +6,7 @@ import {
   ensureGuestCredentialAccount,
   getGuestConfig,
 } from '@/lib/guest-auth'
+import { applyLoginSessionBalance } from '@/lib/random-balance-server'
 import { NextRequest, NextResponse } from 'next/server'
 
 function copyAuthCookies(source: Response, target: NextResponse) {
@@ -202,6 +203,9 @@ export async function GET(request: NextRequest) {
     const redirectUrl = redirectTarget(request, from)
     const response = NextResponse.redirect(redirectUrl)
     copyAuthCookies(authResponse, response)
+    await applyLoginSessionBalance().catch((err) => {
+      console.warn('[guest-auth] balance init error:', err)
+    })
     return response
   } catch (error) {
     console.error('[guest-auth] unexpected error:', error)
