@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { gotoApp } from './helpers/app'
 
 test.describe('PWA Funkcionalita - 20x Komplexné Testy', () => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { login } from './helpers/app';
 
 test.describe('Dashboard2 Action Icons UI Hotfix', () => {

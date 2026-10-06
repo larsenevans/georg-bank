@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { expectGeorgeHeader } from './helpers/app'
 import { loginWithPin } from './helpers/dashboard2'
 

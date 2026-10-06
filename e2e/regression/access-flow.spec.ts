@@ -5,6 +5,10 @@ import { test, expect } from '@playwright/test'
  * Feasible without live admin email / DB approval: welcome UI + API shape + unit-locked constants.
  */
 test.describe('access-flow regression', () => {
+  // Own approved access session (see e2e/auth.setup.ts): the logout test ends it,
+  // which must not invalidate the shared session in playwright/.auth/user.json.
+  test.use({ storageState: 'playwright/.auth/access-regression.json' })
+
   test('welcome screen exposes access messaging', async ({ page }) => {
     await page.goto('/welcome')
     await expect(page.locator('body')).toBeVisible()

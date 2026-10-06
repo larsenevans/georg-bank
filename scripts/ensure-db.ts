@@ -103,6 +103,17 @@ async function ensureStatementProfileColumns(pool: Pool) {
   }
 }
 
+/** Access flow tables (idempotent CREATE TABLE IF NOT EXISTS) — needed by the welcome gate + e2e. */
+async function ensureAccessFlowTables(pool: Pool) {
+  if (await tableExists(pool, 'access_session')) return
+
+  const accessFlowMigration = path.join(process.cwd(), 'drizzle', '0003_access_flow.sql')
+  if (fs.existsSync(accessFlowMigration)) {
+    await applySqlFile(pool, accessFlowMigration)
+    console.log('[ensure-db] Access flow tables applied.')
+  }
+}
+
 async function ensureGuestUser(pool: Pool) {
   const { isDedicatedGuestEmail, ensureGuestCredentialAccount } = await import(
     '../lib/guest-auth'
@@ -382,6 +393,7 @@ export async function ensureDatabase() {
     await pool.query('SELECT 1')
     await ensureSchema(pool)
     await ensureStatementProfileColumns(pool)
+    await ensureAccessFlowTables(pool)
     await ensureGuestUser(pool)
     await migrateLegacyDemoUserIds(pool)
     await ensureDemoAccountBalance(pool)

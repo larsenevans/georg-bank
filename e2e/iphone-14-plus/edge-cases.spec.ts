@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../fixtures'
 
 test.describe('iPhone 14 Plus – Edge cases', () => {
   test.skip('edge-cases-001: offline gate page', async () => {

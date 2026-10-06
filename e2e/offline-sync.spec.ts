@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('Offline-First Data Sync Architecture', () => {
   test('1. Simulácia offline módu a zápis do IndexedDB fronty', async ({ page, context }) => {

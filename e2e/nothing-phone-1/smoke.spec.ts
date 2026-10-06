@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../fixtures'
 import { loginWithPin } from '../helpers/dashboard2'
 import {
   expectNoHorizontalOverflow,

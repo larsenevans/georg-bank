@@ -2,12 +2,20 @@
 import { defineConfig, devices } from '@playwright/test'
 import { loadEnvConfig } from '@next/env'
 import { nothingPhone1 } from './e2e/devices/nothing-phone-1'
+import { E2E_DEFAULT_ACCESS_ADMIN_SECRET } from './e2e/helpers/access-session'
 
 // Load .env / .env.local so SITE_GATE_PASSWORD, TEST_USER_*, etc. work in E2E helpers.
 loadEnvConfig(process.cwd())
 
 const isProduction = !!process.env.BASE_URL
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3030'
+
+// Access flow: the local web server and auth.setup share one admin secret so e2e can
+// approve a test access session via /api/access/decide (e2e/helpers/access-session.ts).
+// Remote BASE_URL runs must provide E2E_ACCESS_ADMIN_SECRET explicitly.
+if (!isProduction && !process.env.ACCESS_ADMIN_SECRET) {
+  process.env.ACCESS_ADMIN_SECRET = E2E_DEFAULT_ACCESS_ADMIN_SECRET
+}
 
 const mobileFolderIgnore = [
   /production-check\.spec\.ts/,
@@ -157,6 +165,7 @@ export default defineConfig({
           env: {
             SITE_GATE_ENABLED: 'false',
             DISABLE_RATE_LIMIT: 'true',
+            ACCESS_ADMIN_SECRET: process.env.ACCESS_ADMIN_SECRET ?? E2E_DEFAULT_ACCESS_ADMIN_SECRET,
           },
         },
       }),

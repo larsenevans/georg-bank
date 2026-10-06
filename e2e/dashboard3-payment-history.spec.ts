@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './fixtures'
 import { enterPin, loginWithPinLight } from './helpers/dashboard2'
 import { E2E_APP_PIN } from './helpers/app'
 

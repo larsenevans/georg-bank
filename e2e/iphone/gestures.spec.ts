@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../fixtures'
 
 test.describe('iPhone – Gestures', () => {
   test.skip('gestures-001: Nová platba tap target 44px', async () => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { loginWithPinLight } from './helpers/dashboard2'
 import { E2E_APP_PIN } from './helpers/app'
 

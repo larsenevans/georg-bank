@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { expectPinOnlyScreen } from './helpers/dashboard2'
 import { GUEST_BOOTSTRAP_SKIP_COOKIE } from '../lib/guest-auth'
 

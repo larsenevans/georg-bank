@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../fixtures'
 
 test.describe('iPhone 14 Plus – Transactions', () => {
   test.skip('transactions-001: transaction list scroll', async () => {

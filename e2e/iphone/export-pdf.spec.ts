@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+import { test } from '../fixtures'
 
 test.describe('iPhone – Export PDF', () => {
   test.skip('export-pdf-001: monthly export button tap', async () => {
