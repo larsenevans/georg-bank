@@ -9,11 +9,13 @@ export const E2E_DEFAULT_ACCESS_ADMIN_SECRET = 'playwright-e2e-access-admin-secr
 /**
  * Secret used to approve test access requests via GET /api/access/decide.
  * E2E_ACCESS_ADMIN_SECRET wins (e.g. when targeting a remote BASE_URL), then ACCESS_ADMIN_SECRET.
+ * Local Playwright runs fall back to the default test-only secret configured in playwright.config.ts.
  */
 export function getE2eAccessAdminSecret(): string | null {
   return (
     process.env.E2E_ACCESS_ADMIN_SECRET?.trim() ||
     process.env.ACCESS_ADMIN_SECRET?.trim() ||
+    (!process.env.BASE_URL ? E2E_DEFAULT_ACCESS_ADMIN_SECRET : null) ||
     null
   )
 }

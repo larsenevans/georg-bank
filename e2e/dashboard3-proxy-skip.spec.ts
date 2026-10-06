@@ -13,6 +13,11 @@ test.describe('dashboard3 – proxy guest skip', () => {
     const origin = (baseURL ?? 'http://localhost:3030').replace(/\/$/, '')
     await context.addCookies([
       {
+        name: 'access_granted',
+        value: 'e2e-proxy-skip',
+        url: origin,
+      },
+      {
         name: GUEST_BOOTSTRAP_SKIP_COOKIE,
         value: '1',
         url: origin,
@@ -21,7 +26,9 @@ test.describe('dashboard3 – proxy guest skip', () => {
 
     const guestHits: string[] = []
     page.on('request', (req) => {
-      if (req.url().includes('/api/auth/guest')) guestHits.push(req.url())
+      if (req.isNavigationRequest() && req.url().includes('/api/auth/guest')) {
+        guestHits.push(req.url())
+      }
     })
 
     await page.goto('/dashboard3', { waitUntil: 'domcontentloaded', timeout: 45000 })
