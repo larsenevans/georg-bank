@@ -26,7 +26,7 @@ test.describe('Nothing Phone 1 – smoke', () => {
   })
 
   test('dashboard2 PIN → Prehľad full-bleed, no nested phone chrome', async ({ page }) => {
-    await loginWithPin(page, '666666')
+    await loginWithPin(page, '661723')
 
     await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible()
     await expectViewportMeta(page)
@@ -56,7 +56,7 @@ test.describe('Nothing Phone 1 – smoke', () => {
   })
 
   test('Nová platba sheet opens in visible viewport (no long scroll)', async ({ page }) => {
-    await loginWithPin(page, '666666')
+    await loginWithPin(page, '661723')
 
     await page.getByRole('button', { name: /Nová platba/i }).click()
     await expect(page.getByRole('heading', { name: 'Nová platba' })).toBeVisible({

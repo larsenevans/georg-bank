@@ -10,7 +10,7 @@ test.describe('iOS WebKit Acceptance — Real Mobile Flow', () => {
 
     const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i);
     if (await pinHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-      for (const digit of '666666') {
+      for (const digit of '661723') {
         await page.getByRole('button', { name: digit, exact: true }).click();
       }
       await page.waitForTimeout(500);

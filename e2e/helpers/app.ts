@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
 /** PIN used in e2e — must match APP_PIN env (CI / .env.local), not a code default. */
-export const E2E_APP_PIN = process.env.APP_PIN ?? '666666'
+export const E2E_APP_PIN = process.env.APP_PIN ?? '661723'
 
 export const SITE_GATE_PASSWORD = process.env.SITE_GATE_PASSWORD ?? 'heslo'
 
