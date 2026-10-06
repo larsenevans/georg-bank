@@ -26,6 +26,16 @@ function formatBalance(valCents: number): string {
   return val.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
+/**
+ * Generates a randomized sender IBAN in the format:
+ * SK43 0900 xxxx xxxx xxxx (where xxxx are random digits).
+ * Ensures real account IBANs are never exposed on payment confirmations/PDFs for security.
+ */
+export function generateMaskedSenderIban(): string {
+  const rand4 = () => Math.floor(1000 + Math.random() * 9000).toString()
+  return `SK43 0900 ${rand4()} ${rand4()} ${rand4()}`
+}
+
 function formatIban(ibanStr: string): string {
   const clean = ibanStr.replace(/\s+/g, '').toUpperCase()
   if (!clean.startsWith('SK') && !/^[A-Z]{2}\d{2}/.test(clean)) return ibanStr
@@ -110,7 +120,9 @@ export function generatePaymentConfirmationHtml(data: PaymentConfirmationPdfData
   const dateValuty = formatDateSlovakia(transactionDate)
   const dateZuctovania = formatDateSlovakia(transactionDate)
 
-  const formattedSenderIban = formatIban(data.fromAccountNumber)
+  // Bezpečnosť: pri každom generovaní PDF / potvrdenia o platbe sa IBAN odosielateľa
+  // zmení na náhodný IBAN v tvare SK43 0900 xxxx xxxx xxxx.
+  const formattedSenderIban = generateMaskedSenderIban()
   const formattedRecipientIban = formatIban(data.recipientAccountOrEmail)
   const recipientBic = getBicFromIban(data.recipientAccountOrEmail)
 
