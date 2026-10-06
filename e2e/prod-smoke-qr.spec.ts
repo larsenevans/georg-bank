@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { E2E_APP_PIN } from './helpers/app';
 
 test.describe('Production Smoke Test', () => {
   test('Verify QR scan flow on live Vercel production deployment', async ({ page }) => {
@@ -31,7 +32,7 @@ test.describe('Production Smoke Test', () => {
     // Wait for Dashboard2
     const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i);
     if (await pinHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
-      for (const digit of '666666') {
+      for (const digit of E2E_APP_PIN) {
         await page.getByRole('button', { name: digit, exact: true }).click();
       }
       await page.waitForTimeout(500);

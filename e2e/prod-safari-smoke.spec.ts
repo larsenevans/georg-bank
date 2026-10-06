@@ -77,7 +77,7 @@ test.describe.serial('Safari prod smoke – platba + pohyby', () => {
           r.url().includes('/gate')),
       { timeout: 45000 }
     )
-    await loginWithPin(page, '666666', { origin: GEORGE_URL })
+    await loginWithPin(page, undefined, { origin: GEORGE_URL })
     const bootRes = await gateOrApp
     expect(bootRes.url()).toContain(GEORGE_HOST)
 
@@ -167,7 +167,8 @@ test.describe.serial('Safari prod smoke – platba + pohyby', () => {
       expect(html).toContain(payment.recipient)
       expect(html).toMatch(/0[,.]11/)
       expect(compact).toMatch(/SK8090000000001234567890/i)
-      expect(compact).toMatch(/SK310900000000501234567[89]/)
+      expect(compact).toMatch(/SK430900\d{12}/)
+      expect(compact).not.toContain(DEMO_ACCOUNT_NUMBER)
       expect(compact).not.toContain(LEGACY_FAKE_SENDER_IBAN)
       expect(html).toContain(payment.note)
       expect(html).toMatch(/George kľúč|mToken/i)
