@@ -1,6 +1,5 @@
 import { test, expect, type Page } from './fixtures';
-import path from 'path';
-import { gotoApp, login } from './helpers/app';
+import { login, E2E_APP_PIN } from './helpers/app';
 
 /**
  * QR Payment Flow E2E Suite
@@ -22,7 +21,7 @@ test.use({
 async function unlockPinIfNeeded(page: Page) {
   const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i);
   if (await pinHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-    for (const digit of '666666') {
+    for (const digit of E2E_APP_PIN) {
       await page.getByRole('button', { name: digit, exact: true }).click();
     }
     await page.waitForTimeout(500);
