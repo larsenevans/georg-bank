@@ -36,6 +36,32 @@ function serverAuthHeaders(request: NextRequest) {
   return headers
 }
 
+function publicOrigin(request: NextRequest) {
+  const configured =
+    process.env.ACCESS_BASE_URL?.trim() ||
+    process.env.BETTER_AUTH_URL?.trim()
+  if (configured) {
+    return new URL(configured).origin
+  }
+
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  if (forwardedHost) {
+    return `${forwardedProto || 'https'}://${forwardedHost}`
+  }
+
+  return request.nextUrl.origin
+}
+
+function redirectTarget(request: NextRequest, path: string) {
+  const origin = publicOrigin(request)
+  if (!path.startsWith('/') || path.startsWith('//')) {
+    return new URL('/dashboard2', origin)
+  }
+
+  return new URL(path, origin)
+}
+
 async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
   const resolved = resolveDatabaseUrl()
   if (!resolved) {
@@ -61,7 +87,7 @@ async function probeDatabase(): Promise<{ ok: boolean; detail: string }> {
 
 function guestFailureRedirect(request: NextRequest, reason: string) {
   console.error('[guest-auth] bootstrap failed:', reason)
-  const dashboardUrl = new URL('/dashboard2', request.url)
+  const dashboardUrl = redirectTarget(request, '/dashboard2')
   const response = NextResponse.redirect(dashboardUrl)
   response.cookies.set(GUEST_BOOTSTRAP_SKIP_COOKIE, '1', {
     httpOnly: true,
@@ -173,7 +199,7 @@ export async function GET(request: NextRequest) {
       return guestFailureRedirect(request, reason ?? 'sign_in_failed')
     }
 
-    const redirectUrl = new URL(from, request.url)
+    const redirectUrl = redirectTarget(request, from)
     const response = NextResponse.redirect(redirectUrl)
     copyAuthCookies(authResponse, response)
     return response

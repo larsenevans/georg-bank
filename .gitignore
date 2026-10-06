@@ -76,5 +76,6 @@ android-apk/*.keystore
 android-apk/*.jks
 
 # Secrets
+env-abon-SETUP.txt
 dokumenty/secrets/
 secrets/
