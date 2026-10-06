@@ -88,7 +88,7 @@ export async function grantAccessSession(
 
     const created = await api.post('/api/access/request', {
       data: { code: randomAccessCode() },
-      headers: { 'user-agent': 'playwright-e2e' },
+      headers: { 'user-agent': 'playwright-e2e', 'x-e2e-test': '1' },
     })
     expect(created.status(), 'POST /api/access/request').toBe(200)
     const { requestId } = (await created.json()) as { requestId: string }
@@ -96,7 +96,7 @@ export async function grantAccessSession(
 
     const decided = await api.get('/api/access/decide', {
       params: { token: secret, requestId, decision: 'approved' },
-      headers: decideHeaders(baseURL),
+      headers: { ...decideHeaders(baseURL), 'user-agent': 'playwright-e2e', 'x-e2e-test': '1' },
     })
     expect(
       decided.status(),

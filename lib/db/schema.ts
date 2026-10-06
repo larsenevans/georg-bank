@@ -83,9 +83,13 @@ export const accessRequest = pgTable(
   'access_request',
   {
     id: text('id').primaryKey(),
-    code: text('code').notNull(),
+    code: text('code'),
+    email: text('email'),
+    userId: text('userId'),
+    token: text('token'),
     status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
     deviceHint: text('deviceHint'),
+    userAgent: text('userAgent'),
     ipHash: text('ipHash'),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     decidedAt: timestamp('decidedAt'),
@@ -94,6 +98,7 @@ export const accessRequest = pgTable(
   (t) => [
     index('idx_access_request_status').on(t.status),
     index('idx_access_request_createdAt').on(t.createdAt),
+    index('idx_access_request_email').on(t.email),
   ],
 )
 

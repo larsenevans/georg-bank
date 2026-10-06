@@ -13,7 +13,7 @@ function buildConnectionString(raw?: string): string | undefined {
     .replace(/\?$/, '')                   // clean trailing '?' if nothing left
 }
 
-const rawUrl = resolveDatabaseUrl() || 'postgresql://postgres:postgres@127.0.0.1:5432/internet_bank'
+const rawUrl = resolveDatabaseUrl() || process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 const hasSsl  = rawUrl?.includes('sslmode=') ?? false
 const connectionString = buildConnectionString(rawUrl)
 
