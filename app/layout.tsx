@@ -8,9 +8,10 @@ import { TranslationProvider } from '@/components/providers/translation-provider
 
 const inter = Inter({
   subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
   variable: '--font-inter',
+  preload: true,
 })
 export const viewport: Viewport = {
   width: 'device-width',
@@ -30,9 +31,14 @@ export const metadata: Metadata = {
   robots: {
     index: false,
     follow: false,
+    nocache: true,
     googleBot: {
       index: false,
       follow: false,
+      noimageindex: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'none',
+      'max-snippet': -1,
     },
   },
   appleWebApp: {

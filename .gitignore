@@ -60,6 +60,7 @@ tailscale.apk
 # Temp files
 tmp/
 temp/
+public/pdfs/txn-*.pdf
 
 # Vercel
 .vercel/
