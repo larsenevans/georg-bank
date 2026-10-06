@@ -26,25 +26,6 @@ function randomAccessCode(): string {
   return code
 }
 
-function isLocalBaseUrl(baseURL: string): boolean {
-  const { hostname } = new URL(baseURL)
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
-}
-
-let decideCounter = 0
-
-/**
- * /api/access/decide has its own limiter (60 per 10 min keyed by x-forwarded-for) that ignores
- * DISABLE_RATE_LIMIT. Against a local test server give each approval a distinct test client key
- * (TEST-NET-2 range) so a full suite (one session per test) is not throttled.
- */
-function decideHeaders(baseURL: string): Record<string, string> | undefined {
-  if (!isLocalBaseUrl(baseURL)) return undefined
-  decideCounter += 1
-  const n = (process.pid * 1000 + decideCounter) % 65536
-  return { 'x-forwarded-for': `198.51.${n >> 8}.${n & 255}` }
-}
-
 function extractCookieValue(setCookieHeaders: string[], name: string): string | null {
   for (const header of setCookieHeaders) {
     const first = header.split(';')[0] ?? ''
@@ -88,7 +69,6 @@ export async function grantAccessSession(
 
     const created = await api.post('/api/access/request', {
       data: { code: randomAccessCode() },
-      headers: { 'user-agent': 'playwright-e2e' },
     })
     expect(created.status(), 'POST /api/access/request').toBe(200)
     const { requestId } = (await created.json()) as { requestId: string }
@@ -96,7 +76,6 @@ export async function grantAccessSession(
 
     const decided = await api.get('/api/access/decide', {
       params: { token: secret, requestId, decision: 'approved' },
-      headers: decideHeaders(baseURL),
     })
     expect(
       decided.status(),

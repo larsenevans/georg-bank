@@ -1,5 +1,5 @@
 'use client'
-import { downloadPaymentConfirmationPdf } from '@/lib/payment-confirmation-pdf'
+import { downloadPaymentConfirmationPdf, generateMaskedSenderIban } from '@/lib/payment-confirmation-pdf'
 
 export default function TestPdf() {
   const handleDownload = () => {
@@ -9,7 +9,7 @@ export default function TestPdf() {
       status: 'Štandardný platobný príkaz',
 
       transferType: 'external',
-      fromAccountNumber: 'SK67 0900 0000 0050 3231 6123',
+      fromAccountNumber: generateMaskedSenderIban(),
       recipientName: 'Jozef Mak',
       recipientAccountOrEmail: 'SK99 0900 0000 0000 1234 5678',
       amount: '100',

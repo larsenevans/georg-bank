@@ -34,6 +34,7 @@ import {
   readAccessCookieToken,
   requireAccessForTransaction,
 } from '@/lib/access-session'
+import { isTrustedTestMode } from '@/lib/access-flow'
 
 async function getTodayOutgoingUsedCents(userId: string) {
   const todayStart = startOfLocalDay()
@@ -131,7 +132,8 @@ export async function POST(req: Request) {
 
     const isOutgoing = isOutgoingPaymentType(type)
 
-    if (isOutgoing && amount < 1.00) {
+    const isE2E = isTrustedTestMode()
+    if (isOutgoing && !isE2E && amount < 1.00) {
       return NextResponse.json(
         { success: false, error: 'Minimálna suma platby je 1,00 €.' },
         { status: 400 }

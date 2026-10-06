@@ -164,7 +164,7 @@ export default defineConfig({
           timeout: 180000,
           env: {
             SITE_GATE_ENABLED: 'false',
-            DISABLE_RATE_LIMIT: 'true',
+            E2E_TEST_MODE: 'true',
             ACCESS_ADMIN_SECRET: process.env.ACCESS_ADMIN_SECRET ?? E2E_DEFAULT_ACCESS_ADMIN_SECRET,
           },
         },

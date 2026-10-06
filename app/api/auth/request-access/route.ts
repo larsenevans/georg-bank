@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAccessRequestWithinLimit } from '@/lib/access-request-store'
 import {
-  isValidAccessCode,
   hashIp,
   simplifyUserAgent,
   buildAdminEmailHtml,
@@ -12,20 +11,31 @@ import {
   isTrustedTestMode,
 } from '@/lib/access-flow'
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
-    code?: unknown
     email?: unknown
     password?: unknown
-    name?: unknown
   } | null
 
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
-  const code = typeof body?.code === 'string' ? body.code.trim() : ''
 
-  if (!email && !isValidAccessCode(code)) {
+  if (!email || !isValidEmail(email)) {
     return NextResponse.json(
-      { error: 'invalid_code', message: 'Zadajte platný e-mail alebo 16-miestny kód.' },
+      { error: 'invalid_email', message: 'Zadajte platnú e-mailovú adresu.' },
+      { status: 400 },
+    )
+  }
+
+  if (body?.password !== undefined) {
+    return NextResponse.json(
+      {
+        error: 'password_not_supported',
+        message: 'Táto route slúži iba na žiadosť o prístup; heslo neposielajte.',
+      },
       { status: 400 },
     )
   }
@@ -37,16 +47,14 @@ export async function POST(request: NextRequest) {
   const ipHash = hashIp(ip)
 
   const userAgent = request.headers.get('user-agent') ?? ''
-
-  const requestId = randomUUID()
   const deviceHint = simplifyUserAgent(userAgent)
+  const requestId = randomUUID()
   const token = getAccessAdminSecret() || randomUUID()
   let requestQuota: Awaited<ReturnType<typeof createAccessRequestWithinLimit>>
   try {
     requestQuota = await createAccessRequestWithinLimit({
       id: requestId,
-      code: code || null,
-      email: email || null,
+      email,
       token,
       deviceHint,
       userAgent,
@@ -71,12 +79,9 @@ export async function POST(request: NextRequest) {
   }
 
   const emailResult = await sendAdminEmail({
-    subject: email
-      ? `🔔 Žiadosť o prístup do George Bank: ${email}`
-      : 'George · Nová žiadosť o prístup',
+    subject: `🔔 Žiadosť o prístup do George Bank: ${email}`,
     html: buildAdminEmailHtml({
-      code: code || undefined,
-      email: email || undefined,
+      email,
       deviceHint,
       createdAt: new Date(),
       decideBaseUrl: getAccessBaseUrl(request.url),
@@ -87,11 +92,13 @@ export async function POST(request: NextRequest) {
   })
 
   if (!emailResult.ok) {
-    console.warn('[access] Admin e-mail failed:', emailResult.error)
+    console.warn('[access] Admin e-mail warning:', emailResult.error)
   }
 
   return NextResponse.json({
+    ok: true,
     requestId,
+    status: 'pending',
     remainingRequests: requestQuota.remainingRequests,
     emailSent: emailResult.ok,
   })

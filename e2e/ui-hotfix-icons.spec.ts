@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { login } from './helpers/app';
+import { login, E2E_APP_PIN } from './helpers/app';
 
 test.describe('Dashboard2 Action Icons UI Hotfix', () => {
   const viewports = [
@@ -16,7 +16,7 @@ test.describe('Dashboard2 Action Icons UI Hotfix', () => {
 
       const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i);
       if (await pinHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-        for (const digit of '666666') {
+        for (const digit of E2E_APP_PIN) {
           await page.getByRole('button', { name: digit, exact: true }).click();
         }
         await page.waitForTimeout(500);

@@ -47,9 +47,7 @@ export function resolveDatabaseUrl(): string | undefined {
 
 function isLocalPlaceholder(url: string): boolean {
   return (
-    url.includes('localhost') ||
-    url.includes('127.0.0.1') ||
-    // malformed local URL without credentials
+    // Only malformed local URL without credentials
     /^postgresql:\/\/localhost/i.test(url) ||
     /^postgresql:\/\/127\.0\.0\.1/i.test(url)
   )

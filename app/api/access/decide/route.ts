@@ -107,7 +107,8 @@ export async function GET(request: NextRequest) {
     expiresAt,
   })
 
-  return new NextResponse(decidePageHtml('Prístup bol schválený. Používateľ môže pokračovať.', true), {
+  const approvedUserText = req.email ? ` pre ${req.email}` : ''
+  return new NextResponse(decidePageHtml(`Prístup bol úspešne schválený${approvedUserText}. Používateľ má povolený vstup do bankingu.`, true), {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   })

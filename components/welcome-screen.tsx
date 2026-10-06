@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const CODE_LENGTH = 16
-const POLL_INTERVAL_MS = 5000
+const POLL_INTERVAL_MS = 2500
 
 type Phase = 'input' | 'submitting' | 'pending'
 
@@ -209,38 +209,38 @@ export function WelcomeScreen() {
         </div>
 
         {/* Upper section */}
-        <div className="px-5 pt-5 pb-2 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
+        <div className="px-5 pt-6 pb-2 flex-1 flex flex-col justify-between min-h-0 overflow-hidden antialiased">
           <div className="flex flex-col">
-            <h1 className="text-[30px] font-bold text-[#141414] leading-tight tracking-tight">
+            <h1 className="text-[32px] font-bold text-black leading-tight tracking-[-0.03em]">
               Prístup
             </h1>
-            <p className="text-[15.5px] font-semibold text-[#3d3d3d] mt-0.5">
+            <p className="text-[16px] font-semibold text-[#242528] mt-0.5">
               {phase === 'pending' ? 'Čaká sa na schválenie' : 'Zadaj 16-miestny kód'}
             </p>
-            <p className="text-[16px] font-semibold text-[#1c1c1c] mt-3 tracking-normal">
+            <p className="text-[16px] font-semibold text-[#111215] mt-2.5 tracking-tight">
               {phase === 'pending'
                 ? 'Správca overuje váš prístupový kód'
                 : 'Kód schvaľuje správca aplikácie'}
             </p>
             {remainingRequests !== null && (
-              <p className="text-[12px] text-[#2a2a2a] mt-1.5" data-testid="remaining-requests">
+              <p className="text-[12.5px] font-medium text-[#1c1d20] mt-1.5" data-testid="remaining-requests">
                 Zostávajúce pokusy: {remainingRequests}
               </p>
             )}
           </div>
 
-          {/* Maroon viewfinder (static, no scanning animation) */}
+          {/* Maroon viewfinder (pixel-perfect 1:1 match) */}
           <div className="flex-1 min-h-0 flex items-center justify-center py-2">
-            <div className="w-full max-w-[190px] aspect-square rounded-[24px] bg-[#5c0e0e] shadow-md pointer-events-none transition-all" />
+            <div className="w-full max-w-[188px] aspect-square rounded-[24px] bg-[#5c0e0e] shadow-[0_8px_24px_rgba(0,0,0,0.25)] border border-black/10 pointer-events-none transition-all" />
           </div>
         </div>
 
         {/* Bottom container */}
         <div className="w-full flex-shrink-0 flex flex-col z-20">
           {/* White bottom sheet */}
-          <div className="w-full bg-white rounded-t-[26px] shadow-[0_-6px_25px_rgba(0,0,0,0.18)] px-5 pt-4 pb-3 flex flex-col">
+          <div className="w-full bg-white rounded-t-[26px] shadow-[0_-6px_25px_rgba(0,0,0,0.18)] px-5 pt-4 pb-3 flex flex-col antialiased">
             <div className="flex items-center justify-between pb-2">
-              <h2 className="text-[20px] font-bold text-black tracking-tight">
+              <h2 className="text-[21px] font-bold text-black tracking-[-0.02em]">
                 {phase === 'pending' ? 'Žiadosť odoslaná' : 'Zadať kód ručne'}
               </h2>
               <button
@@ -249,7 +249,7 @@ export function WelcomeScreen() {
                 aria-label="Vymazať zadaný kód"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-black active:opacity-40 transition-opacity cursor-pointer"
               >
-                <svg className="w-5 h-5 stroke-[2.4]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <svg className="w-5 h-5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -258,21 +258,21 @@ export function WelcomeScreen() {
 
             {/* 16-digit input box */}
             <div
-              className="relative w-full h-[58px] bg-white border border-[#c8c8cc] rounded-[13px] px-3.5 pt-1.5 pb-1 flex flex-col justify-center cursor-text transition-all"
+              className="relative w-full h-[60px] bg-white border border-[#bcbcc0] focus-within:border-black rounded-[14px] px-3.5 pt-1.5 pb-1 flex flex-col justify-center cursor-text transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               data-testid="code-input-box"
             >
-              <span className="text-[12px] text-[#717178] font-normal leading-tight select-none">
+              <span className="text-[12.5px] text-[#636366] font-medium leading-tight select-none">
                 Zadaj 16-miestny kód
               </span>
               <div className="flex items-center h-6 mt-0.5 overflow-hidden">
                 <span
-                  className="text-[17px] font-medium tracking-[0.08em] text-black select-none"
+                  className="text-[18px] font-semibold tracking-[0.09em] text-black select-none font-mono"
                   data-testid="digits-text"
                 >
                   {formattedDigits}
                 </span>
                 <span
-                  className={`inline-block w-[1.8px] h-[19px] bg-black ml-[1px] ${
+                  className={`inline-block w-[2px] h-[20px] bg-black ml-[1px] ${
                     digits.length < CODE_LENGTH ? 'animate-[cursorBlink_1.1s_step-end_infinite]' : 'opacity-0'
                   }`}
                 />
@@ -289,7 +289,7 @@ export function WelcomeScreen() {
                     setDigits('')
                     setPhase('input')
                   }}
-                  className="w-full h-[46px] rounded-[13px] font-semibold text-[16px] flex items-center justify-center bg-[#ebebef] text-[#3d3d3d] cursor-pointer select-none"
+                  className="w-full h-[48px] rounded-[14px] font-semibold text-[16.5px] flex items-center justify-center bg-[#e5e5ea] text-[#1c1c1e] hover:bg-[#dcdce0] active:scale-[0.99] transition-all cursor-pointer select-none"
                   data-testid="cancel-request"
                 >
                   Zrušiť a zadať nový kód
@@ -300,10 +300,10 @@ export function WelcomeScreen() {
                   onClick={submit}
                   disabled={!canSubmit}
                   data-testid="submit-code"
-                  className={`w-full h-[46px] rounded-[13px] font-semibold text-[16px] flex items-center justify-center transition-all select-none ${
+                  className={`w-full h-[48px] rounded-[14px] font-semibold text-[16.5px] flex items-center justify-center transition-all select-none ${
                     canSubmit
-                      ? 'bg-black text-white cursor-pointer active:scale-[0.99] shadow-sm'
-                      : 'bg-[#ebebef] text-[#b8b8bd] cursor-not-allowed'
+                      ? 'bg-black text-white hover:bg-[#1a1a1a] cursor-pointer active:scale-[0.99] shadow-md'
+                      : 'bg-[#e5e5ea] text-[#8e8e93] cursor-not-allowed'
                   }`}
                 >
                   {phase === 'submitting' ? (
@@ -317,7 +317,7 @@ export function WelcomeScreen() {
           </div>
 
           {/* iOS numeric keyboard */}
-          <div className="w-full bg-[#cfd3d9] px-1.5 pt-1.5 pb-4">
+          <div className="w-full bg-[#d0d3d9] px-1.5 pt-1.5 pb-4 antialiased">
             <div className="grid grid-cols-3 gap-1.5 max-w-[390px] mx-auto">
               {KEYS.map((key) => (
                 <button
@@ -325,11 +325,11 @@ export function WelcomeScreen() {
                   type="button"
                   onClick={() => pressDigit(key.digit)}
                   data-testid={`key-${key.digit}`}
-                  className="h-[46px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.32)] flex flex-col items-center justify-center active:bg-[#b9bcc2] active:scale-[0.96] transition-all cursor-pointer"
+                  className="h-[47px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center active:bg-[#b0b4ba] active:scale-[0.96] transition-all cursor-pointer"
                 >
-                  <span className="text-[25px] font-normal text-black leading-none">{key.digit}</span>
+                  <span className="text-[26px] font-normal text-black leading-none">{key.digit}</span>
                   {key.letters ? (
-                    <span className="text-[9.5px] font-semibold tracking-[0.16em] text-black leading-none uppercase -mt-0.5">
+                    <span className="text-[9.5px] font-bold tracking-[0.18em] text-black leading-none uppercase -mt-0.5">
                       {key.letters}
                     </span>
                   ) : (
@@ -338,15 +338,15 @@ export function WelcomeScreen() {
                 </button>
               ))}
 
-              <div className="h-[46px]" />
+              <div className="h-[47px]" />
 
               <button
                 type="button"
                 onClick={() => pressDigit('0')}
                 data-testid="key-0"
-                className="h-[46px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.32)] flex flex-col items-center justify-center active:bg-[#b9bcc2] active:scale-[0.96] transition-all cursor-pointer"
+                className="h-[47px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center active:bg-[#b0b4ba] active:scale-[0.96] transition-all cursor-pointer"
               >
-                <span className="text-[25px] font-normal text-black leading-none">0</span>
+                <span className="text-[26px] font-normal text-black leading-none">0</span>
                 <span className="h-[4px]" />
               </button>
 
@@ -355,9 +355,9 @@ export function WelcomeScreen() {
                 onClick={backspace}
                 aria-label="Zmazať číslicu"
                 data-testid="key-backspace"
-                className="h-[46px] flex items-center justify-center text-black active:opacity-35 active:scale-[0.92] transition-all cursor-pointer"
+                className="h-[47px] flex items-center justify-center text-black active:opacity-35 active:scale-[0.92] transition-all cursor-pointer"
               >
-                <svg className="w-[28px] h-[28px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <svg className="w-[28px] h-[28px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -367,7 +367,7 @@ export function WelcomeScreen() {
               </button>
             </div>
 
-            <div className="w-32 h-1 bg-black rounded-full mx-auto mt-2.5" />
+            <div className="w-36 h-[4.5px] bg-black/85 rounded-full mx-auto mt-2.5" />
           </div>
         </div>
 

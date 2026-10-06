@@ -7,6 +7,7 @@ import { AlertCircle, X, Calendar, Download } from 'lucide-react'
 import {
   downloadPaymentConfirmationPdf,
   openPaymentConfirmationHtml,
+  generateMaskedSenderIban,
   type PaymentConfirmationPdfData,
 } from '@/lib/payment-confirmation-pdf'
 import { encodeTransactionDescription } from '@/lib/payment-confirmation-from-transaction'
@@ -77,7 +78,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
     createdAt: new Date().toLocaleString('sk-SK'),
     status: 'Štandardný platobný príkaz',
     transferType,
-    fromAccountNumber: activeAccount?.accountNumber ?? '',
+    fromAccountNumber: generateMaskedSenderIban(),
     recipientName,
     recipientAccountOrEmail: iban.trim(),
     amount,

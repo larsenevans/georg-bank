@@ -1,4 +1,7 @@
-import type { PaymentConfirmationPdfData } from '@/lib/payment-confirmation-pdf'
+import {
+  generateMaskedSenderIban,
+  type PaymentConfirmationPdfData,
+} from '@/lib/payment-confirmation-pdf'
 import { formatTransactionDateMedium } from '@/lib/format-date'
 
 type TransactionRecord = {
@@ -54,7 +57,7 @@ export function buildPaymentConfirmationFromTransaction(
     createdAt: formatTransactionDateMedium(txn.createdAt.toISOString()),
     status: 'Štandardný platobný príkaz',
     transferType,
-    fromAccountNumber: account.accountNumber,
+    fromAccountNumber: generateMaskedSenderIban(),
     recipientName: parsed.recipientName,
     recipientAccountOrEmail,
     amount: (txn.amount / 100).toFixed(2),

@@ -73,7 +73,7 @@ test.describe('iOS WebKit Acceptance — Real Mobile Flow', () => {
     await expect(modalAvatar).not.toBeVisible();
 
     // 6. Network Intercept: Verify 0 automatic payment POST calls
-    let postTransactionsCalls: Array<{ url: string; postData: string | null }> = [];
+    const postTransactionsCalls: Array<{ url: string; postData: string | null }> = [];
     page.on('request', (req) => {
       if (req.method() === 'POST' && (req.url().includes('/api/transactions') || req.url().includes('/api/webhooks/process-payment'))) {
         postTransactionsCalls.push({ url: req.url(), postData: req.postData() });

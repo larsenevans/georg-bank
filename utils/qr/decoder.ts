@@ -576,7 +576,7 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
 
     if (accounts.length === 0) {
       // Legacy fallback keys
-      let fallbackIban = pairs['IBAN']?.replace(/\s+/g, '').toUpperCase() || '';
+      const fallbackIban = pairs['IBAN']?.replace(/\s+/g, '').toUpperCase() || '';
       const fallbackBic = pairs['BIC'] ? normalizeBic(pairs['BIC']) : null;
       if (fallbackIban && isValidIbanFormat(fallbackIban)) {
         accounts.push({ iban: fallbackIban, bic: fallbackBic });

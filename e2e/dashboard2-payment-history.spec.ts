@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from './fixtures'
+import { E2E_APP_PIN } from './helpers/app'
 import { enterPin, loginWithPin } from './helpers/dashboard2'
 
 /**
@@ -136,7 +137,7 @@ test.describe('dashboard2 – história platieb po autorizácii', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
     // po reload treba znova PIN (isSimulatorLoggedIn nie je persistovaný)
     await expect(page.getByText(/Zadajte bezpečnostný PIN/i)).toBeVisible({ timeout: 15000 })
-    await enterPin(page, '666666')
+    await enterPin(page, E2E_APP_PIN)
 
     await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible({
       timeout: 15000,

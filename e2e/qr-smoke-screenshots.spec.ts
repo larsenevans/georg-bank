@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import fs from 'fs';
 import path from 'path';
-import { login } from './helpers/app';
+import { login, E2E_APP_PIN } from './helpers/app';
 
 const artifactDir =
   process.env.QR_SMOKE_ARTIFACT_DIR ??
@@ -19,7 +19,7 @@ test.describe('QR Smoke Test & 5x Screenshot Verification', () => {
 
     const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i);
     if (await pinHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-      for (const digit of '666666') {
+      for (const digit of E2E_APP_PIN) {
         await page.getByRole('button', { name: digit, exact: true }).click();
       }
       await page.waitForTimeout(500);

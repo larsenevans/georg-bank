@@ -1,10 +1,12 @@
+import { isTrustedTestMode } from '@/lib/access-flow'
+
 const WINDOW_MS = 60 * 60 * 1000
 const MAX_REQUESTS = 5
 
 const buckets = new Map<string, number[]>()
 
 export function checkStatementGenerationRateLimit(userId: string) {
-  if (process.env.DISABLE_RATE_LIMIT === 'true') {
+  if (isTrustedTestMode()) {
     return true
   }
   const now = Date.now()

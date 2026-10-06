@@ -11,3 +11,5 @@ RESEND_API_KEY=
 ACCESS_FLOW_ENABLED=
 # Public base URL used in admin e-mail buttons (optional; derived from request when unset)
 ACCESS_BASE_URL=
+# Set only by the local Playwright server; production Vercel deployments ignore this bypass.
+E2E_TEST_MODE=
