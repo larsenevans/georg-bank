@@ -13,11 +13,6 @@ import {
   DEMO_DEFAULT_USER_LEGACY_IDS,
   DEMO_DEFAULT_USER_NAME,
 } from '../lib/demo-user'
-import {
-  GUEST_USER_EMAIL,
-  GUEST_USER_NAME,
-  GUEST_USER_PASSWORD,
-} from '../lib/guest-auth'
 
 function buildPool() {
   const rawUrl = resolveDatabaseUrl()
@@ -105,40 +100,48 @@ async function ensureStatementProfileColumns(pool: Pool) {
 
 /** Access flow tables (idempotent CREATE TABLE IF NOT EXISTS) — needed by the welcome gate + e2e. */
 async function ensureAccessFlowTables(pool: Pool) {
-  if (await tableExists(pool, 'access_session')) return
+  if (!(await tableExists(pool, 'access_session'))) {
+    const accessFlowMigration = path.join(process.cwd(), 'drizzle', '0003_access_flow.sql')
+    if (fs.existsSync(accessFlowMigration)) {
+      await applySqlFile(pool, accessFlowMigration)
+      console.log('[ensure-db] Access flow tables applied.')
+    }
+  }
 
-  const accessFlowMigration = path.join(process.cwd(), 'drizzle', '0003_access_flow.sql')
-  if (fs.existsSync(accessFlowMigration)) {
-    await applySqlFile(pool, accessFlowMigration)
-    console.log('[ensure-db] Access flow tables applied.')
+  const accessRequestEmailMigration = path.join(process.cwd(), 'drizzle', '0004_access_request_email.sql')
+  if (fs.existsSync(accessRequestEmailMigration)) {
+    await applySqlFile(pool, accessRequestEmailMigration)
+    console.log('[ensure-db] Access request email migration applied.')
   }
 }
 
 async function ensureGuestUser(pool: Pool) {
-  const { isDedicatedGuestEmail, ensureGuestCredentialAccount } = await import(
+  const { getGuestConfig, ensureGuestCredentialAccount } = await import(
     '../lib/guest-auth'
   )
-  if (!isDedicatedGuestEmail(GUEST_USER_EMAIL)) {
+  const guest = getGuestConfig()
+  if (!guest.ok) {
     console.error(
-      '[ensure-db] Skipping guest ensure: GUEST_USER_EMAIL must end with @local.test, got:',
-      GUEST_USER_EMAIL
+      '[ensure-db] Skipping guest ensure: GUEST_USER_EMAIL or PASSWORD missing/invalid'
     )
     return
   }
 
+  const { email, password, name } = guest
+
   const existing = await pool.query(
     'SELECT 1 FROM "user" WHERE email = $1 LIMIT 1',
-    [GUEST_USER_EMAIL]
+    [email]
   )
 
   if (existing.rows.length > 0) {
     await pool.query(
       `UPDATE "user" SET name = $1, "updatedAt" = NOW() WHERE email = $2 AND name IS DISTINCT FROM $1`,
-      [GUEST_USER_NAME, GUEST_USER_EMAIL]
+      [name, email]
     )
     const synced = await ensureGuestCredentialAccount(
-      GUEST_USER_EMAIL,
-      GUEST_USER_PASSWORD
+      email,
+      password
     ).catch(() => false)
     console.log(
       synced
@@ -151,9 +154,9 @@ async function ensureGuestUser(pool: Pool) {
   const { auth } = await import('../lib/auth')
   await auth.api.signUpEmail({
     body: {
-      email: GUEST_USER_EMAIL,
-      password: GUEST_USER_PASSWORD,
-      name: GUEST_USER_NAME,
+      email,
+      password,
+      name,
     },
   })
   console.log('[ensure-db] Guest user created.')
@@ -318,12 +321,10 @@ async function ensureGuestBankAccount(pool: Pool) {
     return
   }
 
-  const { isDedicatedGuestEmail } = await import('../lib/guest-auth')
-  if (!isDedicatedGuestEmail(GUEST_USER_EMAIL)) {
-    console.error(
-      '[ensure-db] Skipping guest bank seed: GUEST_USER_EMAIL must end with @local.test, got:',
-      GUEST_USER_EMAIL
-    )
+  const { getGuestConfig } = await import('../lib/guest-auth')
+  const guest = getGuestConfig()
+  if (!guest.ok) {
+    console.error('[ensure-db] Skipping guest bank seed: guest config missing/invalid')
     return
   }
 
@@ -332,7 +333,7 @@ async function ensureGuestBankAccount(pool: Pool) {
   const GUEST_ACCOUNT_ID = 'acc-guest-default'
 
   const user = await pool.query(`SELECT id FROM "user" WHERE email = $1 LIMIT 1`, [
-    GUEST_USER_EMAIL,
+    guest.email,
   ])
   if (user.rows.length === 0) {
     console.warn('[ensure-db] Guest user missing; cannot seed bank account.')
