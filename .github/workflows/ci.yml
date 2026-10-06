@@ -66,6 +66,7 @@ jobs:
       APP_PIN: "666666"
       SITE_GATE_ENABLED: "false"
       DISABLE_RATE_LIMIT: "true"
+      E2E_TEST_MODE: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       # Presence-only flag for UI status card (no real Mistral calls required for page render)
       MISTRAL_API_KEY: ci-dummy-mistral-key
