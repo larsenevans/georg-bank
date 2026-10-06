@@ -2,23 +2,55 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
 
 const CODE_LENGTH = 16
 const POLL_INTERVAL_MS = 5000
 
-type Phase = 'input' | 'submitting' | 'pending' | 'error'
+type Phase = 'input' | 'submitting' | 'pending'
 
 export function WelcomeScreen() {
   const router = useRouter()
-  const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''))
+  const [digits, setDigits] = useState<string>('')
   const [phase, setPhase] = useState<Phase>('input')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [toast, setToast] = useState<{ visible: boolean; message: string; ok: boolean }>({
+    visible: false,
+    message: '',
+    ok: true,
+  })
   const [remainingRequests, setRemainingRequests] = useState<number | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const filledCount = digits.filter((d) => d !== '').length
-  const code = digits.join('')
+  const isComplete = digits.length === CODE_LENGTH
+  const canSubmit = isComplete && (phase === 'input' || phase === 'pending')
+
+  const playTapTone = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext()
+      }
+      const ctx = audioCtxRef.current
+      if (ctx.state === 'suspended') ctx.resume()
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(160, ctx.currentTime)
+      oscillator.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.032)
+      gainNode.gain.setValueAtTime(0.08, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.032)
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
+      oscillator.start()
+      oscillator.stop(ctx.currentTime + 0.032)
+    } catch {
+      // audio restricted – silent fallback
+    }
+  }, [])
+
+  const showToast = useCallback((message: string, ok: boolean) => {
+    setToast({ visible: true, message, ok })
+    setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2500)
+  }, [])
 
   const clearPolling = useCallback(() => {
     if (pollRef.current) {
@@ -30,68 +62,62 @@ export function WelcomeScreen() {
   useEffect(() => clearPolling, [clearPolling])
 
   const startPolling = useCallback(
-    (id: string) => {
+    (requestId: string) => {
       clearPolling()
       pollRef.current = setInterval(async () => {
         try {
-          const res = await fetch(`/api/access/status?requestId=${encodeURIComponent(id)}`, {
+          const res = await fetch(`/api/access/status?requestId=${encodeURIComponent(requestId)}`, {
             cache: 'no-store',
           })
           if (!res.ok) return
           const data = (await res.json()) as { status?: string }
           if (data.status === 'approved') {
             clearPolling()
+            showToast('Prístup schválený!', true)
             router.push('/dashboard2')
           } else if (data.status === 'rejected') {
             clearPolling()
-            setPhase('error')
-            setErrorMessage('Kód zamietnutý. Skúste to znova s novým kódom.')
-            setDigits(Array(CODE_LENGTH).fill(''))
+            setPhase('input')
+            setDigits('')
+            showToast('Kód zamietnutý. Skúste to znova.', false)
           }
         } catch {
           // keep polling
         }
       }, POLL_INTERVAL_MS)
     },
-    [clearPolling, router],
+    [clearPolling, router, showToast],
   )
 
   const pressDigit = (digit: string) => {
     if (phase === 'submitting' || phase === 'pending') return
-    setPhase('input')
-    setErrorMessage('')
-    setDigits((prev) => {
-      const idx = prev.findIndex((d) => d === '')
-      if (idx === -1) return prev
-      const next = [...prev]
-      next[idx] = digit
-      return next
-    })
+    if (digits.length >= CODE_LENGTH) return
+    playTapTone()
+    setDigits((prev) => prev + digit)
   }
 
   const backspace = () => {
     if (phase === 'submitting' || phase === 'pending') return
-    setDigits((prev) => {
-      const next = [...prev]
-      for (let i = next.length - 1; i >= 0; i--) {
-        if (next[i] !== '') {
-          next[i] = ''
-          break
-        }
-      }
-      return next
-    })
+    if (digits.length === 0) return
+    playTapTone()
+    setDigits((prev) => prev.slice(0, -1))
   }
 
-  const submit = async () => {
-    if (filledCount !== CODE_LENGTH || phase === 'submitting' || phase === 'pending') return
+  const clearInput = () => {
+    if (phase === 'submitting' || phase === 'pending') return
+    if (digits.length === 0) return
+    playTapTone()
+    setDigits('')
+  }
+
+  const submit = useCallback(async () => {
+    if (digits.length !== CODE_LENGTH || phase === 'submitting' || phase === 'pending') return
     setPhase('submitting')
-    setErrorMessage('')
     try {
       const res = await fetch('/api/access/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: digits }),
       })
       const data = (await res.json().catch(() => ({}))) as {
         requestId?: string
@@ -101,125 +127,256 @@ export function WelcomeScreen() {
       if (res.ok && data.requestId) {
         setRemainingRequests(data.remainingRequests ?? null)
         setPhase('pending')
+        showToast('Žiadosť odoslaná, čaká na schválenie…', true)
         startPolling(data.requestId)
       } else if (res.status === 429) {
-        setPhase('error')
-        setErrorMessage(data.message ?? 'Príliš veľa pokusov. Skúste to neskôr.')
+        setPhase('input')
+        showToast(data.message ?? 'Príliš veľa pokusov. Skúste to neskôr.', false)
       } else {
-        setPhase('error')
-        setErrorMessage(data.message ?? 'Neplatný kód. Zadajte presne 16 číslic.')
+        setPhase('input')
+        showToast(data.message ?? 'Neplatný kód. Zadajte presne 16 číslic.', false)
       }
     } catch {
-      setPhase('error')
-      setErrorMessage('Chyba spojenia. Skúste to znova.')
+      setPhase('input')
+      showToast('Chyba spojenia. Skúste to znova.', false)
     }
-  }
+  }, [digits, phase, showToast, startPolling])
 
-  const groups = [0, 1, 2, 3].map((g) => digits.slice(g * 4, g * 4 + 4))
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault()
+        pressDigit(e.key)
+      } else if (e.key === 'Backspace') {
+        e.preventDefault()
+        backspace()
+      } else if (e.key === 'Enter' && digits.length === CODE_LENGTH) {
+        e.preventDefault()
+        submit()
+      } else if (e.key === 'Escape') {
+        clearInput()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
+
+  const formattedDigits = (digits.match(/.{1,4}/g) || []).join(' ')
+
+  const KEYS: Array<{ digit: string; letters?: string }> = [
+    { digit: '1' },
+    { digit: '2', letters: 'A B C' },
+    { digit: '3', letters: 'D E F' },
+    { digit: '4', letters: 'G H I' },
+    { digit: '5', letters: 'J K L' },
+    { digit: '6', letters: 'M N O' },
+    { digit: '7', letters: 'P Q R S' },
+    { digit: '8', letters: 'T U V' },
+    { digit: '9', letters: 'W X Y Z' },
+  ]
 
   return (
-    <div className="min-h-dvh bg-[#030305] text-white flex flex-col items-center px-4 py-8 select-none">
-      <div className="w-full max-w-sm flex-1 flex flex-col">
-        <div className="text-center mt-4 mb-6">
-          <p className="text-xs text-slate-500 tracking-widest mb-2">GEORGE</p>
-          <h1 className="text-xl font-semibold text-white mb-2">Vitajte</h1>
-          <p className="text-sm text-slate-400">
-            Zadajte 16-miestny prístupový kód. Prístup schvaľuje administrátor.
-          </p>
+    <div
+      className="flex justify-center items-center select-none bg-black"
+      style={{ height: '100dvh', overflow: 'hidden', touchAction: 'manipulation' }}
+    >
+      <div className="relative w-full max-w-[420px] h-full flex flex-col justify-between bg-[#737373] overflow-hidden shadow-2xl">
+        {/* Toast */}
+        <div
+          className={`absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 w-[90%] max-w-[340px] ${
+            toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20 pointer-events-none'
+          }`}
+        >
+          <div
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white ${
+              toast.ok ? 'bg-emerald-600' : 'bg-red-600'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {toast.ok ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              )}
+            </svg>
+            <span data-testid="toast-message">{toast.message}</span>
+          </div>
         </div>
 
-        <div className="flex justify-center gap-2 mb-8 flex-wrap" data-testid="code-display">
-          {groups.map((group, gi) => (
+        {/* Upper section */}
+        <div className="px-5 pt-5 pb-2 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
+          <div className="flex flex-col">
+            <h1 className="text-[30px] font-bold text-[#141414] leading-tight tracking-tight">
+              Prístup
+            </h1>
+            <p className="text-[15.5px] font-semibold text-[#3d3d3d] mt-0.5">
+              {phase === 'pending' ? 'Čaká sa na schválenie' : 'Zadaj 16-miestny kód'}
+            </p>
+            <p className="text-[16px] font-semibold text-[#1c1c1c] mt-3 tracking-normal">
+              {phase === 'pending'
+                ? 'Správca overuje váš prístupový kód'
+                : 'Kód schvaľuje správca aplikácie'}
+            </p>
+            {remainingRequests !== null && (
+              <p className="text-[12px] text-[#2a2a2a] mt-1.5" data-testid="remaining-requests">
+                Zostávajúce pokusy: {remainingRequests}
+              </p>
+            )}
+          </div>
+
+          {/* Maroon viewfinder (static, no scanning animation) */}
+          <div className="flex-1 min-h-0 flex items-center justify-center py-2">
+            <div className="w-full max-w-[190px] aspect-square rounded-[24px] bg-[#5c0e0e] shadow-md pointer-events-none transition-all" />
+          </div>
+        </div>
+
+        {/* Bottom container */}
+        <div className="w-full flex-shrink-0 flex flex-col z-20">
+          {/* White bottom sheet */}
+          <div className="w-full bg-white rounded-t-[26px] shadow-[0_-6px_25px_rgba(0,0,0,0.18)] px-5 pt-4 pb-3 flex flex-col">
+            <div className="flex items-center justify-between pb-2">
+              <h2 className="text-[20px] font-bold text-black tracking-tight">
+                {phase === 'pending' ? 'Žiadosť odoslaná' : 'Zadať kód ručne'}
+              </h2>
+              <button
+                type="button"
+                onClick={clearInput}
+                aria-label="Vymazať zadaný kód"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-black active:opacity-40 transition-opacity cursor-pointer"
+              >
+                <svg className="w-5 h-5 stroke-[2.4]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 16-digit input box */}
             <div
-              key={gi}
-              className="flex gap-1.5 bg-[#171821] rounded-xl px-3 py-2.5"
-              data-testid={`code-group-${gi}`}
+              className="relative w-full h-[58px] bg-white border border-[#c8c8cc] rounded-[13px] px-3.5 pt-1.5 pb-1 flex flex-col justify-center cursor-text transition-all"
+              data-testid="code-input-box"
             >
-              {group.map((d, di) => (
-                <div
-                  key={di}
-                  className={`w-2.5 h-2.5 rounded-full border-2 transition-all duration-150 ${
-                    d !== '' ? 'bg-[#327bf5] border-[#327bf5] scale-110' : 'border-slate-700'
+              <span className="text-[12px] text-[#717178] font-normal leading-tight select-none">
+                Zadaj 16-miestny kód
+              </span>
+              <div className="flex items-center h-6 mt-0.5 overflow-hidden">
+                <span
+                  className="text-[17px] font-medium tracking-[0.08em] text-black select-none"
+                  data-testid="digits-text"
+                >
+                  {formattedDigits}
+                </span>
+                <span
+                  className={`inline-block w-[1.8px] h-[19px] bg-black ml-[1px] ${
+                    digits.length < CODE_LENGTH ? 'animate-[cursorBlink_1.1s_step-end_infinite]' : 'opacity-0'
                   }`}
                 />
-              ))}
+              </div>
             </div>
-          ))}
-        </div>
 
-        <div className="text-center mb-6 min-h-10">
-          {phase === 'pending' && (
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-300" data-testid="pending-state">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Žiadosť odoslaná, čaká na schválenie…
+            {/* Submit button */}
+            <div className="pt-2.5">
+              {phase === 'pending' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearPolling()
+                    setDigits('')
+                    setPhase('input')
+                  }}
+                  className="w-full h-[46px] rounded-[13px] font-semibold text-[16px] flex items-center justify-center bg-[#ebebef] text-[#3d3d3d] cursor-pointer select-none"
+                  data-testid="cancel-request"
+                >
+                  Zrušiť a zadať nový kód
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={!canSubmit}
+                  data-testid="submit-code"
+                  className={`w-full h-[46px] rounded-[13px] font-semibold text-[16px] flex items-center justify-center transition-all select-none ${
+                    canSubmit
+                      ? 'bg-black text-white cursor-pointer active:scale-[0.99] shadow-sm'
+                      : 'bg-[#ebebef] text-[#b8b8bd] cursor-not-allowed'
+                  }`}
+                >
+                  {phase === 'submitting' ? (
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Požiadať o prístup'
+                  )}
+                </button>
+              )}
             </div>
-          )}
-          {phase === 'error' && errorMessage && (
-            <p className="text-sm text-red-400" data-testid="error-state">
-              {errorMessage}
-            </p>
-          )}
-          {phase !== 'pending' && remainingRequests !== null && (
-            <p className="text-xs text-slate-600">Zostávajúce pokusy: {remainingRequests}</p>
-          )}
-        </div>
-
-        {phase !== 'pending' && (
-          <div className="grid grid-cols-3 gap-x-4 gap-y-3 max-w-65 w-full mx-auto">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-              <button
-                key={num}
-                onClick={() => pressDigit(num)}
-                data-testid={`key-${num}`}
-                className="w-14 h-14 mx-auto rounded-full text-lg font-bold flex items-center justify-center bg-[#171821] hover:bg-[#1d1e2b] active:scale-90 transition-all cursor-pointer"
-              >
-                {num}
-              </button>
-            ))}
-            <button
-              onClick={submit}
-              disabled={filledCount !== CODE_LENGTH || phase === 'submitting'}
-              data-testid="submit-code"
-              className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl transition-all ${
-                filledCount === CODE_LENGTH
-                  ? 'bg-[#327bf5] text-white cursor-pointer active:scale-90'
-                  : 'text-slate-600 cursor-not-allowed'
-              }`}
-              aria-label="Odoslať kód"
-            >
-              ➤
-            </button>
-            <button
-              onClick={() => pressDigit('0')}
-              data-testid="key-0"
-              className="w-14 h-14 mx-auto rounded-full text-lg font-bold flex items-center justify-center bg-[#171821] hover:bg-[#1d1e2b] active:scale-90 transition-all cursor-pointer"
-            >
-              0
-            </button>
-            <button
-              onClick={backspace}
-              data-testid="key-backspace"
-              className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-slate-400 hover:text-slate-200 active:scale-90 transition-all cursor-pointer"
-              aria-label="Zmazať"
-            >
-              ⌫
-            </button>
           </div>
-        )}
 
-        {phase === 'pending' && (
-          <button
-            onClick={() => {
-              clearPolling()
-              setDigits(Array(CODE_LENGTH).fill(''))
-              setPhase('input')
-            }}
-            className="mt-4 mx-auto block text-sm text-slate-400 hover:text-slate-200 underline cursor-pointer"
-            data-testid="cancel-request"
-          >
-            Zrušiť a zadať nový kód
-          </button>
-        )}
+          {/* iOS numeric keyboard */}
+          <div className="w-full bg-[#cfd3d9] px-1.5 pt-1.5 pb-4">
+            <div className="grid grid-cols-3 gap-1.5 max-w-[390px] mx-auto">
+              {KEYS.map((key) => (
+                <button
+                  key={key.digit}
+                  type="button"
+                  onClick={() => pressDigit(key.digit)}
+                  data-testid={`key-${key.digit}`}
+                  className="h-[46px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.32)] flex flex-col items-center justify-center active:bg-[#b9bcc2] active:scale-[0.96] transition-all cursor-pointer"
+                >
+                  <span className="text-[25px] font-normal text-black leading-none">{key.digit}</span>
+                  {key.letters ? (
+                    <span className="text-[9.5px] font-semibold tracking-[0.16em] text-black leading-none uppercase -mt-0.5">
+                      {key.letters}
+                    </span>
+                  ) : (
+                    <span className="h-[7px]" />
+                  )}
+                </button>
+              ))}
+
+              <div className="h-[46px]" />
+
+              <button
+                type="button"
+                onClick={() => pressDigit('0')}
+                data-testid="key-0"
+                className="h-[46px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.32)] flex flex-col items-center justify-center active:bg-[#b9bcc2] active:scale-[0.96] transition-all cursor-pointer"
+              >
+                <span className="text-[25px] font-normal text-black leading-none">0</span>
+                <span className="h-[4px]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={backspace}
+                aria-label="Zmazať číslicu"
+                data-testid="key-backspace"
+                className="h-[46px] flex items-center justify-center text-black active:opacity-35 active:scale-[0.92] transition-all cursor-pointer"
+              >
+                <svg className="w-[28px] h-[28px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.5-7.5H20a2 2 0 012 2v11a2 2 0 01-2 2H9.5L3 12z"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="w-32 h-1 bg-black rounded-full mx-auto mt-2.5" />
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes cursorBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+          }
+        `}</style>
       </div>
     </div>
   )
