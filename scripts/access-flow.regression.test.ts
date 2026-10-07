@@ -45,9 +45,9 @@ if (savedCi === undefined) delete process.env.CI
 else process.env.CI = savedCi
 if (savedDisableRateLimit === undefined) delete process.env.DISABLE_RATE_LIMIT
 else process.env.DISABLE_RATE_LIMIT = savedDisableRateLimit
-assert(ACCESS_REQUEST_MAX_PER_HOUR === 5, 'rate limit must be 5/h')
-assert(getAccessRequestQuota(4).allowed, 'fifth request is allowed')
-assert(!getAccessRequestQuota(5).allowed, 'sixth request is blocked')
+assert(ACCESS_REQUEST_MAX_PER_HOUR === 15, 'rate limit must be 15/h')
+assert(getAccessRequestQuota(14).allowed, '15th request is allowed')
+assert(!getAccessRequestQuota(15).allowed, '16th request is blocked')
 
 // --- Contract: hashIp ---------------------------------------------------------
 const hashed = hashIp('10.0.0.1')

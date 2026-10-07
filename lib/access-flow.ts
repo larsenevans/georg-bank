@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 
 export const ACCESS_COOKIE = 'access_granted'
-export const ACCESS_REQUEST_MAX_PER_HOUR = 5
+export const ACCESS_REQUEST_MAX_PER_HOUR = 15
 export const ACCESS_REQUEST_EXPIRY_HOURS = 24
 export const ACCESS_SESSION_EXPIRY_DAYS = 30
 

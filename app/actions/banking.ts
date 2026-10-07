@@ -156,11 +156,11 @@ export async function createTransaction(
 ) {
   const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
   if (!accessGate.ok) {
-    if (accessGate.status === 403) {
+    if (accessGate.status === 403 && accessGate.error !== 'transaction_already_used') {
       await clearAccessCookieFromServerAction()
     }
     throw new Error(accessGate.error === 'transaction_already_used'
-      ? 'Táto session už použila platbu.'
+      ? 'Platbu ste už využili. Môžete si stiahnuť PDF výpis.'
       : 'Vyžaduje sa aktívna access session.')
   }
   const accessSessionRow = accessGate.skipped ? null : accessGate.session
@@ -226,7 +226,6 @@ export async function createTransaction(
 
   if (accessSessionRow) {
     await afterTransactionSuccess(accessSessionRow)
-    await clearAccessCookieFromServerAction()
   }
 
   revalidatePath('/dashboard')
@@ -296,11 +295,11 @@ export async function internalTransferByEmail(
 ) {
   const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
   if (!accessGate.ok) {
-    if (accessGate.status === 403) {
+    if (accessGate.status === 403 && accessGate.error !== 'transaction_already_used') {
       await clearAccessCookieFromServerAction()
     }
     throw new Error(accessGate.error === 'transaction_already_used'
-      ? 'Táto session už použila platbu.'
+      ? 'Platbu ste už využili. Môžete si stiahnuť PDF výpis.'
       : 'Vyžaduje sa aktívna access session.')
   }
   const accessSessionRow = accessGate.skipped ? null : accessGate.session

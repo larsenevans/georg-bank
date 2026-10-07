@@ -46,11 +46,11 @@ if (savedCi === undefined) delete process.env.CI
 else process.env.CI = savedCi
 if (savedDisableRateLimit === undefined) delete process.env.DISABLE_RATE_LIMIT
 else process.env.DISABLE_RATE_LIMIT = savedDisableRateLimit
-assert(ACCESS_REQUEST_MAX_PER_HOUR === 5, 'access request limit is 5 per hour')
-assert(getAccessRequestQuota(0).remainingRequests === 4, 'first request leaves 4')
-assert(getAccessRequestQuota(4).allowed, 'fifth request is allowed')
-assert(getAccessRequestQuota(4).remainingRequests === 0, 'fifth request leaves 0')
-assert(!getAccessRequestQuota(5).allowed, 'sixth request is blocked')
+assert(ACCESS_REQUEST_MAX_PER_HOUR === 15, 'access request limit is 15 per hour')
+assert(getAccessRequestQuota(0).remainingRequests === 14, 'first request leaves 14')
+assert(getAccessRequestQuota(14).allowed, '15th request is allowed')
+assert(getAccessRequestQuota(14).remainingRequests === 0, '15th request leaves 0')
+assert(!getAccessRequestQuota(15).allowed, '16th request is blocked')
 
 // --- Contract: session token is a UUID ----------------------------------------
 const token = generateSessionToken()

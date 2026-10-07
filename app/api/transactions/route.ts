@@ -147,13 +147,13 @@ export async function POST(req: Request) {
       if (!accessGate.ok) {
         const message =
           accessGate.error === 'transaction_already_used'
-            ? 'Máte povolenie spraviť iba jednu platbu na túto session.'
+            ? 'Platbu ste už využili. Môžete si stiahnuť PDF výpis.'
             : accessGate.error
         const response = NextResponse.json(
           { success: false, error: accessGate.error, message },
           { status: accessGate.status },
         )
-        return accessGate.status === 403 ? clearAccessCookie(response) : response
+        return (accessGate.status === 403 && accessGate.error !== 'transaction_already_used') ? clearAccessCookie(response) : response
       }
       accessSessionRow = accessGate.skipped ? null : accessGate.session
     }

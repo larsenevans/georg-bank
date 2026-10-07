@@ -10,19 +10,7 @@ import {
 
 export type AccessSessionRow = typeof accessSession.$inferSelect
 
-/** Pure: a session is consumed when either protected action succeeds. */
-export function shouldScheduleLogout(session: {
-  transactionUsed: boolean
-  pdfGenerated: boolean
-  logoutAt: Date | null
-}): boolean {
-  return Boolean((session.transactionUsed || session.pdfGenerated) && session.logoutAt == null)
-}
 
-/** Pure: consumed sessions end at the action timestamp without a countdown. */
-export function computeLogoutAt(nowMs: number = Date.now()): Date {
-  return new Date(nowMs)
-}
 
 /** Pure: patch applied by endSession. */
 export function buildEndSessionValues(now: Date = new Date()) {
@@ -90,28 +78,7 @@ export async function markPdfGenerated(sessionId: string): Promise<void> {
     .where(and(eq(accessSession.id, sessionId), eq(accessSession.status, 'active')))
 }
 
-/**
- * End a session immediately when one protected action is consumed.
- * Kept as a dedicated helper for callers that use the historical function name.
- */
-export async function maybeScheduleLogout(sessionId: string): Promise<Date | null> {
-  const [row] = await db
-    .select()
-    .from(accessSession)
-    .where(eq(accessSession.id, sessionId))
-    .limit(1)
 
-  if (!row || row.logoutAt) return row?.logoutAt ?? null
-  if (!shouldScheduleLogout(row)) return null
-
-  const logoutAt = computeLogoutAt()
-  await db
-    .update(accessSession)
-    .set(buildEndSessionValues(logoutAt))
-    .where(and(eq(accessSession.id, sessionId), eq(accessSession.status, 'active')))
-
-  return logoutAt
-}
 
 export async function endSession(sessionToken: string): Promise<void> {
   await db
