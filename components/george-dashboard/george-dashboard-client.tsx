@@ -700,6 +700,8 @@ export function GeorgeDashboardClient({
   }
 
   const openPaymentSheet = () => {
+    setShowQrScanner(false)
+    setShowQrPreview(false)
     setIsPaymentSheetOpen(true)
   }
 
@@ -730,6 +732,7 @@ export function GeorgeDashboardClient({
     setPaymentOptions([])
 
     applyDraftToPaymentForm(draft)
+    setIsPaymentSheetOpen(true)
     showToast('Údaje z QR kódu boli vyplnené do formulára!')
   }, [applyDraftToPaymentForm])
 
@@ -738,6 +741,7 @@ export function GeorgeDashboardClient({
     setShowQrPreview(false)
     setPaymentOptions(options)
     applyDraftToPaymentForm(options[0].draft)
+    setIsPaymentSheetOpen(true)
     showToast(
       options.length > 1
         ? 'QR kód obsahuje viac účtov — vyberte príjemcu nižšie.'
@@ -763,13 +767,10 @@ export function GeorgeDashboardClient({
 
   const handleSendMoneyFromPreview = useCallback((draft: PaymentDraft) => {
     setShowQrPreview(false)
-    setPayRecipient(draft.recipientName)
-    setPayIban(draft.iban)
-    setPayAmount(draft.amount?.toFixed(2) || '')
-    setPayVs(draft.variableSymbol || '')
-    setPayNote(draft.note || '')
+    applyDraftToPaymentForm(draft)
+    setIsPaymentSheetOpen(true)
     showToast('Platba predvyplnená z QR kódu!')
-  }, [])
+  }, [applyDraftToPaymentForm])
 
   const handleScanAgain = useCallback(() => {
     setShowQrPreview(false)
@@ -3493,38 +3494,38 @@ export function GeorgeDashboardClient({
                   Autorizovať cez George kľúč
                 </button>
               </div>
-
-              {/* QR Code Scanner Modal */}
-              {showQrScanner && scannedDraft === null && (
-                <PaymentQrScanner
-                  onScanSuccess={handleScanSuccess}
-                  onMultipleOptions={handleMultipleQrOptions}
-                  onError={handleScanError}
-                  onClose={handleScannerClose}
-                  title="Skenovať platobný QR kód"
-                  description="Namierte kameru na platobný QR kód (QR Platba / SPAYD, EPC/SEPA, PAY by square)"
-                  showImageUpload={true}
-                />
-              )}
-
-              {/* QR Code Preview Modal */}
-              {showQrPreview && scannedDraft && (
-                <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-md bg-[#12131b] rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
-                    <QrPaymentPreview
-                      draft={scannedDraft}
-                      options={paymentOptions}
-                      onOptionSelect={handleOptionSelect}
-                      onSaveContact={handleSaveContactFromPreview}
-                      onSendMoney={handleSendMoneyFromPreview}
-                      onClose={() => setShowQrPreview(false)}
-                      onScanAgain={handleScanAgain}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
+
+          {/* QR Code Scanner Modal (Top-Level Portal) */}
+          {showQrScanner && scannedDraft === null && (
+            <PaymentQrScanner
+              onScanSuccess={handleScanSuccess}
+              onMultipleOptions={handleMultipleQrOptions}
+              onError={handleScanError}
+              onClose={handleScannerClose}
+              title="Skenovať platobný QR kód"
+              description="Namierte kameru na platobný QR kód (QR Platba / SPAYD, EPC/SEPA, PAY by square)"
+              showImageUpload={true}
+            />
+          )}
+
+          {/* QR Code Preview Modal (Top-Level Portal) */}
+          {showQrPreview && scannedDraft && (
+            <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-md bg-[#12131b] rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
+                <QrPaymentPreview
+                  draft={scannedDraft}
+                  options={paymentOptions}
+                  onOptionSelect={handleOptionSelect}
+                  onSaveContact={handleSaveContactFromPreview}
+                  onSendMoney={handleSendMoneyFromPreview}
+                  onClose={() => setShowQrPreview(false)}
+                  onScanAgain={handleScanAgain}
+                />
+              </div>
+            </div>
+          )}
           </div>,
           document.body
         )
