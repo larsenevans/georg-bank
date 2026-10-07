@@ -11,7 +11,7 @@ const inter = Inter({
   weight: ['400', '500', '600', '700'],
   display: 'swap',
   variable: '--font-inter',
-  preload: true,
+  preload: false,
 })
 export const viewport: Viewport = {
   width: 'device-width',
