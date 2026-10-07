@@ -3050,10 +3050,8 @@ export function GeorgeDashboardClient({
                   </div>
                   <button
                     type="button"
-                    onClick={async () => {
-                      await fetch('/api/pin/logout', { method: 'POST' }).catch(() => {})
-                      setIsSimulatorLoggedIn(false)
-                      setModalType(null)
+                    onClick={() => {
+                      window.location.href = '/api/access/logout'
                     }}
                     className="mt-4 w-full py-2.5 rounded-xl bg-red-600/20 text-red-400 border border-red-500/30 text-xs font-bold hover:bg-red-600/30 transition-colors"
                   >
