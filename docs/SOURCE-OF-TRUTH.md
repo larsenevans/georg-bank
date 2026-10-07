@@ -1,4 +1,4 @@
-# 🏦 georg-bank | SOURCE-OF-TRUTH
+# 🏦 gro-kan | SOURCE-OF-TRUTH
 > **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00001-6vq ✅ PRODUKCIA
 
 ---
