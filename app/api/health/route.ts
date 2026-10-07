@@ -5,6 +5,8 @@ import { getGuestConfig, isDedicatedGuestEmail } from '@/lib/guest-auth'
 import { isAppPinConfigured } from '@/lib/app-pin'
 import { computeHealthOk } from '@/lib/health-readiness'
 
+import { getAccessEnabled } from '@/lib/access-flow'
+
 export const dynamic = 'force-dynamic'
 
 /**
@@ -56,8 +58,12 @@ export async function GET() {
   return NextResponse.json(
     {
       ok,
+      status: ok ? 'ok' : 'error',
       database,
       databaseError,
+      accessFlow: {
+        enabled: getAccessEnabled(),
+      },
       betterAuth: {
         secretConfigured: hasBetterAuthSecret,
         urlConfigured: Boolean(betterAuthUrl),
