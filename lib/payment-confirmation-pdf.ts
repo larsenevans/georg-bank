@@ -343,14 +343,14 @@ export function generatePaymentConfirmationHtml(data: PaymentConfirmationPdfData
     .erste-symbol { width: 32px; height: 32px; }
     .logo-subtitle { font-size: 21px; font-weight: 500; color: #1a1919; margin-top: -2px; letter-spacing: -0.3px; }
     .bank-details { font-size: 9.5px; color: #1a1919; line-height: 1.4; font-weight: 500; }
-    .document-title { font-size: 19px; font-weight: 700; color: #1a1919; margin-bottom: 6px; }
+    .document-title { font-size: 19px; font-weight: 700; color: #1a1919; margin-bottom: 6px; position: relative; top: -2px; }
     
     .details-col { display: flex; flex-direction: column; justify-content: space-between; }
     .details-row { display: flex; align-items: center; position: relative; padding-bottom: 2px; border-bottom: 1.5px solid #8a9fac; height: 20px; box-sizing: border-box; }
     .details-row.row-large { height: 24px; padding-bottom: 3px; }
     .marker { width: 10px; height: 10px; background-color: #536f85; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
-    .label { font-size: 11px; font-weight: 700; color: #1a1919; }
-    .value { font-size: 11px; font-weight: 700; color: #1a1919; margin-left: auto; word-break: break-word; }
+    .label { font-size: 11px; font-weight: 700; color: #1a1919; position: relative; top: -2px; }
+    .value { font-size: 11px; font-weight: 700; color: #1a1919; margin-left: auto; word-break: break-word; position: relative; top: -2px; }
     .value-large { font-size: 16px; font-weight: 700; color: #000000; margin-left: auto; }
     .value-right { margin-left: auto; }
     
