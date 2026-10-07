@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
+import { Storage } from '@google-cloud/storage'
 import fs from 'fs'
 import path from 'path'
 import { eq } from 'drizzle-orm'
@@ -17,6 +18,14 @@ import {
 export const runtime = 'nodejs'
 
 const MAX_BYTES = 5 * 1024 * 1024
+
+let gcsStorage: Storage | null = null
+function getGcsStorage() {
+  if (!gcsStorage) {
+    gcsStorage = new Storage()
+  }
+  return gcsStorage
+}
 
 async function findOutgoingTxn(transactionId: string) {
   const supabase = createServiceSupabase()
@@ -126,6 +135,23 @@ export async function POST(req: Request) {
         pdfUrl = blob.url
       } catch (err) {
         console.error('[receipts/upload] Vercel Blob error:', err)
+      }
+    }
+
+    const gcsBucketName = process.env.RECEIPTS_GCS_BUCKET
+    if (!pdfUrl && gcsBucketName) {
+      try {
+        const bucket = getGcsStorage().bucket(gcsBucketName)
+        const file = bucket.file(storagePath)
+        await file.save(buffer, { contentType: 'application/pdf' })
+        const [signedUrl] = await file.getSignedUrl({
+          version: 'v4',
+          action: 'read',
+          expires: Date.now() + 24 * 60 * 60 * 1000,
+        })
+        pdfUrl = signedUrl
+      } catch (err) {
+        console.error('[receipts/upload] GCS error:', err)
       }
     }
 
