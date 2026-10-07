@@ -80,3 +80,7 @@ android-apk/*.jks
 env-abon-SETUP.txt
 dokumenty/secrets/
 secrets/
+
+# Gradle & Build caches
+**/.gradle/
+**/build/
