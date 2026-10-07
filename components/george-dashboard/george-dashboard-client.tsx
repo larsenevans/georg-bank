@@ -860,12 +860,15 @@ export function GeorgeDashboardClient({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.success === false) {
-        if (
-          res.status === 403 &&
-          (data.error === 'transaction_already_used' || data.error === 'pdf_already_generated')
-        ) {
-          finishSingleAction()
-          return
+        if (res.status === 403) {
+          if (data.error === 'transaction_already_used') {
+            showToast('Platbu ste už využili, môžete si stiahnuť PDF.')
+            return
+          }
+          if (data.error === 'pdf_already_generated') {
+            finishSessionAfterPdf()
+            return
+          }
         }
         showToast(
           data.message ||
@@ -918,7 +921,6 @@ export function GeorgeDashboardClient({
 
     closePaymentSheet()
     setTransactionFilter('all')
-    finishSingleAction()
   }
 
   const uploadReceiptPdf = async (transactionId: string, blob: Blob) => {
@@ -934,7 +936,7 @@ export function GeorgeDashboardClient({
       }
       if (!res.ok) {
         if (res.status === 403 && json.error === 'pdf_already_generated') {
-          finishSingleAction()
+          finishSessionAfterPdf()
         }
         return false
       }
@@ -983,7 +985,7 @@ export function GeorgeDashboardClient({
         const uploaded = await uploadReceiptPdf(data.transactionId, result.blob)
         closedEarly = true
         window.setTimeout(() => setPdfOverlayOpen(false), 600)
-        if (uploaded) finishSingleAction()
+        if (uploaded) finishSessionAfterPdf()
         return
       }
       if (result.usedHtmlFallback) {
@@ -1070,8 +1072,8 @@ export function GeorgeDashboardClient({
     setToastTimeoutId(id)
   }
 
-  const finishSingleAction = () => {
-    showToast('Akcia bola vykonaná. Pokračujte opätovným zadaním kódu.')
+  const finishSessionAfterPdf = () => {
+    showToast('Relácia skončila. PDF bolo vygenerované.')
     window.setTimeout(() => {
       window.location.href = '/welcome'
     }, 1200)
@@ -1335,10 +1337,9 @@ export function GeorgeDashboardClient({
         const data = await res.json().catch(() => ({}))
         if (res.ok && data.success !== false) {
           notifyPohybyLive({ type: 'payment', transactionId: data.transaction?.id })
-          finishSingleAction()
         } else {
           if (res.status === 403 && data.error === 'transaction_already_used') {
-            finishSingleAction()
+            showToast('Platbu ste už využili, môžete si stiahnuť PDF.')
           }
           console.error('Chyba ukladania investície do Supabase DB:', data.error || res.status)
         }
@@ -2291,7 +2292,7 @@ export function GeorgeDashboardClient({
 
                     {/* Profilová fotka (oranžový avatar) */}
                     <div
-                      className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-md"
+                      className="w-13 h-13 md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-md"
                       onClick={() => showModal('profile-modal')}
                       aria-label="Profil"
                     >
@@ -2307,11 +2308,17 @@ export function GeorgeDashboardClient({
                       </button>
                       <button
                         type="button"
-                        data-testid="add-money-open"
-                        onClick={() => setIsAddMoneyOpen(true)}
-                        className="text-[#179f42] hover:text-emerald-400 font-bold text-[14px] transition-colors active:scale-95 focus:outline-none"
+                        data-testid="qr-payment-open"
+                        onClick={openQrScanner}
+                        className="text-[#179f42] hover:text-emerald-400 font-bold text-[14px] flex items-center gap-1.5 transition-colors active:scale-95 focus:outline-none"
                       >
-                        Pridať peniaze
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="3" y="3" width="7" height="7" rx="1" />
+                          <rect x="14" y="3" width="7" height="7" rx="1" />
+                          <rect x="3" y="14" width="7" height="7" rx="1" />
+                          <path d="M14 14h2v2h-2zm4 0h3v3h-3zm-4 4h3v3h-3zm4 0h3v3h-3z" />
+                        </svg>
+                        QR platba
                       </button>
                     </div>
                     <button onClick={showQuickActions} className="w-8 h-8 rounded-full border border-[#327bf5]/45 hover:bg-[#327bf5]/10 flex items-center justify-center text-[#327bf5] transition-all focus:outline-none active:scale-90" aria-label="Možnosti">
@@ -2334,7 +2341,7 @@ export function GeorgeDashboardClient({
                       </div>
                     </div>
                     {/* Moneyback ikona: € symbol + circular refund arrow */}
-                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#111c33] border border-[#2F80ED]/20 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#111c33] border border-[#2F80ED]/20 flex items-center justify-center overflow-hidden shrink-0">
                       <svg
                         viewBox="0 0 24 24"
                         className="w-7 h-7 text-[#2F80ED]"
@@ -2367,7 +2374,7 @@ export function GeorgeDashboardClient({
                       <p className="text-xs text-[#7f8596] mt-1.5">mesačne</p>
                     </div>
                     {/* Poistenie ikona: shield outline + checkmark */}
-                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0 select-none">
+                    <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0 select-none">
                       <svg
                         viewBox="0 0 24 24"
                         className="w-7 h-7 text-[#A855F7]"
@@ -2397,7 +2404,7 @@ export function GeorgeDashboardClient({
                       </div>
                     </div>
                     {/* Investície ikona: 3-bar chart + rising trend arrow */}
-                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0">
                       <svg
                         viewBox="0 0 24 24"
                         className="w-7 h-7 text-[#A855F7]"
@@ -2433,7 +2440,7 @@ export function GeorgeDashboardClient({
                       <p className="text-[13px] text-[#7f8596] mt-2 select-none">súčasť balíka Premium</p>
                     </div>
                     {/* Slivkové pozadie s ikonou platobnej karty a štítom */}
-                    <div className="w-[52px] h-[52px] md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#201435] border border-[#A855F7]/20 flex items-center justify-center overflow-hidden shrink-0">
                       <svg
                         viewBox="0 0 24 24"
                         className="w-7 h-7 text-[#A855F7]"
@@ -3241,7 +3248,7 @@ export function GeorgeDashboardClient({
           <div className={dashClass}>
           <div
             data-testid="add-money-sheet"
-            className={`fixed inset-0 z-[190] bg-black/75 backdrop-blur-sm transition-opacity duration-300 ${
+            className={`fixed inset-0 z-190 bg-black/75 backdrop-blur-sm transition-opacity duration-300 ${
               isAddMoneyOpen
                 ? 'opacity-100 pointer-events-auto'
                 : 'opacity-0 pointer-events-none'
@@ -3325,7 +3332,7 @@ export function GeorgeDashboardClient({
           <div
             id="payment-sheet"
             data-testid="payment-sheet"
-            className={`fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm transition-opacity duration-300 ${
+            className={`fixed inset-0 z-200 bg-black/75 backdrop-blur-sm transition-opacity duration-300 ${
               isPaymentSheetOpen
                 ? 'opacity-100 pointer-events-auto'
                 : 'opacity-0 pointer-events-none'

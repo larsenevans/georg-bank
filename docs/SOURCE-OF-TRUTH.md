@@ -55,7 +55,7 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Kód: presne 16 číslic ^[0-9]{16}$
    Rate limit: 5 requestov/IP/hodinu (hardenované proti IP spoofingu cez pravostranný x-forwarded-for) ✅
    Expirácia žiadosti: 24 h
-   Single-use session: presne 1 akcia (platba ALEBO PDF) okamžite ukončí session; `logoutAt` a `endedAt` sú časom akcie a klient sa vráti na `/welcome`
+   Session 1+1: presne 1 platba a 1 PDF; platba NEUKONČUJE, PDF UKONČUJE, 2. platba 403 s odkazom na PDF; po PDF sa `logoutAt` a `endedAt` zaznamenajú a klient sa vráti na `/welcome`
    Session cookie: access_granted, httpOnly, 30 dní
    Decide endpoint: idempotentný, 403 pri zlom tokene, 200 pri novom tokene
 
@@ -80,7 +80,7 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Zdroj ostrých hodnôt C:\Users\42195\Desktop\abon-XXXXXX.txt
    RESEND_API_KEY v .env.local ✅ doplnený a funkčný
    ACCESS_ADMIN_SECRET verzia 2 v Secret Manageri ✅ nasadená a overená
-   APP_PIN verzia 2 (888888) v Secret Manageri ✅ nasadená a overená
+   APP_PIN v Secret Manager, verzia v2 ✅ nasadená a overená
    Secret Manager na gggggg-510905 ✅ 6 secrets: DATABASE_URL, RESEND_API_KEY, ACCESS_ADMIN_SECRET, BETTER_AUTH_SECRET, APP_PIN, GUEST_USER_PASSWORD
    GCS Bucket pre receipts gs://gggggg-receipts ✅ vytvorený (europe-west3, uniform bucket-level access)
    IAM oprávnenie: 1040062317673-compute@developer.gserviceaccount.com → roles/storage.objectAdmin na gs://gggggg-receipts ✅
@@ -104,7 +104,7 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
       - Notifikačný kanál: `projects/gggggg-510905/notificationChannels/7738800639303183457` (email `enzoenzof2024@gmail.com`, VERIFIED, enabled: true) ✅
       - Doplnkové aktívne alerty na Cloud Run: `Cloud Run Error Alerts` (severity>=ERROR), `Cloud Run CPU High`, `Cloud Run Memory High` (všetky smerované na `enzoenzof2024@gmail.com`) ✅
    3. [VOLITEĽNÉ] Nastavenie automatického mazania/retencie starých PDF z GCS bucketu (Lifecycle Rule, napr. 30 dní).
-   4. [STAV PROJEKTU] Všetky kľúčové funkčné a bezpečnostné požiadavky (databáza, migrácie, access gate, e-maily, rate limit, secret rotácia, GCS signed receipts, PIN 888888, monitoring & alerty) sú 100% DOKONČENÉ A FUNKČNÉ.
+   4. [STAV PROJEKTU] Všetky kľúčové funkčné a bezpečnostné požiadavky (databáza, migrácie, access gate, e-maily, rate limit, secret rotácia, GCS signed receipts, APP_PIN v Secret Manager, verzia v2, monitoring & alerty) sú 100% DOKONČENÉ A FUNKČNÉ.
 
 9. Zmeny do tohto dokumentu
    Každá zmena = nový riadok v tejto sekcii:
@@ -113,8 +113,8 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
 [2026-10-07] [HARDENING & ROTÁCIA] [Opravený rate-limit IP spoofing bypass cez getClientIp (commit b7ab445), rotovaný ACCESS_ADMIN_SECRET na verziu 2 v Secret Manageri (overené: starý token 403, nový token 200), zapnuté denné zálohy Cloud SQL o 03:00 s PITR, úspešne nasadená revízia georg-bank-00006-nqx na Cloud Run, smoke test prešiel na 100%] [DÔKAZ: gcloud run revisions list -> georg-bank-00006-nqx, gcloud sql instances describe -> backupConfiguration.enabled=true]
 [2026-10-07] [STORAGE & RECEIPTS] [Vytvorený GCS bucket gs://gggggg-receipts, pridelené roles/storage.objectAdmin a roles/iam.serviceAccountTokenCreator pre Cloud Run SA, pridaná GCS vetva v /api/receipts/upload s 24h V4 signed URL, commit 68c0918, nasadená revízia georg-bank-00008-2th, overené nahrávanie a ukladanie signed URL do DB] [DÔKAZ: gcloud storage ls gs://gggggg-receipts/, curl /api/receipts/upload -> success:true s V4 podpisom]
 [2026-10-07] [GATE HEALING & RULE] [Opravené vymazanie env vars po deployi: nastavené ACCESS_FLOW_ENABLED=true a plaintext premenné, health probe rozšírený o accessFlow.enabled, pridané povinné pravidlo do AGENTS.md, commit adeb6f1, overené: health enabled:true, root 307, dashboard2 307, emailSent:true] [DÔKAZ: gcloud run services describe -> ACCESS_FLOW_ENABLED=true, curl /api/health -> "accessFlow":{"enabled":true}]
-[2026-10-07] [PIN ROTATION] [Aktualizovaný APP_PIN=888888 v .env.local a vytvorená verzia 2 v Secret Manageri, Cloud Run aktualizovaný na revíziu georg-bank-00012-lsb, overený kompletný env výpis] [DÔKAZ: gcloud secrets versions list APP_PIN -> verzia 2 enabled, gcloud run services describe -> georg-bank-00012-lsb]
-[2026-10-07] [SINGLE-ACTION SESSION] [Nahradený kontrakt „1 platba + 1 PDF + 60 s“: prvá úspešná platba alebo PDF okamžite ukončí access session, vymaže access cookie a dashboard zobrazí potvrdenie pred návratom na /welcome.] [DÔKAZ: npm run test:unit, npx tsc --noEmit, npm run build -> exit code 0]
+[2026-10-07] [PIN ROTATION] [Aktualizovaný APP_PIN v Secret Manager, verzia v2, Cloud Run aktualizovaný na revíziu georg-bank-00012-lsb, overený kompletný env výpis] [DÔKAZ: gcloud secrets versions list APP_PIN -> verzia 2 enabled, gcloud run services describe -> georg-bank-00012-lsb]
+[2026-10-07] [SESSION 1+1] [Nahradený kontrakt single-action: platba NEUKONČUJE session, PDF UKONČUJE, 2. platba vráti 403 s odkazom na PDF; po PDF sa vymaže access cookie a dashboard zobrazí potvrdenie pred návratom na /welcome.] [DÔKAZ: npm run test:unit, npx tsc --noEmit, npm run build -> exit code 0]
 [2026-10-07] [MONITORING & ALERTS] [Vytvorený Uptime Check georg-bank-health-probe pre /api/health (1 min perióda, HTTPS) a Alert Policies pre výpadok /api/health a preťaženie Cloud SQL (CPU > 85% po dobu 5 min na gggggg-sql), oba napojené na notifikačný email enzoenzof2024@gmail.com spolu s existujúcimi Cloud Run error alertami] [DÔKAZ: gcloud monitoring uptime list-configs -> georg-bank-health-probe-lbqBdpEPXN4, gcloud monitoring policies list -> 5 aktívnych alert policies prepojených na channel 7738800639303183457]
 [2026-10-07] [MONITORING VERIFICATION] [Kontrola duplicít monitoringu: 5 alert policies (všetky unikátne – názov A signál: log errors, CPU p99>80%/5min, memory p99>80%/5min, uptime probe, Cloud SQL CPU>85%), 1 email kanál (enzoenzof2024@gmail.com, VERIFIED), 1 uptime check – ŽIADNE duplicity; vytvorené 3 Cloud Run politiky cez REST API s opravenými poľami conditionMatchedLog (bez „s"), aggregations (pole) a metrikami cpu|memory/utilizations (DELTA/DISTRIBUTION, škála 0–1, ALIGN_PERCENTILE_99)] [DÔKAZ: gcloud monitoring policies list --project=gggggg-510905 -> 5 riadkov enabled=True, notificationChannels API -> count=1, uptimeCheckConfigs -> count=1]
 [2026-10-07] [PDF STATEMENT STYLING] [Posunutý text v sekcii Výpis z Účtu (.document-title, .details-row .label a .value) o 2px vyššie (position: relative; top: -2px) v lib/payment-confirmation-pdf.ts a styles/slsp-statement.css, aby text nesedel tesne na spodnej linke; commit aaeff14] [DÔKAZ: npm run test:unit (27 pass), npx tsc --noEmit (exit 0), npm run build (exit 0)]

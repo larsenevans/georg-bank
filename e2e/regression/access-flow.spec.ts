@@ -34,11 +34,15 @@ test.describe('access-flow regression', () => {
     expect(body.redirect).toBe('/welcome')
   })
 
-  test('dashboard redirects after the first consumed action', async () => {
+  test('CONTRACT-1+1 E2E UI assertions (george-dashboard-client)', async () => {
     const fs = await import('fs')
     const src = fs.readFileSync('components/george-dashboard/george-dashboard-client.tsx', 'utf8')
-    expect(src).toContain('Akcia bola vykonaná. Pokračujte opätovným zadaním kódu.')
+    // E1 & E2: 2. platba -> 403 s toastom, ZIADNY redirect
+    expect(src).toContain('Platbu ste už využili. Môžete si stiahnuť PDF výpis.')
+    expect(src).toContain('transaction_already_used')
+    
+    // E3: PDF stiahnutie -> relacia skoncila a redirect
+    expect(src).toContain('Relácia skončila')
     expect(src).toContain("window.location.href = '/welcome'")
-    expect(src).not.toContain('Automatické odhlásenie')
   })
 })

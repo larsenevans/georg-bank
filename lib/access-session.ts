@@ -71,12 +71,10 @@ export async function getActiveAccessSession(
 }
 
 export async function markTransactionUsed(sessionId: string): Promise<void> {
-  const now = new Date()
   await db
     .update(accessSession)
     .set({
       transactionUsed: true,
-      ...buildEndSessionValues(now),
     })
     .where(and(eq(accessSession.id, sessionId), eq(accessSession.status, 'active')))
 }
@@ -168,7 +166,13 @@ export function getConsumedActionError(
   session: Pick<AccessSessionRow, 'transactionUsed' | 'pdfGenerated'>,
   attemptedAction: 'transaction_already_used' | 'pdf_already_generated',
 ): 'transaction_already_used' | 'pdf_already_generated' | null {
-  return session.transactionUsed || session.pdfGenerated ? attemptedAction : null
+  if (attemptedAction === 'transaction_already_used' && session.transactionUsed) {
+    return 'transaction_already_used'
+  }
+  if (attemptedAction === 'pdf_already_generated' && session.pdfGenerated) {
+    return 'pdf_already_generated'
+  }
+  return null
 }
 
 async function requireAccessForConsumedAction(
