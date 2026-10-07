@@ -233,58 +233,10 @@ export function GeorgeDashboardClient({
   const [pdfOverlayOpen, setPdfOverlayOpen] = useState(false)
   const [pdfOverlayPhase, setPdfOverlayPhase] = useState<'preparing' | 'done'>('preparing')
   const [portalReady, setPortalReady] = useState(false)
-  const [accessLogoutAt, setAccessLogoutAt] = useState<string | null>(null)
-  const [accessLogoutSeconds, setAccessLogoutSeconds] = useState<number | null>(null)
 
   useEffect(() => {
     setPortalReady(true)
   }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    const poll = async () => {
-      try {
-        const res = await fetch('/api/access/session', { cache: 'no-store' })
-        if (!res.ok) return
-        const data = (await res.json()) as { logoutAt?: string | null; disabled?: boolean }
-        if (cancelled || data.disabled) return
-        if (data.logoutAt) setAccessLogoutAt(data.logoutAt)
-      } catch {
-        // ignore polling errors
-      }
-    }
-    void poll()
-    const id = window.setInterval(poll, 4000)
-    return () => {
-      cancelled = true
-      window.clearInterval(id)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!accessLogoutAt) return
-    const tick = () => {
-      const left = Math.max(
-        0,
-        Math.ceil((new Date(accessLogoutAt).getTime() - Date.now()) / 1000),
-      )
-      setAccessLogoutSeconds(left)
-      if (left <= 0) {
-        void fetch('/api/access/logout', {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'x-requested-with': 'XMLHttpRequest',
-          },
-        }).finally(() => {
-          window.location.href = '/welcome'
-        })
-      }
-    }
-    tick()
-    const id = window.setInterval(tick, 250)
-    return () => window.clearInterval(id)
-  }, [accessLogoutAt])
 
   // GEORGE PRIHLASOVACIE STAVY
   const [isSimulatorLoggedIn, setIsSimulatorLoggedIn] = useState(false)
@@ -888,8 +840,6 @@ export function GeorgeDashboardClient({
     const balanceBefore = state.spaceBalance
     const balanceAfter = state.spaceBalance - amount
     const optimisticId = newTxnId('pay')
-    const createdAtLabel = new Date().toLocaleString('sk-SK')
-
     // Persist first so /pohyby sees the outgoing payment immediately.
     let serverTxn: Partial<Transaction> & { id?: string } = {}
     try {
@@ -910,6 +860,13 @@ export function GeorgeDashboardClient({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.success === false) {
+        if (
+          res.status === 403 &&
+          (data.error === 'transaction_already_used' || data.error === 'pdf_already_generated')
+        ) {
+          finishSingleAction()
+          return
+        }
         showToast(
           data.error ||
             `Platbu sa nepodarilo zapísať (limit 24 h ${DAILY_PAYMENT_LIMIT_EUR} €).`
@@ -960,31 +917,7 @@ export function GeorgeDashboardClient({
 
     closePaymentSheet()
     setTransactionFilter('all')
-    showToast(`Platba ${amount.toFixed(2)} € pre ${recipient} bola zapísaná.`)
-
-    // PDF confirmation after successful DB write (overlay + upload)
-    void generateAndDeliverReceipt({
-      transactionId: txnId,
-      createdAt: createdAtLabel,
-      status: 'Štandardný platobný príkaz',
-      transferType: 'external',
-      fromAccountNumber: generateMaskedSenderIban(),
-      recipientName: recipient,
-      recipientAccountOrEmail: iban,
-      amount: amount.toFixed(2),
-      currency: 'EUR',
-      variableSymbol: vs,
-      constantSymbol: '0308',
-      specificSymbol: '',
-      note: note || 'Platba cez mobilnú verziu George',
-      payerReference: '',
-      dueDate: 'Dnes',
-      repeatDays: '0',
-      createTemplate: false,
-      emailConfirmation: false,
-      balanceBefore: (newTxn.balanceBefore ?? balanceBefore).toFixed(2),
-      balanceAfter: (newTxn.balanceAfter ?? balanceAfter).toFixed(2),
-    })
+    finishSingleAction()
   }
 
   const uploadReceiptPdf = async (transactionId: string, blob: Blob) => {
@@ -993,8 +926,17 @@ export function GeorgeDashboardClient({
       form.append('transactionId', transactionId)
       form.append('file', blob, `${transactionId}.pdf`)
       const res = await fetch('/api/receipts/upload', { method: 'POST', body: form })
-      if (!res.ok) return
-      const json = (await res.json()) as { success?: boolean; pdfUrl?: string }
+      const json = (await res.json().catch(() => ({}))) as {
+        success?: boolean
+        pdfUrl?: string
+        error?: string
+      }
+      if (!res.ok) {
+        if (res.status === 403 && json.error === 'pdf_already_generated') {
+          finishSingleAction()
+        }
+        return false
+      }
       if (json.success && json.pdfUrl) {
         setState((prev) => ({
           ...prev,
@@ -1006,8 +948,10 @@ export function GeorgeDashboardClient({
           prev?.id === transactionId ? { ...prev, pdfUrl: json.pdfUrl } : prev
         )
       }
+      return json.success === true
     } catch (err) {
       console.warn('[dashboard2] receipt upload failed:', err)
+      return false
     }
   }
 
@@ -1035,9 +979,10 @@ export function GeorgeDashboardClient({
       const result = await downloadPaymentConfirmationAsPdf(data)
       if (result.ok && result.blob) {
         setPdfOverlayPhase('done')
-        void uploadReceiptPdf(data.transactionId, result.blob)
+        const uploaded = await uploadReceiptPdf(data.transactionId, result.blob)
         closedEarly = true
         window.setTimeout(() => setPdfOverlayOpen(false), 600)
+        if (uploaded) finishSingleAction()
         return
       }
       if (result.usedHtmlFallback) {
@@ -1122,6 +1067,13 @@ export function GeorgeDashboardClient({
       setIsToastVisible(false)
     }, 4000)
     setToastTimeoutId(id)
+  }
+
+  const finishSingleAction = () => {
+    showToast('Akcia bola vykonaná. Pokračujte opätovným zadaním kódu.')
+    window.setTimeout(() => {
+      window.location.href = '/welcome'
+    }, 1200)
   }
 
   const handleKeypadPress = async (digit: string) => {
@@ -1382,7 +1334,11 @@ export function GeorgeDashboardClient({
         const data = await res.json().catch(() => ({}))
         if (res.ok && data.success !== false) {
           notifyPohybyLive({ type: 'payment', transactionId: data.transaction?.id })
+          finishSingleAction()
         } else {
+          if (res.status === 403 && data.error === 'transaction_already_used') {
+            finishSingleAction()
+          }
           console.error('Chyba ukladania investície do Supabase DB:', data.error || res.status)
         }
       })
@@ -1506,15 +1462,6 @@ export function GeorgeDashboardClient({
         data-variant={variant}
         style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
       >
-        {accessLogoutSeconds != null ? (
-          <div
-            data-testid="logout-banner"
-            className="w-full px-4 py-2 text-center text-sm font-semibold bg-amber-500/20 text-amber-100 border-b border-amber-500/30"
-          >
-            Automatické odhlásenie o {accessLogoutSeconds}s
-          </div>
-        ) : null}
-
         {/* Desktop chrome — only ≥lg; hidden on PIN / mobile / PWA standalone */}
         {!isPasscodeScreen && (
           <>
@@ -2176,15 +2123,6 @@ export function GeorgeDashboardClient({
       data-testid="george-dashboard"
       data-variant={variant}
     >
-      {accessLogoutSeconds != null ? (
-        <div
-          data-testid="logout-banner"
-          className="w-full px-4 py-2 text-center text-sm font-semibold bg-amber-500/20 text-amber-100 border-b border-amber-500/30 shrink-0"
-        >
-          Automatické odhlásenie o {accessLogoutSeconds}s
-        </div>
-      ) : null}
-
       {/* Desktop chrome — only ≥lg; hidden on mobile / PWA standalone */}
       <div className="d2-desktop-chrome hidden lg:block shrink-0">
         <DashboardHeader user={user} />

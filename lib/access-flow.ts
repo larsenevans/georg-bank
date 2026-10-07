@@ -6,7 +6,6 @@ export const ACCESS_COOKIE = 'access_granted'
 export const ACCESS_REQUEST_MAX_PER_HOUR = 5
 export const ACCESS_REQUEST_EXPIRY_HOURS = 24
 export const ACCESS_SESSION_EXPIRY_DAYS = 30
-export const ACCESS_AUTO_LOGOUT_SECONDS = 60
 
 export function isValidAccessCode(code: string): boolean {
   return /^[0-9]{16}$/.test(code)

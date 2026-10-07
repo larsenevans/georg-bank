@@ -13,6 +13,7 @@ import {
 } from '@/lib/format-date'
 import {
   afterPdfSuccess,
+  clearAccessCookie,
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
@@ -21,7 +22,8 @@ export async function GET(req: Request) {
   try {
     const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
     if (!pdfGate.ok) {
-      return NextResponse.json({ error: pdfGate.error }, { status: pdfGate.status })
+      const response = NextResponse.json({ error: pdfGate.error }, { status: pdfGate.status })
+      return pdfGate.status === 403 ? clearAccessCookie(response) : response
     }
     const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
 
@@ -160,7 +162,7 @@ export async function GET(req: Request) {
       await afterPdfSuccess(accessSessionRow)
     }
 
-    return new NextResponse(htmlContent, {
+    const response = new NextResponse(htmlContent, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
@@ -168,6 +170,7 @@ export async function GET(req: Request) {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       },
     })
+    return accessSessionRow ? clearAccessCookie(response) : response
   } catch (error) {
     console.error('Error generating PDF:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

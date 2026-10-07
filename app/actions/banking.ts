@@ -12,6 +12,7 @@ import { encodeTransactionDescription } from '@/lib/payment-confirmation-from-tr
 import { triggerProcessPaymentWebhook } from '@/lib/trigger-process-payment-webhook'
 import {
   afterTransactionSuccess,
+  clearAccessCookieFromServerAction,
   readAccessCookieToken,
   requireAccessForTransaction,
 } from '@/lib/access-session'
@@ -155,6 +156,9 @@ export async function createTransaction(
 ) {
   const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
   if (!accessGate.ok) {
+    if (accessGate.status === 403) {
+      await clearAccessCookieFromServerAction()
+    }
     throw new Error(accessGate.error === 'transaction_already_used'
       ? 'Táto session už použila platbu.'
       : 'Vyžaduje sa aktívna access session.')
@@ -222,6 +226,7 @@ export async function createTransaction(
 
   if (accessSessionRow) {
     await afterTransactionSuccess(accessSessionRow)
+    await clearAccessCookieFromServerAction()
   }
 
   revalidatePath('/dashboard')
@@ -291,6 +296,9 @@ export async function internalTransferByEmail(
 ) {
   const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
   if (!accessGate.ok) {
+    if (accessGate.status === 403) {
+      await clearAccessCookieFromServerAction()
+    }
     throw new Error(accessGate.error === 'transaction_already_used'
       ? 'Táto session už použila platbu.'
       : 'Vyžaduje sa aktívna access session.')
@@ -438,6 +446,7 @@ export async function internalTransferByEmail(
 
   if (accessSessionRow) {
     await afterTransactionSuccess(accessSessionRow)
+    await clearAccessCookieFromServerAction()
   }
 
   revalidatePath('/dashboard')

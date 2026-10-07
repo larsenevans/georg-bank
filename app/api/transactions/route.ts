@@ -31,6 +31,7 @@ import { desc, eq, inArray } from 'drizzle-orm'
 import {
   type AccessSessionRow,
   afterTransactionSuccess,
+  clearAccessCookie,
   readAccessCookieToken,
   requireAccessForTransaction,
 } from '@/lib/access-session'
@@ -148,10 +149,11 @@ export async function POST(req: Request) {
           accessGate.error === 'transaction_already_used'
             ? 'Máte povolenie spraviť iba jednu platbu na túto session.'
             : accessGate.error
-        return NextResponse.json(
+        const response = NextResponse.json(
           { success: false, error: errorMsg },
           { status: accessGate.status },
         )
+        return accessGate.status === 403 ? clearAccessCookie(response) : response
       }
       accessSessionRow = accessGate.skipped ? null : accessGate.session
     }
@@ -197,12 +199,13 @@ export async function POST(req: Request) {
         if (accessSessionRow) {
           await afterTransactionSuccess(accessSessionRow)
         }
-        return NextResponse.json({
+        const response = NextResponse.json({
           success: true,
           dailyLimit: remote.dailyLimit,
           transaction: remote.transaction,
           source: 'supabase',
         })
+        return accessSessionRow ? clearAccessCookie(response) : response
       }
     }
 
@@ -429,7 +432,7 @@ export async function POST(req: Request) {
       await afterTransactionSuccess(accessSessionRow)
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       dailyLimit,
       transaction: {
@@ -448,6 +451,7 @@ export async function POST(req: Request) {
         category,
       },
     })
+    return accessSessionRow ? clearAccessCookie(response) : response
   } catch (error) {
     console.error('[API /api/transactions POST] Error:', error)
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })

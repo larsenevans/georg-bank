@@ -5,7 +5,6 @@ import {
   formatAccessCode,
   isAccessRequestExpired,
   ACCESS_REQUEST_MAX_PER_HOUR,
-  ACCESS_AUTO_LOGOUT_SECONDS,
   isTrustedTestMode,
   getAccessRequestQuota,
 } from '@/lib/access-flow'
@@ -13,6 +12,7 @@ import {
   shouldScheduleLogout,
   computeLogoutAt,
   buildEndSessionValues,
+  getConsumedActionError,
 } from '@/lib/access-session'
 
 function assert(condition: boolean, message: string) {
@@ -65,42 +65,69 @@ assert(
   'session token must be UUID',
 )
 
-// --- Contract: maybeScheduleLogout +60s idempotent ----------------------------
-assert(ACCESS_AUTO_LOGOUT_SECONDS === 60, 'ACCESS_AUTO_LOGOUT_SECONDS===60')
+// --- Contract: first protected action ends the session immediately -------------
 const now = 1_700_000_000_000
 const scheduled = computeLogoutAt(now)
-assert(scheduled.getTime() === now + 60_000, 'logoutAt is now+60s')
-assert(
-  shouldScheduleLogout({
-    transactionUsed: true,
-    pdfGenerated: true,
-    logoutAt: null,
-  }) === true,
-  'schedule when both flags true and logoutAt null',
-)
+assert(scheduled.getTime() === now, 'logoutAt is the action time')
 assert(
   shouldScheduleLogout({
     transactionUsed: true,
     pdfGenerated: false,
     logoutAt: null,
-  }) === false,
-  'do not schedule without pdf',
+  }) === true,
+  'schedule immediately after a transaction',
 )
 assert(
   shouldScheduleLogout({
     transactionUsed: false,
     pdfGenerated: true,
     logoutAt: null,
+  }) === true,
+  'schedule immediately after a PDF',
+)
+assert(
+  shouldScheduleLogout({
+    transactionUsed: false,
+    pdfGenerated: false,
+    logoutAt: null,
   }) === false,
-  'do not schedule without transaction',
+  'do not schedule without a consumed action',
 )
 assert(
   shouldScheduleLogout({
     transactionUsed: true,
-    pdfGenerated: true,
-    logoutAt: new Date(now + 30_000),
+    pdfGenerated: false,
+    logoutAt: new Date(now),
   }) === false,
-  'idempotent: do not reschedule when logoutAt set',
+  'do not reschedule an ended session',
+)
+assert(
+  getConsumedActionError(
+    { transactionUsed: true, pdfGenerated: false },
+    'transaction_already_used',
+  ) === 'transaction_already_used',
+  'a second payment is rejected after the first payment',
+)
+assert(
+  getConsumedActionError(
+    { transactionUsed: true, pdfGenerated: false },
+    'pdf_already_generated',
+  ) === 'pdf_already_generated',
+  'a PDF is rejected after a payment consumed the session',
+)
+assert(
+  getConsumedActionError(
+    { transactionUsed: false, pdfGenerated: true },
+    'transaction_already_used',
+  ) === 'transaction_already_used',
+  'a payment is rejected after a PDF consumed the session',
+)
+assert(
+  getConsumedActionError(
+    { transactionUsed: false, pdfGenerated: true },
+    'pdf_already_generated',
+  ) === 'pdf_already_generated',
+  'a second PDF is rejected after the first PDF',
 )
 const first = computeLogoutAt(now)
 const second = computeLogoutAt(now)
@@ -118,6 +145,7 @@ assert(isAccessRequestExpired(null) === true, 'null expired')
 const ended = buildEndSessionValues(new Date(now))
 assert(ended.status === 'ended', 'endSession sets status ended')
 assert(ended.endedAt.getTime() === now, 'endSession sets endedAt')
+assert(ended.logoutAt.getTime() === now, 'endSession sets logoutAt to the action time')
 
 // --- Contract: formatAccessCode -----------------------------------------------
 assert(formatAccessCode('1234567890123456') === '1234 5678 9012 3456', '4x4 format')

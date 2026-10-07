@@ -11,6 +11,7 @@ import { isOutgoingPaymentType } from '@/lib/daily-payment-limit'
 import { createServiceSupabase } from '@/lib/demo-transactions-supabase'
 import {
   afterPdfSuccess,
+  clearAccessCookie,
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
@@ -67,7 +68,8 @@ export async function POST(req: Request) {
   try {
     const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
     if (!pdfGate.ok) {
-      return NextResponse.json({ success: false, error: pdfGate.error }, { status: pdfGate.status })
+      const response = NextResponse.json({ success: false, error: pdfGate.error }, { status: pdfGate.status })
+      return pdfGate.status === 403 ? clearAccessCookie(response) : response
     }
     const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
 
@@ -169,7 +171,8 @@ export async function POST(req: Request) {
       await afterPdfSuccess(accessSessionRow)
     }
 
-    return NextResponse.json({ success: true, pdfUrl, transactionId })
+    const response = NextResponse.json({ success: true, pdfUrl, transactionId })
+    return accessSessionRow ? clearAccessCookie(response) : response
   } catch (error) {
     console.error('[receipts/upload] Error:', error)
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })

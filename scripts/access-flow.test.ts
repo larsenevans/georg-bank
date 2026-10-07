@@ -7,7 +7,6 @@ import {
   formatAccessCode,
   isAccessRequestExpired,
   ACCESS_REQUEST_MAX_PER_HOUR,
-  ACCESS_AUTO_LOGOUT_SECONDS,
   getAccessRequestQuota,
   isTrustedTestMode,
 } from '@/lib/access-flow'
@@ -85,9 +84,6 @@ assert(isAccessRequestExpired(old) === true, '25h old request should be expired'
 const boundary = new Date(now.getTime() - (24 * 60 * 60 * 1000 - 60000))
 assert(isAccessRequestExpired(boundary) === false, '23h59m old request should not be expired')
 assert(isAccessRequestExpired(null) === true, 'null createdAt should count as expired')
-
-// --- Contract: auto-logout is exactly 60 seconds -------------------------------
-assert(ACCESS_AUTO_LOGOUT_SECONDS === 60, 'auto-logout must be exactly 60 seconds')
 
 // --- Contract: buildAdminEmailHtml with email & green/red buttons --------------
 import { buildAdminEmailHtml } from '@/lib/access-flow'

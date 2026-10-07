@@ -20,6 +20,7 @@ import {
 import { checkStatementGenerationRateLimit } from '@/lib/statement-rate-limit'
 import {
   afterPdfSuccess,
+  clearAccessCookieFromServerAction,
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
@@ -68,6 +69,9 @@ export async function generateBulkStatementsAction(
 ): Promise<BulkStatementResult[]> {
   const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
   if (!pdfGate.ok) {
+    if (pdfGate.status === 403) {
+      await clearAccessCookieFromServerAction()
+    }
     throw new Error(pdfGate.error === 'pdf_already_generated'
       ? 'Táto session už vygenerovala PDF.'
       : 'Vyžaduje sa aktívna access session.')
@@ -174,6 +178,7 @@ export async function generateBulkStatementsAction(
 
   if (accessSessionRow) {
     await afterPdfSuccess(accessSessionRow)
+    await clearAccessCookieFromServerAction()
   }
   return results
 }

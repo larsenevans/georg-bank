@@ -55,7 +55,7 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Kód: presne 16 číslic ^[0-9]{16}$
    Rate limit: 5 requestov/IP/hodinu (hardenované proti IP spoofingu cez pravostranný x-forwarded-for) ✅
    Expirácia žiadosti: 24 h
-   Auto-logout: presne 60 s po vyčerpaní (1 platba + 1 PDF)
+   Single-use session: presne 1 akcia (platba ALEBO PDF) okamžite ukončí session; `logoutAt` a `endedAt` sú časom akcie a klient sa vráti na `/welcome`
    Session cookie: access_granted, httpOnly, 30 dní
    Decide endpoint: idempotentný, 403 pri zlom tokene, 200 pri novom tokene
 
@@ -109,4 +109,4 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
 [2026-10-07] [STORAGE & RECEIPTS] [Vytvorený GCS bucket gs://gggggg-receipts, pridelené roles/storage.objectAdmin a roles/iam.serviceAccountTokenCreator pre Cloud Run SA, pridaná GCS vetva v /api/receipts/upload s 24h V4 signed URL, commit 68c0918, nasadená revízia georg-bank-00008-2th, overené nahrávanie a ukladanie signed URL do DB] [DÔKAZ: gcloud storage ls gs://gggggg-receipts/, curl /api/receipts/upload -> success:true s V4 podpisom]
 [2026-10-07] [GATE HEALING & RULE] [Opravené vymazanie env vars po deployi: nastavené ACCESS_FLOW_ENABLED=true a plaintext premenné, health probe rozšírený o accessFlow.enabled, pridané povinné pravidlo do AGENTS.md, commit adeb6f1, overené: health enabled:true, root 307, dashboard2 307, emailSent:true] [DÔKAZ: gcloud run services describe -> ACCESS_FLOW_ENABLED=true, curl /api/health -> "accessFlow":{"enabled":true}]
 [2026-10-07] [PIN ROTATION] [Aktualizovaný APP_PIN=888888 v .env.local a vytvorená verzia 2 v Secret Manageri, Cloud Run aktualizovaný na revíziu georg-bank-00012-lsb, overený kompletný env výpis] [DÔKAZ: gcloud secrets versions list APP_PIN -> verzia 2 enabled, gcloud run services describe -> georg-bank-00012-lsb]
-
+[2026-10-07] [SINGLE-ACTION SESSION] [Nahradený kontrakt „1 platba + 1 PDF + 60 s“: prvá úspešná platba alebo PDF okamžite ukončí access session, vymaže access cookie a dashboard zobrazí potvrdenie pred návratom na /welcome.] [DÔKAZ: npm run test:unit, npx tsc --noEmit, npm run build -> exit code 0]

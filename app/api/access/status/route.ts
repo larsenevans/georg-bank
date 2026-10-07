@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accessRequest, accessSession } from '@/lib/db/schema'
-import { ACCESS_COOKIE, ACCESS_SESSION_EXPIRY_DAYS, ACCESS_AUTO_LOGOUT_SECONDS } from '@/lib/access-flow'
+import { ACCESS_COOKIE, ACCESS_SESSION_EXPIRY_DAYS } from '@/lib/access-flow'
 
 export async function GET(request: NextRequest) {
   const requestId = request.nextUrl.searchParams.get('requestId')?.trim() ?? ''
@@ -20,10 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  const response = NextResponse.json({
-    status: req.status,
-    secondsUntilLogout: ACCESS_AUTO_LOGOUT_SECONDS,
-  })
+  const response = NextResponse.json({ status: req.status })
 
   if (req.status === 'approved' && req.sessionToken) {
     const [session] = await db

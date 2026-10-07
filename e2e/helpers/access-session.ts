@@ -45,7 +45,7 @@ function extractCookieValue(setCookieHeaders: string[], name: string): string | 
  *
  * Returns null when the access flow is disabled on the server (ACCESS_FLOW_ENABLED=false).
  * Each call creates a fresh session; call it again for specs that consume the
- * session's single transaction / single PDF allowance.
+ * one permitted payment or PDF action.
  */
 export async function grantAccessSession(
   context: BrowserContext,

@@ -34,10 +34,11 @@ test.describe('access-flow regression', () => {
     expect(body.redirect).toBe('/welcome')
   })
 
-  test('logout banner testid is reserved in dashboard client source contract', async () => {
+  test('dashboard redirects after the first consumed action', async () => {
     const fs = await import('fs')
     const src = fs.readFileSync('components/george-dashboard/george-dashboard-client.tsx', 'utf8')
-    expect(src).toContain('data-testid="logout-banner"')
-    expect(src).toContain('Automatické odhlásenie')
+    expect(src).toContain('Akcia bola vykonaná. Pokračujte opätovným zadaním kódu.')
+    expect(src).toContain("window.location.href = '/welcome'")
+    expect(src).not.toContain('Automatické odhlásenie')
   })
 })

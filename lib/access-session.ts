@@ -1,33 +1,34 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { accessSession } from '@/lib/db/schema'
 import {
-  ACCESS_AUTO_LOGOUT_SECONDS,
   ACCESS_COOKIE,
   getAccessEnabled,
 } from '@/lib/access-flow'
 
 export type AccessSessionRow = typeof accessSession.$inferSelect
 
-/** Pure: schedule logout only when both flags are true and logoutAt is still null. */
+/** Pure: a session is consumed when either protected action succeeds. */
 export function shouldScheduleLogout(session: {
   transactionUsed: boolean
   pdfGenerated: boolean
   logoutAt: Date | null
 }): boolean {
-  return Boolean(session.transactionUsed && session.pdfGenerated && session.logoutAt == null)
+  return Boolean((session.transactionUsed || session.pdfGenerated) && session.logoutAt == null)
 }
 
-/** Pure: logoutAt = now + ACCESS_AUTO_LOGOUT_SECONDS (exactly 60s by contract). */
+/** Pure: consumed sessions end at the action timestamp without a countdown. */
 export function computeLogoutAt(nowMs: number = Date.now()): Date {
-  return new Date(nowMs + ACCESS_AUTO_LOGOUT_SECONDS * 1000)
+  return new Date(nowMs)
 }
 
 /** Pure: patch applied by endSession. */
 export function buildEndSessionValues(now: Date = new Date()) {
   return {
     status: 'ended' as const,
+    logoutAt: now,
     endedAt: now,
   }
 }
@@ -70,22 +71,30 @@ export async function getActiveAccessSession(
 }
 
 export async function markTransactionUsed(sessionId: string): Promise<void> {
+  const now = new Date()
   await db
     .update(accessSession)
-    .set({ transactionUsed: true })
-    .where(eq(accessSession.id, sessionId))
+    .set({
+      transactionUsed: true,
+      ...buildEndSessionValues(now),
+    })
+    .where(and(eq(accessSession.id, sessionId), eq(accessSession.status, 'active')))
 }
 
 export async function markPdfGenerated(sessionId: string): Promise<void> {
+  const now = new Date()
   await db
     .update(accessSession)
-    .set({ pdfGenerated: true })
-    .where(eq(accessSession.id, sessionId))
+    .set({
+      pdfGenerated: true,
+      ...buildEndSessionValues(now),
+    })
+    .where(and(eq(accessSession.id, sessionId), eq(accessSession.status, 'active')))
 }
 
 /**
- * Set logoutAt = now + ACCESS_AUTO_LOGOUT_SECONDS only when both flags are true
- * and logoutAt is still null. Idempotent: if logoutAt is already set, returns it unchanged.
+ * End a session immediately when one protected action is consumed.
+ * Kept as a dedicated helper for callers that use the historical function name.
  */
 export async function maybeScheduleLogout(sessionId: string): Promise<Date | null> {
   const [row] = await db
@@ -94,23 +103,16 @@ export async function maybeScheduleLogout(sessionId: string): Promise<Date | nul
     .where(eq(accessSession.id, sessionId))
     .limit(1)
 
-  if (!row) return null
-  if (row.logoutAt) return row.logoutAt
+  if (!row || row.logoutAt) return row?.logoutAt ?? null
   if (!shouldScheduleLogout(row)) return null
 
   const logoutAt = computeLogoutAt()
   await db
     .update(accessSession)
-    .set({ logoutAt })
-    .where(and(eq(accessSession.id, sessionId), isNull(accessSession.logoutAt)))
+    .set(buildEndSessionValues(logoutAt))
+    .where(and(eq(accessSession.id, sessionId), eq(accessSession.status, 'active')))
 
-  const [updated] = await db
-    .select()
-    .from(accessSession)
-    .where(eq(accessSession.id, sessionId))
-    .limit(1)
-
-  return updated?.logoutAt ?? logoutAt
+  return logoutAt
 }
 
 export async function endSession(sessionToken: string): Promise<void> {
@@ -127,6 +129,27 @@ export type AccessGateResult =
   | { ok: true; session: AccessSessionRow; skipped: false }
   | { ok: false; error: string; status: number }
 
+function clearAccessCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 0,
+    expires: new Date(0),
+  }
+}
+
+export function clearAccessCookie(response: NextResponse): NextResponse {
+  response.cookies.set(ACCESS_COOKIE, '', clearAccessCookieOptions())
+  return response
+}
+
+export async function clearAccessCookieFromServerAction(): Promise<void> {
+  const jar = await cookies()
+  jar.set(ACCESS_COOKIE, '', clearAccessCookieOptions())
+}
+
 /** When access flow is disabled, skip gating. Otherwise require an active session. */
 export async function requireActiveAccessSession(
   cookieToken: string | null | undefined,
@@ -141,36 +164,67 @@ export async function requireActiveAccessSession(
   return { ok: true, session, skipped: false }
 }
 
+export function getConsumedActionError(
+  session: Pick<AccessSessionRow, 'transactionUsed' | 'pdfGenerated'>,
+  attemptedAction: 'transaction_already_used' | 'pdf_already_generated',
+): 'transaction_already_used' | 'pdf_already_generated' | null {
+  return session.transactionUsed || session.pdfGenerated ? attemptedAction : null
+}
+
+async function requireAccessForConsumedAction(
+  cookieToken: string | null | undefined,
+  consumedError: 'transaction_already_used' | 'pdf_already_generated',
+): Promise<AccessGateResult> {
+  if (!getAccessEnabled()) {
+    return { ok: true, session: null, skipped: true }
+  }
+  if (!cookieToken) {
+    return { ok: false, error: 'access_session_required', status: 401 }
+  }
+
+  const [session] = await db
+    .select()
+    .from(accessSession)
+    .where(eq(accessSession.sessionToken, cookieToken))
+    .limit(1)
+
+  if (!session) {
+    return { ok: false, error: 'access_session_required', status: 401 }
+  }
+  const consumedActionError = getConsumedActionError(session, consumedError)
+  if (consumedActionError) {
+    return { ok: false, error: consumedActionError, status: 403 }
+  }
+  if (
+    session.status !== 'active' ||
+    session.expiresAt.getTime() <= Date.now() ||
+    (session.logoutAt != null && session.logoutAt.getTime() <= Date.now())
+  ) {
+    if (session.status === 'active') {
+      await endSession(session.sessionToken)
+    }
+    return { ok: false, error: 'access_session_required', status: 401 }
+  }
+
+  return { ok: true, session, skipped: false }
+}
+
 export async function requireAccessForTransaction(
   cookieToken: string | null | undefined,
 ): Promise<AccessGateResult> {
-  const gate = await requireActiveAccessSession(cookieToken)
-  if (!gate.ok) return gate
-  if (gate.skipped) return gate
-  if (gate.session.transactionUsed) {
-    return { ok: false, error: 'transaction_already_used', status: 403 }
-  }
-  return gate
+  return requireAccessForConsumedAction(cookieToken, 'transaction_already_used')
 }
 
 export async function requireAccessForPdf(
   cookieToken: string | null | undefined,
 ): Promise<AccessGateResult> {
-  const gate = await requireActiveAccessSession(cookieToken)
-  if (!gate.ok) return gate
-  if (gate.skipped) return gate
-  if (gate.session.pdfGenerated) {
-    return { ok: false, error: 'pdf_already_generated', status: 403 }
-  }
-  return gate
+  return requireAccessForConsumedAction(cookieToken, 'pdf_already_generated')
 }
 
 export async function afterTransactionSuccess(session: AccessSessionRow): Promise<void> {
   await markTransactionUsed(session.id)
-  await maybeScheduleLogout(session.id)
 }
 
 export async function afterPdfSuccess(session: AccessSessionRow): Promise<void> {
   await markPdfGenerated(session.id)
-  await maybeScheduleLogout(session.id)
 }
