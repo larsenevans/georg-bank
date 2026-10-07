@@ -134,54 +134,68 @@ async function ensureGuestSignedIn(
     password: guest.password,
   }
 
-  let response = await auth.api.signInEmail({
-    body: credentials,
-    headers,
-    asResponse: true,
-  })
-
-  if (response.ok) {
-    return { response, reason: null }
+  // 1. Skúsime prihlásenie
+  try {
+    const res = await auth.api.signInEmail({
+      body: credentials,
+      headers,
+      asResponse: true,
+    })
+    if (res.ok) {
+      return { response: res, reason: null }
+    }
+  } catch {
+    // Používateľ nemusí existovať alebo má iné heslo
   }
 
+  // 2. Opravíme / vytvoríme účet v DB
   await healGuestCredentials(guest.email, guest.password)
 
-  response = await auth.api.signInEmail({
-    body: credentials,
-    headers,
-    asResponse: true,
-  })
-
-  if (response.ok) {
-    return { response, reason: null }
+  // 3. Skúsime prihlásenie po heale
+  try {
+    const res = await auth.api.signInEmail({
+      body: credentials,
+      headers,
+      asResponse: true,
+    })
+    if (res.ok) {
+      return { response: res, reason: null }
+    }
+  } catch {
+    // Pokračujeme na registráciu
   }
 
-  const signUpResponse = await auth.api.signUpEmail({
-    body: {
-      ...credentials,
-      name: guest.name,
-    },
-    headers,
-    asResponse: true,
-  })
-
-  if (!signUpResponse.ok) {
-    await healGuestCredentials(guest.email, guest.password)
+  // 4. Skúsime registráciu
+  try {
+    await auth.api.signUpEmail({
+      body: {
+        ...credentials,
+        name: guest.name,
+      },
+      headers,
+      asResponse: true,
+    })
+  } catch {
+    // Ak už existuje, pokračujeme
   }
 
-  response = await auth.api.signInEmail({
-    body: credentials,
-    headers,
-    asResponse: true,
-  })
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    console.error('[guest-auth] sign-in failed after heal:', response.status, body)
+  // 5. Finálne prihlásenie
+  try {
+    const res = await auth.api.signInEmail({
+      body: credentials,
+      headers,
+      asResponse: true,
+    })
+    if (res.ok) {
+      return { response: res, reason: null }
+    }
+    const body = await res.text().catch(() => '')
+    console.error('[guest-auth] sign-in failed after heal:', res.status, body)
+    return { response: null, reason: 'sign_in_failed' }
+  } catch (err) {
+    console.error('[guest-auth] final sign-in threw:', err)
     return { response: null, reason: 'sign_in_failed' }
   }
-
-  return { response, reason: null }
 }
 
 export async function GET(request: NextRequest) {

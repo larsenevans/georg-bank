@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 const CODE_LENGTH = 16
 const POLL_INTERVAL_MS = 2500
@@ -9,7 +8,6 @@ const POLL_INTERVAL_MS = 2500
 type Phase = 'input' | 'submitting' | 'pending'
 
 export function WelcomeScreen() {
-  const router = useRouter()
   const [digits, setDigits] = useState<string>('')
   const [phase, setPhase] = useState<Phase>('input')
   const [toast, setToast] = useState<{ visible: boolean; message: string; ok: boolean }>({
@@ -61,33 +59,68 @@ export function WelcomeScreen() {
 
   useEffect(() => clearPolling, [clearPolling])
 
+  const checkStatusOnce = useCallback(
+    async (requestId: string) => {
+      try {
+        const res = await fetch(`/api/access/status?requestId=${encodeURIComponent(requestId)}`, {
+          cache: 'no-store',
+        })
+        if (!res.ok) return false
+        const data = (await res.json()) as { status?: string }
+        if (data.status === 'approved') {
+          clearPolling()
+          sessionStorage.removeItem('pending_access_request_id')
+          showToast('Prístup schválený!', true)
+          // Použijeme window.location.href pre spoľahlivé odoslanie HttpOnly cookie na mobiloch
+          window.location.href = '/dashboard2'
+          return true
+        } else if (data.status === 'rejected') {
+          clearPolling()
+          sessionStorage.removeItem('pending_access_request_id')
+          setPhase('input')
+          setDigits('')
+          showToast('Kód zamietnutý. Skúste to znova.', false)
+          return true
+        }
+      } catch {
+        // keep polling
+      }
+      return false
+    },
+    [clearPolling, showToast],
+  )
+
   const startPolling = useCallback(
     (requestId: string) => {
       clearPolling()
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/access/status?requestId=${encodeURIComponent(requestId)}`, {
-            cache: 'no-store',
-          })
-          if (!res.ok) return
-          const data = (await res.json()) as { status?: string }
-          if (data.status === 'approved') {
-            clearPolling()
-            showToast('Prístup schválený!', true)
-            router.push('/dashboard2')
-          } else if (data.status === 'rejected') {
-            clearPolling()
-            setPhase('input')
-            setDigits('')
-            showToast('Kód zamietnutý. Skúste to znova.', false)
-          }
-        } catch {
-          // keep polling
-        }
+      sessionStorage.setItem('pending_access_request_id', requestId)
+
+      // Spustíme interval
+      pollRef.current = setInterval(() => {
+        checkStatusOnce(requestId)
       }, POLL_INTERVAL_MS)
+
+      // Okamžitá kontrola pri návrate z aplikácie e-mailu na telefóne
+      const onWake = () => {
+        if (document.visibilityState === 'visible') {
+          checkStatusOnce(requestId)
+        }
+      }
+      document.addEventListener('visibilitychange', onWake)
+      window.addEventListener('focus', onWake)
     },
-    [clearPolling, router, showToast],
+    [clearPolling, checkStatusOnce],
   )
+
+  // Obnovenie pollingu po načítaní stránky, ak čakáme na schválenie
+  useEffect(() => {
+    const savedReqId = sessionStorage.getItem('pending_access_request_id')
+    if (savedReqId && phase === 'input') {
+      setPhase('pending')
+      startPolling(savedReqId)
+      checkStatusOnce(savedReqId)
+    }
+  }, [phase, startPolling, checkStatusOnce])
 
   const pressDigit = (digit: string) => {
     if (phase === 'submitting' || phase === 'pending') return
@@ -180,10 +213,10 @@ export function WelcomeScreen() {
       className="flex justify-center items-center select-none bg-black"
       style={{ height: '100dvh', overflow: 'hidden', touchAction: 'manipulation' }}
     >
-      <div className="relative w-full max-w-[420px] h-full flex flex-col justify-between bg-[#737373] overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-105 h-full flex flex-col justify-between bg-[#737373] overflow-hidden shadow-2xl">
         {/* Toast */}
         <div
-          className={`absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 w-[90%] max-w-[340px] ${
+          className={`absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 w-[90%] max-w-85 ${
             toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20 pointer-events-none'
           }`}
         >
@@ -192,7 +225,7 @@ export function WelcomeScreen() {
               toast.ok ? 'bg-emerald-600' : 'bg-red-600'
             }`}
           >
-            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {toast.ok ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               ) : (
@@ -231,12 +264,12 @@ export function WelcomeScreen() {
 
           {/* Maroon viewfinder (pixel-perfect 1:1 match) */}
           <div className="flex-1 min-h-0 flex items-center justify-center py-2">
-            <div className="w-full max-w-[188px] aspect-square rounded-[24px] bg-[#5c0e0e] shadow-[0_8px_24px_rgba(0,0,0,0.25)] border border-black/10 pointer-events-none transition-all" />
+            <div className="w-full max-w-47 aspect-square rounded-[24px] bg-[#5c0e0e] shadow-[0_8px_24px_rgba(0,0,0,0.25)] border border-black/10 pointer-events-none transition-all" />
           </div>
         </div>
 
         {/* Bottom container */}
-        <div className="w-full flex-shrink-0 flex flex-col z-20">
+        <div className="w-full shrink-0 flex flex-col z-20">
           {/* White bottom sheet */}
           <div className="w-full bg-white rounded-t-[26px] shadow-[0_-6px_25px_rgba(0,0,0,0.18)] px-5 pt-4 pb-3 flex flex-col antialiased">
             <div className="flex items-center justify-between pb-2">
@@ -258,7 +291,7 @@ export function WelcomeScreen() {
 
             {/* 16-digit input box */}
             <div
-              className="relative w-full h-[60px] bg-white border border-[#bcbcc0] focus-within:border-black rounded-[14px] px-3.5 pt-1.5 pb-1 flex flex-col justify-center cursor-text transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+              className="relative w-full h-15 bg-white border border-[#bcbcc0] focus-within:border-black rounded-[14px] px-3.5 pt-1.5 pb-1 flex flex-col justify-center cursor-text transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               data-testid="code-input-box"
             >
               <span className="text-[12.5px] text-[#636366] font-medium leading-tight select-none">
@@ -272,7 +305,7 @@ export function WelcomeScreen() {
                   {formattedDigits}
                 </span>
                 <span
-                  className={`inline-block w-[2px] h-[20px] bg-black ml-[1px] ${
+                  className={`inline-block w-0.5 h-5 bg-black ml-px ${
                     digits.length < CODE_LENGTH ? 'animate-[cursorBlink_1.1s_step-end_infinite]' : 'opacity-0'
                   }`}
                 />
@@ -289,7 +322,7 @@ export function WelcomeScreen() {
                     setDigits('')
                     setPhase('input')
                   }}
-                  className="w-full h-[48px] rounded-[14px] font-semibold text-[16.5px] flex items-center justify-center bg-[#e5e5ea] text-[#1c1c1e] hover:bg-[#dcdce0] active:scale-[0.99] transition-all cursor-pointer select-none"
+                  className="w-full h-12 rounded-[14px] font-semibold text-[16.5px] flex items-center justify-center bg-[#e5e5ea] text-[#1c1c1e] hover:bg-[#dcdce0] active:scale-[0.99] transition-all cursor-pointer select-none"
                   data-testid="cancel-request"
                 >
                   Zrušiť a zadať nový kód
@@ -300,7 +333,7 @@ export function WelcomeScreen() {
                   onClick={submit}
                   disabled={!canSubmit}
                   data-testid="submit-code"
-                  className={`w-full h-[48px] rounded-[14px] font-semibold text-[16.5px] flex items-center justify-center transition-all select-none ${
+                  className={`w-full h-12 rounded-[14px] font-semibold text-[16.5px] flex items-center justify-center transition-all select-none ${
                     canSubmit
                       ? 'bg-black text-white hover:bg-[#1a1a1a] cursor-pointer active:scale-[0.99] shadow-md'
                       : 'bg-[#e5e5ea] text-[#8e8e93] cursor-not-allowed'
@@ -318,14 +351,14 @@ export function WelcomeScreen() {
 
           {/* iOS numeric keyboard */}
           <div className="w-full bg-[#d0d3d9] px-1.5 pt-1.5 pb-4 antialiased">
-            <div className="grid grid-cols-3 gap-1.5 max-w-[390px] mx-auto">
+            <div className="grid grid-cols-3 gap-1.5 max-w-97.5 mx-auto">
               {KEYS.map((key) => (
                 <button
                   key={key.digit}
                   type="button"
                   onClick={() => pressDigit(key.digit)}
                   data-testid={`key-${key.digit}`}
-                  className="h-[47px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center active:bg-[#b0b4ba] active:scale-[0.96] transition-all cursor-pointer"
+                  className="h-11.75 bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center active:bg-[#b0b4ba] active:scale-[0.96] transition-all cursor-pointer"
                 >
                   <span className="text-[26px] font-normal text-black leading-none">{key.digit}</span>
                   {key.letters ? (
@@ -333,21 +366,21 @@ export function WelcomeScreen() {
                       {key.letters}
                     </span>
                   ) : (
-                    <span className="h-[7px]" />
+                    <span className="h-1.75" />
                   )}
                 </button>
               ))}
 
-              <div className="h-[47px]" />
+              <div className="h-11.75" />
 
               <button
                 type="button"
                 onClick={() => pressDigit('0')}
                 data-testid="key-0"
-                className="h-[47px] bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center active:bg-[#b0b4ba] active:scale-[0.96] transition-all cursor-pointer"
+                className="h-11.75 bg-white rounded-[7px] shadow-[0_1.5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center active:bg-[#b0b4ba] active:scale-[0.96] transition-all cursor-pointer"
               >
                 <span className="text-[26px] font-normal text-black leading-none">0</span>
-                <span className="h-[4px]" />
+                <span className="h-1" />
               </button>
 
               <button
@@ -355,9 +388,9 @@ export function WelcomeScreen() {
                 onClick={backspace}
                 aria-label="Zmazať číslicu"
                 data-testid="key-backspace"
-                className="h-[47px] flex items-center justify-center text-black active:opacity-35 active:scale-[0.92] transition-all cursor-pointer"
+                className="h-11.75 flex items-center justify-center text-black active:opacity-35 active:scale-[0.92] transition-all cursor-pointer"
               >
-                <svg className="w-[28px] h-[28px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
