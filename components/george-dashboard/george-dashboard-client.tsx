@@ -868,7 +868,8 @@ export function GeorgeDashboardClient({
           return
         }
         showToast(
-          data.error ||
+          data.message ||
+            data.error ||
             `Platbu sa nepodarilo zapísať (limit 24 h ${DAILY_PAYMENT_LIMIT_EUR} €).`
         )
         return

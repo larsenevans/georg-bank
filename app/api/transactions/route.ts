@@ -145,12 +145,12 @@ export async function POST(req: Request) {
     if (isOutgoing) {
       const accessGate = await requireAccessForTransaction(await readAccessCookieToken())
       if (!accessGate.ok) {
-        const errorMsg =
+        const message =
           accessGate.error === 'transaction_already_used'
             ? 'Máte povolenie spraviť iba jednu platbu na túto session.'
             : accessGate.error
         const response = NextResponse.json(
-          { success: false, error: errorMsg },
+          { success: false, error: accessGate.error, message },
           { status: accessGate.status },
         )
         return accessGate.status === 403 ? clearAccessCookie(response) : response
