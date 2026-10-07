@@ -33,8 +33,8 @@
 ## 🎯 ARCHITEKTÚRA
 ```
 +------------------+     +----------------------------+     +-------------------+
-|    🖥️ Client     |---->| 🚀 Cloud Run: georg-bank   |---->| 🗄️ Cloud SQL:    |
-|                  |     |   revízia: 00012-lsb       |     |   gggggg-sql      |
+|    🖥️ Client     |---->| 🚀 Cloud Run: gro-kan      |---->| 🗄️ Cloud SQL:    |
+|                  |     |   revízia: 00001-6vq       |     |   gggggg-sql      |
 |   (Browser)      |     |   100% traffic              |     |   POSTGRES_15     |
 +------------------+     +------------+---------------+     +----------+---------+
                                    |                           |
