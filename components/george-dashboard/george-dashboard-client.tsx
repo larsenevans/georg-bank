@@ -15,7 +15,7 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { useSession } from '@/lib/auth-client'
 import { PaymentQrScanner } from '@/components/PaymentQrScanner'
 import { QrPaymentPreview } from '@/components/QrPaymentPreview'
-import { PaymentDraft, PaymentOption, QrDecodingResult } from '@/types/payment'
+import { PaymentDraft, PaymentOption } from '@/types/payment'
 import {
   DAILY_PAYMENT_LIMIT_ENABLED,
   DAILY_PAYMENT_LIMIT_EUR,

@@ -33,7 +33,8 @@ function shouldSkipAuth(request: NextRequest) {
     pathname.startsWith('/api/transactions') ||
     pathname.startsWith('/api/receipts') ||
     pathname.startsWith('/api/push') ||
-    pathname.startsWith('/api/debug-ingest')
+    pathname.startsWith('/api/debug-ingest') ||
+    pathname.startsWith('/api/cron')
   )
 }
 
@@ -94,7 +95,8 @@ export function proxy(request: NextRequest) {
       pathname.startsWith('/api/health') ||
       pathname.startsWith('/api/auth') ||
       pathname.startsWith('/api/pin') ||
-      pathname.startsWith('/api/gate')
+      pathname.startsWith('/api/gate') ||
+      pathname.startsWith('/api/cron')
     if (!accessCookie && !accessPublicPath) {
       const welcomeUrl = request.nextUrl.clone()
       welcomeUrl.pathname = '/welcome'
