@@ -40,6 +40,7 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Migrácie 0000–0004 aplikované ✅ aplikované
    Seed ✅ aplikovaný (5 používateľov)
    access_request.email stĺpec ✅ overený (text)
+   Automatické zálohy: 03:00 UTC, Point-in-time recovery (PITR) povolené, 7 dní retencia ✅
    Poznámka: pôvodne bola inštancia omylom vytvorená ako georg-bank-sql — názov zmenený na gggggg-sql (konvencia: všetko podľa projektu gggggg).
 
 4. Zdrojový kód (overené diagnostikou)
@@ -80,13 +81,14 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Zdroj ostrých hodnôt C:\Users\42195\Desktop\abon-XXXXXX.txt (presný názov over Get-ChildItem C:\Users\42195\Desktop\abon*.txt)
    RESEND_API_KEY v .env.local ✅ doplnený a funkčný
    Leaked secrets v histórii chatu (STARÉ) ACCESS_ADMIN_SECRET + RESEND kľúč — ROTOVANÉ/Nové hodnoty sú v abon-*.txt
+   ACCESS_ADMIN_SECRET verzia 2 v Secret Manageri ✅ nasadená a overená (starý token vracia 403, nový token vracia 200)
 
    Secret Manager na gggggg-510905 ✅ 6 secrets vytvorených: DATABASE_URL, RESEND_API_KEY, ACCESS_ADMIN_SECRET, BETTER_AUTH_SECRET, APP_PIN, GUEST_USER_PASSWORD
    Pravidlo hodnoty nikdy do gitu/logov/výstupu; jediné trvalé uloženie = Secret Manager; .env.local = len lokálny test
 
 7. Nasadenie (stav)
    Položka Stav
-   Cloud Run na gggggg-510905 ✅ nasadené, revízia georg-bank-00003-tfk, 100% traffic
+   Cloud Run na gggggg-510905 ✅ nasadené, revízia georg-bank-00006-nqx, 100% traffic
    Nová produkčná URL https://georg-bank-yar7afbpbq-ey.a.run.app (tiež https://georg-bank-1040062317673.europe-west3.run.app)
    Stará produkcia ✅ georg-bank-00028-xb9, 100% traffic, NEDOTKNUTEĽNÁ
    Stará produkčná URL https://georg-bank-3ltzpu34ya-ey.a.run.app (nemení sa, nechávame)
@@ -99,3 +101,4 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Každá zmena = nový riadok v tejto sekcii:
 
 [2026-10-07] [NASADENIE] [FÁZY 1–4 DOKONČENÉ: Cloud SQL RUNNABLE, DB internet_bank + user georg_app vytvorené, migrácie 0000–0004 + seed aplikované, 6 secrets v Secret Manager vytvorených, Cloud Run revízia georg-bank-00003-tfk úspešne nasadená na gggggg-510905 s overenou URL https://georg-bank-yar7afbpbq-ey.a.run.app, všetkých 7 E2E testov prešlo na 100%] [DÔKAZ: gcloud run revisions list --project=gggggg-510905 -> georg-bank-00003-tfk, health -> ok:true]
+[2026-10-07] [HARDENING & ROTÁCIA] [Opravený rate-limit IP spoofing bypass cez getClientIp (commit b7ab445), rotovaný ACCESS_ADMIN_SECRET na verziu 2 v Secret Manageri (overené: starý token 403, nový token 200), zapnuté denné zálohy Cloud SQL o 03:00 s PITR, úspešne nasadená revízia georg-bank-00006-nqx na Cloud Run, smoke test prešiel na 100%] [DÔKAZ: gcloud run revisions list -> georg-bank-00006-nqx, gcloud sql instances describe -> backupConfiguration.enabled=true]
