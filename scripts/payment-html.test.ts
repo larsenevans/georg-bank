@@ -54,8 +54,8 @@ assert.ok(html.includes('Test HTML'), 'note in HTML')
 assert.ok(/0[,.]25/.test(html), 'amount 0.25 in HTML')
 assert.ok(htmlCompact.includes('SK8090000000001234567890'), 'recipient IBAN')
 assert.ok(
-  /SK430900\d{12}/.test(htmlCompact),
-  'sender IBAN is randomized SK43 0900 xxxx xxxx xxxx'
+  /SK310900\d{12}/.test(htmlCompact),
+  'sender IBAN is randomized SK31 0900 xxxx xxxx xxxx'
 )
 assert.ok(
   !htmlCompact.includes(DEMO_ACCOUNT_NUMBER),

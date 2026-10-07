@@ -62,9 +62,7 @@ test.describe('dashboard2 – história platieb po autorizácii', () => {
     await page.locator('#pay-vs').fill('998877')
     await page.locator('#pay-note').fill('Poznámka hist')
 
-    const downloadPromise = page.waitForEvent('download', { timeout: 20000 })
     await page.getByRole('button', { name: /Autorizovať cez George kľúč/i }).click()
-    await downloadPromise
 
     const row = historyRow(page, recipient)
     await expect(row).toBeVisible({ timeout: 10000 })
@@ -82,6 +80,10 @@ test.describe('dashboard2 – história platieb po autorizácii', () => {
     await expect(detail.getByText(/SK80|1234567890/i)).toBeVisible()
     await expect(detail.getByText('998877')).toBeVisible()
     await expect(detail.getByTestId('txn-download-receipt')).toBeVisible()
+    
+    const downloadPromise = page.waitForEvent('download', { timeout: 20000 })
+    await detail.getByTestId('txn-download-receipt').click()
+    await downloadPromise
   })
 
   test('história prežije reload (localStorage / DB)', async ({ page }) => {
@@ -111,7 +113,6 @@ test.describe('dashboard2 – história platieb po autorizácii', () => {
     await page.locator('#pay-iban').fill('SK9009000000000054321098')
     await page.locator('#pay-amount').fill('0.08')
 
-    const downloadPromise = page.waitForEvent('download', { timeout: 20000 })
     const postPromise = page
       .waitForResponse(
         (res) =>
@@ -123,7 +124,6 @@ test.describe('dashboard2 – história platieb po autorizácii', () => {
       .catch(() => null)
 
     await page.getByRole('button', { name: /Autorizovať cez George kľúč/i }).click()
-    await downloadPromise
     await postPromise
     await expect(historyRow(page, recipient)).toBeVisible({ timeout: 10000 })
 
