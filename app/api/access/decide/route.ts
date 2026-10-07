@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { accessRequest, accessSession } from '@/lib/db/schema'
 import {
   getAccessAdminSecret,
+  getClientIp,
   checkAccessDecideRateLimit,
   generateSessionToken,
   isAccessRequestExpired,
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
   const requestId = params.get('requestId')?.trim() ?? ''
   const decision = params.get('decision') ?? ''
 
-  if (!checkAccessDecideRateLimit(request.headers.get('x-forwarded-for') || 'unknown')) {
+  if (!checkAccessDecideRateLimit(getClientIp(request.headers))) {
     return new NextResponse(decidePageHtml('Príliš veľa pokusov.', false), {
       status: 429,
       headers: { 'Content-Type': 'text/html; charset=utf-8' },

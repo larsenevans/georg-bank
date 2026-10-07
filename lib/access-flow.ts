@@ -36,6 +36,33 @@ export function getAccessEnabled(): boolean {
   return process.env.ACCESS_FLOW_ENABLED !== 'false'
 }
 
+/**
+ * Extracts the trusted client IP.
+ * On Cloud Run and reverse proxies with Google Front End (GFE),
+ * the actual connecting client IP is appended to the end of X-Forwarded-For.
+ * Taking the rightmost (last) IP ensures that client-supplied spoofed IPs
+ * prepended to X-Forwarded-For cannot bypass the rate limit.
+ */
+export function getClientIp(headers: Headers | { get(name: string): string | null }): string {
+  const forwardedFor = headers.get('x-forwarded-for')
+  if (forwardedFor) {
+    const parts = forwardedFor
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      return parts[parts.length - 1]
+    }
+  }
+
+  const realIp = headers.get('x-real-ip')?.trim()
+  if (realIp) {
+    return realIp
+  }
+
+  return 'unknown'
+}
+
 export function hashIp(ip: string | null | undefined): string {
   if (!ip) return ''
   return createHash('sha256').update(`access-ip:${ip}`).digest('hex').slice(0, 32)

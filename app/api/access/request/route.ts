@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAccessRequestWithinLimit } from '@/lib/access-request-store'
 import {
   isValidAccessCode,
+  getClientIp,
   hashIp,
   simplifyUserAgent,
   buildAdminEmailHtml,
@@ -30,10 +31,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+  const ip = getClientIp(request.headers)
   const ipHash = hashIp(ip)
 
   const userAgent = request.headers.get('user-agent') ?? ''

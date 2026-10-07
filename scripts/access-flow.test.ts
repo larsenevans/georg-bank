@@ -2,6 +2,7 @@ import {
   isValidAccessCode,
   generateSessionToken,
   hashIp,
+  getClientIp,
   simplifyUserAgent,
   formatAccessCode,
   isAccessRequestExpired,
@@ -101,5 +102,19 @@ const emailHtml = buildAdminEmailHtml({
 assert(emailHtml.includes('SCHVÁLIŤ PRÍSTUP'), 'must contain green approve button')
 assert(emailHtml.includes('ZAMIETNUŤ'), 'must contain red reject button')
 assert(emailHtml.includes('test@example.com'), 'must contain email')
+
+// --- Contract: spoofed X-Forwarded-For rate-limit bypass prevention -----------
+const realClientIp = '198.51.100.42'
+const spoofedHeader1 = `1.2.3.4, ${realClientIp}`
+const spoofedHeader2 = `5.6.7.8, 9.10.11.12, ${realClientIp}`
+const headers1 = new Headers({ 'x-forwarded-for': spoofedHeader1 })
+const headers2 = new Headers({ 'x-forwarded-for': spoofedHeader2 })
+
+const extractedIp1 = getClientIp(headers1)
+const extractedIp2 = getClientIp(headers2)
+
+assert(extractedIp1 === realClientIp, 'must extract trusted rightmost client IP from x-forwarded-for')
+assert(extractedIp2 === realClientIp, 'must extract trusted rightmost client IP regardless of prepended spoofed IPs')
+assert(hashIp(extractedIp1) === hashIp(extractedIp2), 'spoofed X-Forwarded-For must map to same IP hash and share same rate-limit budget')
 
 console.log('access-flow.test.ts: all assertions passed')
