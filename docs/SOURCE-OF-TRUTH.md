@@ -24,7 +24,7 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    gggggg-510905 → billingEnabled = True ✅ (overené gcloud billing projects describe)
    Odpojený projekt na uvoľnenie kvóty: gifted-mountain-476207-u4 (unlinked, bol prázdny) ✅
    API na gggggg-510905 (všetky zapnuté ✅)
-   run, sqladmin, cloudbuild, artifactregistry, logging, secretmanager
+   run, sqladmin, cloudbuild, artifactregistry, logging, secretmanager, monitoring
 
 3. Cloud SQL — gggggg-sql
    Inštancia gggggg-sql ✅ vytvorená
@@ -97,9 +97,14 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
 
 8. Čo ešte zostáva dokončiť (Backlog / Nasledujúce kroky)
    1. [VOLITEĽNÉ] Nastavenie Custom Domény na Cloud Run (ak je požadovaná namiesto *.run.app URL).
-   2. [VOLITEĽNÉ] Cloud Monitoring / Uptime Check / Alerty pri výpadku alebo zlyhaní health probu.
+   2. [HOTOVÉ / OVERENÉ] Cloud Monitoring / Uptime Check / Alerty pri výpadku alebo zlyhaní health probu:
+      - Uptime Check: `georg-bank-health-probe-lbqBdpEPXN4` (`https://georg-bank-1040062317673.europe-west3.run.app/api/health`, 60s perióda, HTTPS, matchuje `"ok"`) ✅
+      - Alert Policy 1: `Uptime Check Failure - georg-bank /api/health` (ID `18403904379274870796`, zlyhanie probu) ✅
+      - Alert Policy 2: `Cloud SQL High CPU / Load - gggggg-sql` (ID `9865841579265555322`, CPU > 85% po dobu 5 min) ✅
+      - Notifikačný kanál: `projects/gggggg-510905/notificationChannels/7738800639303183457` (email `enzoenzof2024@gmail.com`, VERIFIED, enabled: true) ✅
+      - Doplnkové aktívne alerty na Cloud Run: `Cloud Run Error Alerts` (severity>=ERROR), `Cloud Run CPU High`, `Cloud Run Memory High` (všetky smerované na `enzoenzof2024@gmail.com`) ✅
    3. [VOLITEĽNÉ] Nastavenie automatického mazania/retencie starých PDF z GCS bucketu (Lifecycle Rule, napr. 30 dní).
-   4. [STAV PROJEKTU] Všetky kľúčové funkčné a bezpečnostné požiadavky (databáza, migrácie, access gate, e-maily, rate limit, secret rotácia, GCS signed receipts, PIN 888888) sú 100% DOKONČENÉ A FUNKČNÉ.
+   4. [STAV PROJEKTU] Všetky kľúčové funkčné a bezpečnostné požiadavky (databáza, migrácie, access gate, e-maily, rate limit, secret rotácia, GCS signed receipts, PIN 888888, monitoring & alerty) sú 100% DOKONČENÉ A FUNKČNÉ.
 
 9. Zmeny do tohto dokumentu
    Každá zmena = nový riadok v tejto sekcii:
@@ -110,3 +115,5 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
 [2026-10-07] [GATE HEALING & RULE] [Opravené vymazanie env vars po deployi: nastavené ACCESS_FLOW_ENABLED=true a plaintext premenné, health probe rozšírený o accessFlow.enabled, pridané povinné pravidlo do AGENTS.md, commit adeb6f1, overené: health enabled:true, root 307, dashboard2 307, emailSent:true] [DÔKAZ: gcloud run services describe -> ACCESS_FLOW_ENABLED=true, curl /api/health -> "accessFlow":{"enabled":true}]
 [2026-10-07] [PIN ROTATION] [Aktualizovaný APP_PIN=888888 v .env.local a vytvorená verzia 2 v Secret Manageri, Cloud Run aktualizovaný na revíziu georg-bank-00012-lsb, overený kompletný env výpis] [DÔKAZ: gcloud secrets versions list APP_PIN -> verzia 2 enabled, gcloud run services describe -> georg-bank-00012-lsb]
 [2026-10-07] [SINGLE-ACTION SESSION] [Nahradený kontrakt „1 platba + 1 PDF + 60 s“: prvá úspešná platba alebo PDF okamžite ukončí access session, vymaže access cookie a dashboard zobrazí potvrdenie pred návratom na /welcome.] [DÔKAZ: npm run test:unit, npx tsc --noEmit, npm run build -> exit code 0]
+[2026-10-07] [MONITORING & ALERTS] [Vytvorený Uptime Check georg-bank-health-probe pre /api/health (1 min perióda, HTTPS) a Alert Policies pre výpadok /api/health a preťaženie Cloud SQL (CPU > 85% po dobu 5 min na gggggg-sql), oba napojené na notifikačný email enzoenzof2024@gmail.com spolu s existujúcimi Cloud Run error alertami] [DÔKAZ: gcloud monitoring uptime list-configs -> georg-bank-health-probe-lbqBdpEPXN4, gcloud monitoring policies list -> 5 aktívnych alert policies prepojených na channel 7738800639303183457]
+
