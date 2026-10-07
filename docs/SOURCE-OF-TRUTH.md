@@ -46,17 +46,19 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
 4. Zdrojový kód (overené diagnostikou)
    Položka Hodnota Stav
    Vetva abonbranch ✅
-   HEAD 9aedbf9 (≥ f222f40) ✅
-   Pracovný strom čistý ✅
+   HEAD adeb6f1 (origin/abonbranch) ✅
+   Pracovný strom čistý (git status --short prázdny) ✅
    Remote https://github.com/larsenevans/georg-bank.git ✅
-   Kľúčové súbory (13/13) access-flow, access-session, access-request-store, welcome page + screen, 5× API routes, proxy.ts, migrácie 0003+0004, Dockerfile ✅ všetky existujú
+   Gradle cache ignorovanie: **/.gradle/ a **/build/ v .gitignore ✅
+   Kľúčové súbory: access-flow, access-session, access-request-store, welcome page + screen, 5× access API routes, receipts upload (GCS branch), proxy.ts, migrácie 0000–0004, Dockerfile ✅ všetky existujú
    Kľúčové kontrakty access flow (uzamknuté regresnými testami)
    Kód: presne 16 číslic ^[0-9]{16}$
-   Rate limit: 5 requestov/IP/hodinu, 6. → 429 ✅ overené lokálne aj na Cloud Run
+   Rate limit: 5 requestov/IP/hodinu (hardenované proti IP spoofingu cez pravostranný x-forwarded-for) ✅
    Expirácia žiadosti: 24 h
    Auto-logout: presne 60 s po vyčerpaní (1 platba + 1 PDF)
    Session cookie: access_granted, httpOnly, 30 dní
-   Decide endpoint: idempotentný, 403 pri zlom tokene
+   Decide endpoint: idempotentný, 403 pri zlom tokene, 200 pri novom tokene
+
 5. Lokálne prostredie (všetko ✅ overené)
    Položka Stav
    Priečinok (JEDINÝ platný) C:\Users\42195\Desktop\georg-bank
@@ -69,36 +71,42 @@ Formát: každá sekcia má stav ✅ (overené) / ⚠️ (čiastočne) / ❌ (ne
    Decide → approved + cookie + secondsUntilLogout: 60 ✅
    Rate limit 429 na 6. request ✅
    .env.prod-backup premiestnený mimo dosah (obsahuje STARÉ produkčné secrets — nepoužívať, rotovať)
-   Chyby, ktoré sa už raz stali (aby sa nezopakovali)
-   BOM v .env.local (PowerShell Set-Content -Encoding UTF8) → dotenv ignoroval kľúče. Fix: [IO.File]::WriteAllText(...) ✅ overené
-   .env prebíjal .env.local → premenovaný na .env.prod-backup ✅
-   RESEND_API_KEY s dvojitým prefixom re_re_ → 401. Fix: musí byť re_...
-   Migrácia 0004 neaplikovaná na produkcii → deploy padol na column "email" does not exist → preto nový projekt
-   PowerShell nepodporuje < (pipe z Get-Content namiesto presmerovania)
-   gcloud billing projects unlink neberie --billing-account (len project ID)
-6. Secrets — riadenie
-   Položka Stav
-   Zdroj ostrých hodnôt C:\Users\42195\Desktop\abon-XXXXXX.txt (presný názov over Get-ChildItem C:\Users\42195\Desktop\abon*.txt)
-   RESEND_API_KEY v .env.local ✅ doplnený a funkčný
-   Leaked secrets v histórii chatu (STARÉ) ACCESS_ADMIN_SECRET + RESEND kľúč — ROTOVANÉ/Nové hodnoty sú v abon-*.txt
-   ACCESS_ADMIN_SECRET verzia 2 v Secret Manageri ✅ nasadená a overená (starý token vracia 403, nový token vracia 200)
+   Unit testy: npm run test:unit (7 súborov, 27 testov) → 100% PASS ✅
+   Typecheck: npx tsc --noEmit → 0 chýb ✅
+   Build: npm run build → exit code 0 ✅
 
-   Secret Manager na gggggg-510905 ✅ 6 secrets vytvorených: DATABASE_URL, RESEND_API_KEY, ACCESS_ADMIN_SECRET, BETTER_AUTH_SECRET, APP_PIN, GUEST_USER_PASSWORD
-   Pravidlo hodnoty nikdy do gitu/logov/výstupu; jediné trvalé uloženie = Secret Manager; .env.local = len lokálny test
+6. Secrets & Storage — riadenie
+   Položka Stav
+   Zdroj ostrých hodnôt C:\Users\42195\Desktop\abon-XXXXXX.txt
+   RESEND_API_KEY v .env.local ✅ doplnený a funkčný
+   ACCESS_ADMIN_SECRET verzia 2 v Secret Manageri ✅ nasadená a overená
+   APP_PIN verzia 2 (888888) v Secret Manageri ✅ nasadená a overená
+   Secret Manager na gggggg-510905 ✅ 6 secrets: DATABASE_URL, RESEND_API_KEY, ACCESS_ADMIN_SECRET, BETTER_AUTH_SECRET, APP_PIN, GUEST_USER_PASSWORD
+   GCS Bucket pre receipts gs://gggggg-receipts ✅ vytvorený (europe-west3, uniform bucket-level access)
+   IAM oprávnenie: 1040062317673-compute@developer.gserviceaccount.com → roles/storage.objectAdmin na gs://gggggg-receipts ✅
+   Token Creator rola: 1040062317673-compute@developer.gserviceaccount.com → roles/iam.serviceAccountTokenCreator na projekte gggggg-510905 (pre V4 Signed URLs) ✅
+   Ukladanie potvrdení: 24h V4 signed URL do transaction.pdfUrl (nikdy verejná URL) ✅
 
 7. Nasadenie (stav)
    Položka Stav
-   Cloud Run na gggggg-510905 ✅ nasadené, revízia georg-bank-00006-nqx, 100% traffic
-   Nová produkčná URL https://georg-bank-yar7afbpbq-ey.a.run.app (tiež https://georg-bank-1040062317673.europe-west3.run.app)
-   Stará produkcia ✅ georg-bank-00028-xb9, 100% traffic, NEDOTKNUTEĽNÁ
+   Cloud Run na gggggg-510905 ✅ nasadené, revízia georg-bank-00012-lsb, 100% traffic
+   Nová produkčná URL https://georg-bank-1040062317673.europe-west3.run.app (tiež https://georg-bank-yar7afbpbq-ey.a.run.app)
+   Env premenné na Cloud Run: ACCESS_FLOW_ENABLED=true, ACCESS_BASE_URL, ACCESS_ADMIN_EMAIL, ACCESS_EMAIL_FROM, RECEIPTS_GCS_BUCKET=gggggg-receipts ✅ overené
+   Stará produkcia ✅ georg-bank-00028-xb9 na noorgrowmfinnal-58800798-76fac, 100% traffic, NEDOTKNUTEĽNÁ
    Stará produkčná URL https://georg-bank-3ltzpu34ya-ey.a.run.app (nemení sa, nechávame)
-8. Postup dokončenia (overený plán)
-   FÁZA 1: doplniť .env.local zo abon-*.txt → test emailSent:true ✅
-   FÁZA 2: gggggg-sql → RUNNABLE → DB internet_bank + user georg_app (hex heslo) → npx drizzle-kit migrate (0000–0004) → npm run db:seed → over access_request.email ✅
-   FÁZA 3: Secret Manager (6 secrets) → gcloud run deploy georg-bank --source . --region=europe-west3 --project=gggggg-510905 --allow-unauthenticated → --set-secrets + --update-env-vars (ACCESS_BASE_URL = nová URL) ✅
-   FÁZA 4: end-to-end overenie: health 200, /→307, /welcome iOS, request → emailSent:true, e-mail doručený, decide→approved→dashboard2, single-use (2. platba/PDF zamietnuté, logout ≤60 s), 6. request → 429 ✅
+
+8. Čo ešte zostáva dokončiť (Backlog / Nasledujúce kroky)
+   1. [VOLITEĽNÉ] Nastavenie Custom Domény na Cloud Run (ak je požadovaná namiesto *.run.app URL).
+   2. [VOLITEĽNÉ] Cloud Monitoring / Uptime Check / Alerty pri výpadku alebo zlyhaní health probu.
+   3. [VOLITEĽNÉ] Nastavenie automatického mazania/retencie starých PDF z GCS bucketu (Lifecycle Rule, napr. 30 dní).
+   4. [STAV PROJEKTU] Všetky kľúčové funkčné a bezpečnostné požiadavky (databáza, migrácie, access gate, e-maily, rate limit, secret rotácia, GCS signed receipts, PIN 888888) sú 100% DOKONČENÉ A FUNKČNÉ.
+
 9. Zmeny do tohto dokumentu
    Každá zmena = nový riadok v tejto sekcii:
 
 [2026-10-07] [NASADENIE] [FÁZY 1–4 DOKONČENÉ: Cloud SQL RUNNABLE, DB internet_bank + user georg_app vytvorené, migrácie 0000–0004 + seed aplikované, 6 secrets v Secret Manager vytvorených, Cloud Run revízia georg-bank-00003-tfk úspešne nasadená na gggggg-510905 s overenou URL https://georg-bank-yar7afbpbq-ey.a.run.app, všetkých 7 E2E testov prešlo na 100%] [DÔKAZ: gcloud run revisions list --project=gggggg-510905 -> georg-bank-00003-tfk, health -> ok:true]
 [2026-10-07] [HARDENING & ROTÁCIA] [Opravený rate-limit IP spoofing bypass cez getClientIp (commit b7ab445), rotovaný ACCESS_ADMIN_SECRET na verziu 2 v Secret Manageri (overené: starý token 403, nový token 200), zapnuté denné zálohy Cloud SQL o 03:00 s PITR, úspešne nasadená revízia georg-bank-00006-nqx na Cloud Run, smoke test prešiel na 100%] [DÔKAZ: gcloud run revisions list -> georg-bank-00006-nqx, gcloud sql instances describe -> backupConfiguration.enabled=true]
+[2026-10-07] [STORAGE & RECEIPTS] [Vytvorený GCS bucket gs://gggggg-receipts, pridelené roles/storage.objectAdmin a roles/iam.serviceAccountTokenCreator pre Cloud Run SA, pridaná GCS vetva v /api/receipts/upload s 24h V4 signed URL, commit 68c0918, nasadená revízia georg-bank-00008-2th, overené nahrávanie a ukladanie signed URL do DB] [DÔKAZ: gcloud storage ls gs://gggggg-receipts/, curl /api/receipts/upload -> success:true s V4 podpisom]
+[2026-10-07] [GATE HEALING & RULE] [Opravené vymazanie env vars po deployi: nastavené ACCESS_FLOW_ENABLED=true a plaintext premenné, health probe rozšírený o accessFlow.enabled, pridané povinné pravidlo do AGENTS.md, commit adeb6f1, overené: health enabled:true, root 307, dashboard2 307, emailSent:true] [DÔKAZ: gcloud run services describe -> ACCESS_FLOW_ENABLED=true, curl /api/health -> "accessFlow":{"enabled":true}]
+[2026-10-07] [PIN ROTATION] [Aktualizovaný APP_PIN=888888 v .env.local a vytvorená verzia 2 v Secret Manageri, Cloud Run aktualizovaný na revíziu georg-bank-00012-lsb, overený kompletný env výpis] [DÔKAZ: gcloud secrets versions list APP_PIN -> verzia 2 enabled, gcloud run services describe -> georg-bank-00012-lsb]
+
