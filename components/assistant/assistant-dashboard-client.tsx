@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Bot, CheckCircle2, Loader2, Send, ShieldAlert, Wifi, Users, MessageSquare } from 'lucide-react'
+import { Bot, CheckCircle2, Loader2, Send, Wifi, Users, MessageSquare } from 'lucide-react'
 import type { AssistantConfigStatus } from '@/lib/assistant/types'
 import { createClient } from '@/lib/supabase/client'
 
@@ -30,12 +30,12 @@ interface AssistantDashboardClientProps {
 
 export function AssistantDashboardClient({
   config,
-  conversationCount,
-  messageCount,
+  conversationCount: _conversationCount,
+  messageCount: _messageCount,
   lastError,
   currentUserId,
   currentUserDisplayName,
-  conversations,
+  conversations: _conversations,
 }: AssistantDashboardClientProps) {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
@@ -46,7 +46,7 @@ export function AssistantDashboardClient({
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
   
   const chatEndRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<any>(null)
+  const channelRef = useRef<{ send: (args: Record<string, unknown>) => void } | null>(null)
   const isTypingRef = useRef(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 

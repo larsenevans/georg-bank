@@ -108,7 +108,7 @@ export async function runAssistant({
         ],
       }),
     })
-  } catch (err) {
+  } catch (_err) {
     // Network failure → demo fallback (keeps chat UI usable in CI / offline)
     return {
       content: buildDemoAnswer(message, context, sources),

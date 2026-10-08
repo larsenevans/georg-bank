@@ -1,15 +1,15 @@
 import path from 'path'
 import { spawnSync } from 'child_process'
+import { ESLint } from 'eslint'
 
 interface TestItem {
   id: string
   name: string
-  category: 'Auth & Security' | 'Access & Session Contract' | 'Banking & Limits' | 'Receipts & PDFs' | 'System & Health' | 'E2E Integration'
-  file: string
-  isE2e?: boolean
+  category: 'Auth & Security' | 'Access & Session Contract' | 'Banking & Limits' | 'Receipts & PDFs' | 'System & Health' | 'Code Quality & Lint' | 'E2E Integration'
+  file?: string
 }
 
-const allTests: TestItem[] = [
+const allUnitTests: TestItem[] = [
   // 1. Auth & Security
   { id: 'guest-auth', name: 'Guest Auth Token Contract & Expiry', category: 'Auth & Security', file: './guest-auth.test.ts' },
   { id: 'app-pin', name: 'App PIN & Biometrics FaceID State', category: 'Auth & Security', file: './app-pin.test.ts' },
@@ -45,20 +45,21 @@ interface Result {
 async function runAll() {
   const args = process.argv.slice(2)
   const runE2e = args.includes('--e2e') || args.includes('-e')
+  const skipLint = args.includes('--skip-lint')
   const showHelp = args.includes('--help') || args.includes('-h')
 
   if (showHelp) {
     console.log(`
 Použitie:
-  npm run test:all           Spustí všetky Unit, Regresné, Bezpečnostné a Bankové testy (13 testov)
-  npm run test:all -- --e2e  Spustí unit testy + Playwright E2E testy
-  npm run test:unit          Spustí samotné unit testy
+  npm run test:all              Spustí všetky Unit (13 testov) a za tým Lint testy kódu
+  npm run test:all -- --e2e     Spustí unit testy + lint + Playwright E2E testy
+  npm run test:all -- --skip-lint Spustí iba unit testy bez lintu
     `)
     process.exit(0)
   }
 
   console.log('========================================================================')
-  console.log('🚀 SPUSTENIE KOMPLETNEJ SADY TESTOV (GRO-KAN BANKING SUITE)')
+  console.log('🚀 SPUSTENIE KOMPLETNEJ SADY TESTOV: UNIT + LINT (GRO-KAN BANKING)')
   console.log('========================================================================\n')
 
   const startTime = Date.now()
@@ -66,12 +67,13 @@ Použitie:
   let failedCount = 0
 
   // 1. In-process Unit & Regression runner
-  console.log(`📦 Spúšťam kompletnú sadu Unit a Regresných testov (${allTests.length} testov)...`)
-  for (const test of allTests) {
+  console.log(`📦 [1/2] Spúšťam kompletnú sadu Unit a Regresných testov (${allUnitTests.length} testov)...`)
+  for (const test of allUnitTests) {
     const t0 = Date.now()
     try {
-      // Execute the test module
-      await import(test.file)
+      if (test.file) {
+        await import(test.file)
+      }
       const durationMs = Date.now() - t0
       console.log(`  ✅ PASS [${test.category.padEnd(25)}] ${test.name} (${durationMs}ms)`)
       results.push({ name: test.name, category: test.category, success: true, durationMs })
@@ -84,7 +86,61 @@ Použitie:
     }
   }
 
-  // 2. Voliteľné E2E testy
+  // 2. ESLint In-process Code Quality Check
+  if (!skipLint) {
+    console.log('\n🔍 [2/2] Spúšťam ESLint kontrolu kvality a syntaxe...')
+    const t0 = Date.now()
+    try {
+      const eslint = new ESLint()
+      const lintResults = await eslint.lintFiles(['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'scripts/**/*.ts'])
+      
+      let totalErrors = 0
+      let totalWarnings = 0
+      const errorLines: string[] = []
+
+      for (const res of lintResults) {
+        if (res.errorCount > 0 || res.warningCount > 0) {
+          totalErrors += res.errorCount
+          totalWarnings += res.warningCount
+          for (const m of res.messages) {
+            const relPath = path.relative(process.cwd(), res.filePath)
+            errorLines.push(`${relPath}:${m.line}:${m.column} [${m.severity === 2 ? 'ERROR' : 'WARN'}] ${m.message} (${m.ruleId})`)
+          }
+        }
+      }
+
+      const durationMs = Date.now() - t0
+      const isSuccess = totalErrors === 0
+
+      if (isSuccess) {
+        console.log(`  ✅ PASS [Code Quality & Lint     ] ESLint (0 errors, ${totalWarnings} warnings) (${durationMs}ms)`)
+        results.push({
+          name: `ESLint Code Quality (0 errors, ${totalWarnings} warnings)`,
+          category: 'Code Quality & Lint',
+          success: true,
+          durationMs,
+        })
+      } else {
+        console.log(`  ❌ FAIL [Code Quality & Lint     ] ESLint (${totalErrors} errors, ${totalWarnings} warnings) (${durationMs}ms)`)
+        results.push({
+          name: `ESLint Code Quality (${totalErrors} errors)`,
+          category: 'Code Quality & Lint',
+          success: false,
+          durationMs,
+          errorOutput: errorLines.join('\n'),
+        })
+        failedCount++
+      }
+    } catch (err: unknown) {
+      const durationMs = Date.now() - t0
+      const msg = err instanceof Error ? err.stack || err.message : String(err)
+      console.log(`  ❌ FAIL [Code Quality & Lint     ] ESLint Runner Error (${durationMs}ms)`)
+      results.push({ name: 'ESLint Execution', category: 'Code Quality & Lint', success: false, durationMs, errorOutput: msg })
+      failedCount++
+    }
+  }
+
+  // 3. Voliteľné E2E testy
   if (runE2e) {
     console.log('\n🌐 [E2E] Spúšťam Playwright E2E testy...')
     const t0 = Date.now()
@@ -108,7 +164,7 @@ Použitie:
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(2)
 
   console.log('\n========================================================================')
-  console.log('📊 SÚHRNNÝ VÝSLEDOK VŠETKÝCH TESTOV')
+  console.log('📊 SÚHRNNÝ VÝSLEDOK VŠETKÝCH TESTOV (UNIT + LINT)')
   console.log('========================================================================')
   console.log(`⏱️  Celkový čas: ${totalTime}s`)
   console.log(`✅ Úspešné: ${results.length - failedCount} / ${results.length}`)
@@ -129,7 +185,7 @@ Použitie:
     console.error(`❌ Celkový výsledok: NIEKTORÉ TESTY ZLYHALI (${failedCount} chýb).`)
     process.exit(1)
   } else {
-    console.log('🎉 VŠETKY TESTY A PRAVIDLÁ ÚSPEŠNE PREŠLI NA 100%!')
+    console.log('🎉 VŠETKY UNIT AJ LINT TESTY ÚSPEŠNE PREŠLI NA 100%!')
     process.exit(0)
   }
 }

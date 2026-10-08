@@ -65,7 +65,7 @@ export interface TransferFormProps {
  * - Form validation
  */
 export function TransferForm({
-  contacts = [],
+  contacts: _contacts = [],
   accounts = [],
   selectedAccountId,
   onSubmit,
@@ -97,7 +97,7 @@ export function TransferForm({
   });
 
   const [state, setState] = useState<'form' | 'scanning' | 'preview' | 'submitting'>('form');
-  const [scannerError, setScannerError] = useState<Error | null>(null);
+  const [, setScannerError] = useState<Error | null>(null);
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
 

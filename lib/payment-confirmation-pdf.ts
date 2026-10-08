@@ -137,8 +137,6 @@ export function generatePaymentConfirmationHtml(data: PaymentConfirmationPdfData
   }
 
   const amountStr = `- ${formatBalance(amountCents)}`
-  const balanceAfterStr = formatBalance(balanceAfterCents)
-  const balanceBeforeStr = formatBalance(balanceBeforeCents)
 
   const htmlContent = `<!DOCTYPE html>
 <html lang="sk">

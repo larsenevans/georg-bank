@@ -27,8 +27,9 @@ async function clearHistory() {
     console.log('\n🎉 Database cleared successfully! Everything is fresh and empty.')
     process.exit(0)
 
-  } catch (err: any) {
-    console.error('❌ Error clearing database:', err.message)
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    console.error('❌ Error clearing database:', errorMsg)
     process.exit(1)
   }
 }

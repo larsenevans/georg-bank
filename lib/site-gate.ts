@@ -61,7 +61,7 @@ export function isTailscaleRequest(request: NextRequest): boolean {
   }
 
   // 3. Check client IP
-  const reqIp = (request as any).ip as string | undefined | null
+  const reqIp = (request as { ip?: string }).ip
   const ip = reqIp || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
   if (ip) {
     // x-forwarded-for can be a comma-separated list of IPs

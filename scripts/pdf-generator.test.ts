@@ -25,11 +25,11 @@ const BASE_INPUT = {
   finalBalance: 4_035_000,
   depositsTotal: 4_035_000,
   withdrawalsTotal: 4_035_000,
-  transactions: [] as any[],
+  transactions: [] as Parameters<typeof generateTransactionsPdf>[0]['transactions'],
 }
 
 async function testPaginationLogic() {
-  const statementData = { ...BASE_INPUT, transactions: [] as any[] }
+  const statementData = { ...BASE_INPUT, transactions: [] as Parameters<typeof generateTransactionsPdf>[0]['transactions'] }
 
   for (let i = 0; i < 10; i++) {
     statementData.transactions.push({

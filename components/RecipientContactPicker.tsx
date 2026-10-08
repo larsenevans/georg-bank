@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { RecipientContact, PaymentDraft } from '@/types/payment';
-import { normalizeIban } from '@/utils/qr';
+import { RecipientContact } from '@/types/payment';
 
 /**
  * Props for the RecipientContactPicker component
