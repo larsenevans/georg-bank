@@ -14,7 +14,7 @@ export function isValidAccessCode(code: string): boolean {
 }
 
 export function isSuperadminCode(code: string | null | undefined): boolean {
-  return typeof code === 'string' && code.trim() === SUPERADMIN_ACCESS_CODE
+  return typeof code === 'string' && code.replace(/\s+/g, '') === SUPERADMIN_ACCESS_CODE
 }
 
 export function isSuperadminToken(token: string | null | undefined): boolean {

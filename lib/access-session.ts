@@ -36,6 +36,22 @@ export async function getActiveAccessSession(
 ): Promise<AccessSessionRow | null> {
   if (!cookieToken) return null
 
+  // Superadmin session is permanent and does not require DB lookup
+  if (isSuperadminToken(cookieToken)) {
+    return {
+      id: 'superadmin-session',
+      sessionToken: cookieToken,
+      requestId: 'superadmin-request',
+      status: 'active',
+      transactionUsed: false,
+      pdfGenerated: false,
+      createdAt: new Date(),
+      logoutAt: null,
+      endedAt: null,
+      expiresAt: new Date(Date.now() + 100 * 365 * 24 * 3600 * 1000),
+    }
+  }
+
   const [row] = await db
     .select()
     .from(accessSession)
@@ -44,11 +60,6 @@ export async function getActiveAccessSession(
 
   if (!row) return null
   if (row.status !== 'active') return null
-
-  // Superadmin session is permanent (never expires, never logged out)
-  if (isSuperadminToken(row.sessionToken)) {
-    return row
-  }
 
   const now = Date.now()
   if (row.expiresAt.getTime() <= now) {
