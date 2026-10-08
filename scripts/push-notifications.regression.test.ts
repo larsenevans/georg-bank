@@ -28,6 +28,17 @@ if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
   }
 }
 
+// Fallback pre CI prostredie (napr. GitHub Actions bez .env.local)
+if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = 'BNg_UF-VqzSAgmGRRlzVzXQmqot-dkXs6goaaEwnTqbHNMausVzFrhhplWQVujW1fm8d7bdquc7XVGhqc71SR4c'
+}
+if (!process.env.VAPID_PRIVATE_KEY) {
+  process.env.VAPID_PRIVATE_KEY = 'qU4oP6s4Q0UI3I-64Q2xHbfhMCyxRiibOjvx_j4L4gc'
+}
+if (!process.env.VAPID_SUBJECT) {
+  process.env.VAPID_SUBJECT = 'mailto:admin@internetbank.sk'
+}
+
 
 import { urlBase64ToUint8Array, getPushCapabilities } from '@/lib/push-notifications'
 import { sendWebPushNotification } from '@/app/api/push/send/route'

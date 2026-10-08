@@ -24,6 +24,12 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      CI: true
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BNg_UF-VqzSAgmGRRlzVzXQmqot-dkXs6goaaEwnTqbHNMausVzFrhhplWQVujW1fm8d7bdquc7XVGhqc71SR4c
+      VAPID_PRIVATE_KEY: qU4oP6s4Q0UI3I-64Q2xHbfhMCyxRiibOjvx_j4L4gc
+      VAPID_SUBJECT: mailto:admin@internetbank.sk
+      PUSH_NOTIFICATIONS_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -72,6 +78,10 @@ jobs:
       # Presence-only flag for UI status card (no real Mistral calls required for page render)
       MISTRAL_API_KEY: ci-dummy-mistral-key
       MISTRAL_MODEL: mistral-small-latest
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BNg_UF-VqzSAgmGRRlzVzXQmqot-dkXs6goaaEwnTqbHNMausVzFrhhplWQVujW1fm8d7bdquc7XVGhqc71SR4c
+      VAPID_PRIVATE_KEY: qU4oP6s4Q0UI3I-64Q2xHbfhMCyxRiibOjvx_j4L4gc
+      VAPID_SUBJECT: mailto:admin@internetbank.sk
+      PUSH_NOTIFICATIONS_ENABLED: "true"
 
     steps:
       - uses: actions/checkout@v4
