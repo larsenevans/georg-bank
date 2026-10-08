@@ -80,8 +80,6 @@ export function getPaymentConfirmationFilename(
 
 export function generatePaymentConfirmationHtml(data: PaymentConfirmationPdfData) {
   const amountCents = Math.round(Number(data.amount) * 100)
-  const balanceBeforeCents = Math.round(Number(data.balanceBefore) * 100)
-  const balanceAfterCents = Math.round(Number(data.balanceAfter) * 100)
 
   const cleanDate = (dateStr: string) => {
     if (!dateStr) return ''

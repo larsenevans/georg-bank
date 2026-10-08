@@ -33,9 +33,11 @@ async function testPaginationLogic() {
 
   for (let i = 0; i < 10; i++) {
     statementData.transactions.push({
+      id: `tx-${i}`,
       date: '05. 04. 2026',
       description: `Tx ${i}`,
       amount: 10_000,
+      balanceAfter: 4_035_000,
       type: 'deposit',
     })
   }
@@ -46,9 +48,11 @@ async function testPaginationLogic() {
 
   for (let i = 10; i < 13; i++) {
     statementData.transactions.push({
+      id: `tx-${i}`,
       date: '05. 04. 2026',
       description: `Tx ${i}`,
       amount: 10_000,
+      balanceAfter: 4_035_000,
       type: 'deposit',
     })
   }
@@ -59,9 +63,11 @@ async function testPaginationLogic() {
 
   for (let i = 13; i < 31; i++) {
     statementData.transactions.push({
+      id: `tx-${i}`,
       date: '05. 04. 2026',
       description: `Tx ${i}`,
       amount: 10_000,
+      balanceAfter: 4_035_000,
       type: 'deposit',
     })
   }
