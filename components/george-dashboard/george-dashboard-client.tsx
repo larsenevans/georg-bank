@@ -927,7 +927,7 @@ export function GeorgeDashboardClient({
 
     // PDF/HTML potvrdenie o platbe (download do browsera)
     const createdAtLabel = new Date().toLocaleString('sk-SK')
-    void downloadPaymentConfirmationHtml({
+    const receiptData: PaymentConfirmationPdfData = {
       transactionId: txnId,
       createdAt: createdAtLabel,
       status: 'Štandardný platobný príkaz',
@@ -948,7 +948,13 @@ export function GeorgeDashboardClient({
       emailConfirmation: false,
       balanceBefore: (newTxn.balanceBefore ?? balanceBefore).toFixed(2),
       balanceAfter: (newTxn.balanceAfter ?? balanceAfter).toFixed(2),
-    })
+    }
+
+    if (isLight) {
+      void generateAndDeliverReceipt(receiptData)
+    } else {
+      void downloadPaymentConfirmationHtml(receiptData)
+    }
   }
 
   const uploadReceiptPdf = async (transactionId: string, blob: Blob) => {
