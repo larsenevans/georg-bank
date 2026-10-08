@@ -20,12 +20,6 @@ export function getE2eAccessAdminSecret(): string | null {
   )
 }
 
-function randomAccessCode(): string {
-  let code = ''
-  for (let i = 0; i < 16; i += 1) code += Math.floor(Math.random() * 10).toString()
-  return code
-}
-
 function extractCookieValue(setCookieHeaders: string[], name: string): string | null {
   for (const header of setCookieHeaders) {
     const first = header.split(';')[0] ?? ''

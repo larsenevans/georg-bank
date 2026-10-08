@@ -180,7 +180,7 @@ export function DashboardHeader({ account }: DashboardHeaderProps) {
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 text-[#327bf5] hover:text-blue-400 focus:outline-none rounded-md hover:opacity-95 active:scale-95 transition-all duration-200 min-h-11"
         >
-          <Menu className="w-[22px] h-[22px]" />
+          <Menu className="w-5.5 h-5.5" />
           <span className="text-sm font-bold tracking-tight text-white">Menu</span>
         </button>
 
@@ -189,7 +189,7 @@ export function DashboardHeader({ account }: DashboardHeaderProps) {
           className="flex items-center gap-2 text-[#327bf5] hover:text-blue-400 focus:outline-none rounded-md hover:opacity-95 active:scale-95 transition-all duration-200 min-h-11"
         >
           <span className="text-sm font-bold tracking-tight text-white">{t.dashboard.nav.logout}</span>
-          <Power className="w-[18px] h-[18px]" />
+          <Power className="w-4.5 h-4.5" />
         </button>
       </header>
 
