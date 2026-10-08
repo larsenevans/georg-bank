@@ -58,7 +58,6 @@
 | Účet | Úloha | Stav | Dôkaz |
 |:-----|:------|:----:|:------|
 | `u0352652320@gmail.com` | **Hlavný účet** | ✅ ACTIVE | `gcloud auth list` |
-| `erikbabcan@gmail.com` | Sekundárny | ✅ ZAKÁZANÝ | Nevytvárať žiadne zdroje |
 | `larsenevans89@gmail.com` | Sekundárny | ✅ ZAKÁZANÝ | Nevytvárať žiadne zdroje |
 
 ### 🐙 GitHub
@@ -369,19 +368,21 @@
 | 2026-10-07 | 🎨 PDF STYLING | Posun textu v "Výpis z Účtu" o 2px vyššie (.document-title, .details-row), commit aaeff14 | `npm run test:unit (27 pass), npx tsc --noEmit (exit 0)` |
 | 2026-10-08 | 👑 SUPERADMIN & DEPLOY | Implementovaný Superadmin God-Mode kód 1111111199999999 (okamžité schválenie, neobmedzené platby, neobmedzené generovanie PDF, trvalá session), nasadená revízia gro-kan-00003-zdd na Cloud Run, live overenie health probe a superadmin prihlásenia | `npm run test:all (14/14 pass), gcloud run revisions list -> gro-kan-00003-zdd 100%, curl /api/health -> ok:true` |
 | 2026-10-08 | 🛡️ RETENCIA 30D & LOCK | Implementovaná 30-dňová retencia transakcií a PDF pre Superadmina v DB a GCS, dvojúrovňový cron cleanup (/api/cron/cleanup), prísne uzamknutý kontrakt CONTRACT-1+1 pre bežných hostí (6h cleanup), nasadená revízia gro-kan-00006-rpc | `npm run test:all (15/15 pass 100%), verify-prod-live.ts (7/7 pass 100%), gcloud run revisions list -> gro-kan-00006-rpc 100%` |
+| 2026-10-08 | 📱 NATIVE APP & TESTY 17/17 | Pridaných 58 QR testovacích scenárov, integračný test Cron Cleanup + GCS, E2E Playwright test (Guest vs Superadmin), Native Mobile Viewport Lock, Anti-Selection a Friction Scroll | `npm run test:all (17/17 pass 100%), ESLint 0 errors, git push origin abonbranch` |
 
 ---
 
 ## 📌 ZÁVER
 
 > **🎯 Stav Projektu:** **100% DOKONČENÝ**
-> 
+>
 > Všetky kritické komponenty sú nasadené, overené a monitorované.
-> 
+>
 > **🔒 Bezpečnosť:** Všade aplikované best practices (secrets v SM, IAM role, V4 signed URLs)
-> 
+>
 > **✅ Kvalita:** Unit testy 100% PASS, TypeScript 0 chýb, Build úspešný
 
 ---
 
-*Dokument založený: 2025 | Správca: Erik (u0352652320@gmail.com) | Posledná úprava: 2026-10-07*
+*Dokument založený: 2025 | Správca: Erik (u0352652320@gmail.com) | Posledná úprava: 2026-10-08*
+
