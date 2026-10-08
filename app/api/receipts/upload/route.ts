@@ -10,6 +10,7 @@ import { DEMO_DEFAULT_USER_ID } from '@/lib/demo-user'
 import { isOutgoingPaymentType } from '@/lib/daily-payment-limit'
 import { createServiceSupabase } from '@/lib/demo-transactions-supabase'
 import {
+  clearAccessCookie,
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
