@@ -732,6 +732,20 @@ export async function downloadPaymentConfirmationPdf(data: PaymentConfirmationPd
   await downloadPaymentConfirmationAsPdf(data)
 }
 
+/**
+ * Stiahne potvrdenie podľa zvoleného formátu ('pdf' | 'html').
+ */
+export async function downloadPaymentConfirmationByFormat(
+  data: PaymentConfirmationPdfData,
+  format: 'pdf' | 'html' = 'pdf'
+) {
+  if (format === 'html') {
+    await downloadPaymentConfirmationHtml(data)
+    return { ok: true, format: 'html' as const }
+  }
+  return await downloadPaymentConfirmationAsPdf(data)
+}
+
 export function openPaymentConfirmationHtml(data: PaymentConfirmationPdfData) {
   const htmlContent = generatePaymentConfirmationHtml(data)
   const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })

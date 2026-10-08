@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createTransaction, internalTransferByEmail } from '@/app/actions/banking'
 import { AlertCircle, X, Calendar, Download } from 'lucide-react'
 import {
-  downloadPaymentConfirmationPdf,
+  downloadPaymentConfirmationByFormat,
   openPaymentConfirmationHtml,
   generateMaskedSenderIban,
   type PaymentConfirmationPdfData,
 } from '@/lib/payment-confirmation-pdf'
+import { getReceiptFormat, type ReceiptFormat } from '@/lib/receipt-format'
 import { encodeTransactionDescription } from '@/lib/payment-confirmation-from-transaction'
 import { CATEGORIES, categorizeTransaction } from '@/lib/categories'
 
@@ -50,6 +51,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [paymentConfirmation, setPaymentConfirmation] = useState<PaymentConfirmationPdfData | null>(null)
+  const [receiptFormat] = useState<ReceiptFormat>(() => getReceiptFormat())
 
   useEffect(() => {
     if (!hasManuallyChangedCategory) {
@@ -100,9 +102,9 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
     if (!confirmation) return
     setPdfError(null)
     try {
-      await downloadPaymentConfirmationPdf(confirmation)
+      await downloadPaymentConfirmationByFormat(confirmation, receiptFormat)
     } catch {
-      setPdfError('PDF sa nepodarilo pripraviť. Skúste to znova.')
+      setPdfError('Doklad sa nepodarilo pripraviť. Skúste to znova.')
     }
   }
 
@@ -176,10 +178,10 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
 
   if (success) {
     return (
-      <div className="flex-1 bg-[#030305] text-white flex flex-col font-sans select-none h-full absolute inset-0 z-[100] animate-fade-in">
+      <div className="flex-1 bg-[#030305] text-white flex flex-col font-sans select-none h-full absolute inset-0 z-100 animate-fade-in">
         <header className="bg-transparent text-white px-4 pt-4 pb-4 sticky top-0 z-50 flex items-center justify-between">
           <div className="flex-1"></div>
-          <div className="text-center flex-[3]">
+          <div className="text-center flex-3">
             <h1 className="font-bold text-[17px] text-white tracking-wide">
               Podpisovanie
             </h1>
@@ -192,7 +194,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
                 className="text-slate-400 hover:text-white focus:outline-none p-1"
                 aria-label="Zatvoriť"
               >
-                <X className="w-5 h-5 stroke-[2]" />
+                <X className="w-5 h-5 stroke-2" />
               </button>
             )}
           </div>
@@ -203,7 +205,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
             
             <div className="pt-12 pb-8 px-6 flex flex-col items-center">
               {/* 3D Green checkmark icon */}
-              <div className="w-[88px] h-[88px] rounded-full bg-gradient-to-br from-[#5cf07c] via-[#35cc59] to-[#1c9c38] flex items-center justify-center mb-8 shadow-[inset_-4px_-8px_16px_rgba(0,0,0,0.2),inset_4px_8px_16px_rgba(255,255,255,0.4),0_8px_24px_rgba(53,204,89,0.3)] animate-scale-in">
+              <div className="w-22 h-22 rounded-full bg-linear-to-br from-[#5cf07c] via-[#35cc59] to-[#1c9c38] flex items-center justify-center mb-8 shadow-[inset_-4px_-8px_16px_rgba(0,0,0,0.2),inset_4px_8px_16px_rgba(255,255,255,0.4),0_8px_24px_rgba(53,204,89,0.3)] animate-scale-in">
                 <svg className="w-12 h-12 text-white drop-shadow-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
@@ -225,17 +227,17 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
               <button
                 type="button"
                 onClick={() => paymentConfirmation && openPaymentConfirmationHtml(paymentConfirmation)}
-                className="w-full h-[44px] bg-[#1b1b26] hover:bg-[#1b1b26]/85 text-white font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 text-[14px] border border-slate-800"
+                className="w-full h-11 bg-[#1b1b26] hover:bg-[#1b1b26]/85 text-white font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 text-[14px] border border-slate-800"
               >
                 Zobraziť doklad
               </button>
               <button
                 type="button"
                 onClick={() => void handleDownloadPaymentConfirmation()}
-                className="w-full h-[44px] bg-[#327bf5] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 text-[14px] shadow-lg shadow-blue-900/30"
+                className="w-full h-11 bg-[#327bf5] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 text-[14px] shadow-lg shadow-blue-900/30"
               >
                 <Download className="w-4 h-4" />
-                Stiahnuť doklad (HTML)
+                Stiahnuť doklad ({receiptFormat.toUpperCase()})
               </button>
               {pdfError && (
                 <p className="text-[12px] text-red-400 text-center font-medium">
@@ -248,7 +250,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
                   setSuccess(false)
                   if (onClose) onClose()
                 }}
-                className="w-full h-[44px] bg-[#327bf5] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center text-[14px]"
+                className="w-full h-11 bg-[#327bf5] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center text-[14px]"
               >
                 Hotovo
               </button>
@@ -259,7 +261,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
                   if (onClose) onClose()
                   router.push(`/dashboard/accounts/${accountId}`)
                 }}
-                className="w-full h-[44px] bg-transparent border-[1.5px] border-slate-800 text-[#327bf5] hover:bg-[#1b1b26]/50 font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center text-[14px]"
+                className="w-full h-11 bg-transparent border-[1.5px] border-slate-800 text-[#327bf5] hover:bg-[#1b1b26]/50 font-bold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center text-[14px]"
               >
                 Zobraziť zoznam platieb
               </button>
@@ -295,7 +297,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
             🪄
           </button>
         </div>
-        <div className="text-center flex-[3]">
+        <div className="text-center flex-3">
           <p className="text-[11px] text-slate-400 font-semibold tracking-wider">
             Business účet | € {formatBalance(currentBalance)}
           </p>
@@ -311,7 +313,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
               className="text-slate-405 hover:text-white focus:outline-none p-1"
               aria-label="Zatvoriť"
             >
-              <X className="w-5 h-5 stroke-[2]" />
+              <X className="w-5 h-5 stroke-2" />
             </button>
           )}
         </div>
@@ -673,7 +675,7 @@ export function TransferForm({ accountId, accounts, onClose }: TransferFormProps
       </form>
 
       {/* Floating icon */}
-      <div className="fixed bottom-6 left-5 z-[70] w-10 h-10 rounded-full bg-[#1b1b26] border border-slate-850 flex items-center justify-center shadow-lg">
+      <div className="fixed bottom-6 left-5 z-70 w-10 h-10 rounded-full bg-[#1b1b26] border border-slate-850 flex items-center justify-center shadow-lg">
         <span className="text-[#327bf5] font-black text-[14px] leading-none">N</span>
       </div>
     </div>

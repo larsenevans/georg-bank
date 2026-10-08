@@ -13,6 +13,8 @@ import {
   Sun,
   Loader2,
   Info,
+  FileText,
+  FileCode,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useHorizonBalance } from '../balance-context'
@@ -21,6 +23,11 @@ import {
   unsubscribeFromPush,
   showLocalNotification,
 } from '@/lib/push-notifications'
+import {
+  getReceiptFormat,
+  setReceiptFormat,
+  type ReceiptFormat,
+} from '@/lib/receipt-format'
 
 type ThemeMode = 'dark' | 'light'
 
@@ -38,6 +45,14 @@ export function UserSettingsTab() {
     if (saved === 'light' || saved === 'dark') return saved
     return 'dark'
   })
+
+  // Doklad / Receipt format (PDF vs HTML)
+  const [receiptFormat, setReceiptFormatState] = useState<ReceiptFormat>(() => getReceiptFormat())
+
+  const applyReceiptFormat = (fmt: ReceiptFormat) => {
+    setReceiptFormatState(fmt)
+    setReceiptFormat(fmt)
+  }
   // Security
   const [bioEnabled, setBioEnabled] = useState(() => localStorage.getItem('hb.bio') === '1')
   const [oldPin, setOldPin] = useState('')
@@ -173,6 +188,33 @@ export function UserSettingsTab() {
             onClick={() => applyTheme('dark')}
           />
         </div>
+      </SettingsGroup>
+
+      {/* Doklad & Potvrdenie Formát */}
+      <SettingsGroup
+        icon={<FileText className="h-4 w-4 text-primary" />}
+        title="Doklady a potvrdenia"
+        subtitle="Formát sťahovania potvrdení o platbe"
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <ThemeButton
+            active={receiptFormat === 'pdf'}
+            icon={<FileText className="h-5 w-5" />}
+            label="PDF doklad"
+            onClick={() => applyReceiptFormat('pdf')}
+          />
+          <ThemeButton
+            active={receiptFormat === 'html'}
+            icon={<FileCode className="h-5 w-5" />}
+            label="HTML doklad"
+            onClick={() => applyReceiptFormat('html')}
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          {receiptFormat === 'pdf'
+            ? 'Doklad sa stiahne ako oficiálne A4 PDF s hlavičkou SLSP (odporúčané pre archiváciu a tlač).'
+            : 'Doklad sa stiahne ako interaktívny HTML webový súbor.'}
+        </p>
       </SettingsGroup>
 
       {/* Security */}

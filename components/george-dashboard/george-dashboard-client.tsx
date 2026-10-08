@@ -10,6 +10,11 @@ import {
   generateMaskedSenderIban,
   type PaymentConfirmationPdfData,
 } from '@/lib/payment-confirmation-pdf'
+import {
+  getReceiptFormat,
+  setReceiptFormat,
+  type ReceiptFormat,
+} from '@/lib/receipt-format'
 import { PdfGenerateOverlay } from '@/components/pdf-generate-overlay'
 import { DashboardHeader } from '@/components/dashboard-header'
 import { useSession } from '@/lib/auth-client'
@@ -234,10 +239,28 @@ export function GeorgeDashboardClient({
   const [pdfOverlayOpen, setPdfOverlayOpen] = useState(false)
   const [pdfOverlayPhase, setPdfOverlayPhase] = useState<'preparing' | 'done'>('preparing')
   const [portalReady, setPortalReady] = useState(false)
+  const [receiptFormat, setReceiptFormatState] = useState<ReceiptFormat>(() => getReceiptFormat())
 
   useEffect(() => {
     setPortalReady(true)
   }, [])
+
+  useEffect(() => {
+    const handleFormatChange = (e: Event) => {
+      const custom = e as CustomEvent<ReceiptFormat>
+      if (custom.detail === 'pdf' || custom.detail === 'html') {
+        setReceiptFormatState(custom.detail)
+      }
+    }
+    window.addEventListener('george-receipt-format-changed', handleFormatChange)
+    return () => window.removeEventListener('george-receipt-format-changed', handleFormatChange)
+  }, [])
+
+  const updateReceiptFormat = (fmt: ReceiptFormat) => {
+    setReceiptFormatState(fmt)
+    setReceiptFormat(fmt)
+    showToast(fmt === 'pdf' ? 'Formát dokladov nastavený na PDF.' : 'Formát dokladov nastavený na HTML.')
+  }
 
   // GEORGE PRIHLASOVACIE STAVY
   const [isSimulatorLoggedIn, setIsSimulatorLoggedIn] = useState(false)
@@ -950,8 +973,8 @@ export function GeorgeDashboardClient({
       balanceAfter: (newTxn.balanceAfter ?? balanceAfter).toFixed(2),
     }
 
-    if (isLight) {
-      void generateAndDeliverReceipt(receiptData)
+    if (receiptFormat === 'pdf') {
+      void generateAndDeliverReceipt(receiptData, { showOverlay: isLight })
     } else {
       void downloadPaymentConfirmationHtml(receiptData)
     }
@@ -989,17 +1012,36 @@ export function GeorgeDashboardClient({
     }
   }
 
-  const generateAndDeliverReceipt = async (data: PaymentConfirmationPdfData) => {
-    setPdfOverlayPhase('preparing')
-    setPdfOverlayOpen(true)
+  const generateAndDeliverReceipt = async (
+    data: PaymentConfirmationPdfData,
+    options?: { showOverlay?: boolean; format?: ReceiptFormat }
+  ) => {
+    const fmt = options?.format ?? receiptFormat
+    if (fmt === 'html') {
+      try {
+        await downloadPaymentConfirmationHtml(data)
+        showToast('Stiahnuté HTML potvrdenie o platbe.')
+      } catch {
+        showToast('Doklad sa nepodarilo stiahnuť.')
+      }
+      return
+    }
+
+    const shouldShowOverlay = options?.showOverlay ?? true
+    if (shouldShowOverlay) {
+      setPdfOverlayPhase('preparing')
+      setPdfOverlayOpen(true)
+    }
     let closedEarly = false
     try {
       const result = await downloadPaymentConfirmationAsPdf(data)
       if (result.ok && result.blob) {
-        setPdfOverlayPhase('done')
+        if (shouldShowOverlay) {
+          setPdfOverlayPhase('done')
+          closedEarly = true
+          window.setTimeout(() => setPdfOverlayOpen(false), 600)
+        }
         void uploadReceiptPdf(data.transactionId, result.blob)
-        closedEarly = true
-        window.setTimeout(() => setPdfOverlayOpen(false), 600)
         return
       }
       if (result.usedHtmlFallback) {
@@ -1020,7 +1062,7 @@ export function GeorgeDashboardClient({
         showToast('Doklad sa nepodarilo stiahnuť.')
       }
     } finally {
-      if (!closedEarly) {
+      if (shouldShowOverlay && !closedEarly) {
         window.setTimeout(() => setPdfOverlayOpen(false), 400)
       }
     }
@@ -1067,7 +1109,10 @@ export function GeorgeDashboardClient({
       showToast('Doklad je dostupný len pre odchádzajúce platby.')
       return
     }
-    void generateAndDeliverReceipt(buildTxnReceiptData(txn))
+    void generateAndDeliverReceipt(buildTxnReceiptData(txn), {
+      showOverlay: true,
+      format: receiptFormat,
+    })
   }
 
   const openStoredPdf = (txn: Transaction) => {
@@ -2611,12 +2656,40 @@ export function GeorgeDashboardClient({
                 data-testid="receipts-sandbox"
                 className="mt-4 mb-8 george-card rounded-2xl overflow-hidden border border-slate-800/40 shadow-lg shadow-black/20"
               >
-                <div className="p-4 border-b border-slate-800/40">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sandbox</p>
-                  <h2 className="text-base font-bold text-white mt-1">Doklady</h2>
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Uložené PDF potvrdenia k odchádzajúcim platbám.
-                  </p>
+                <div className="p-4 border-b border-slate-800/40 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sandbox</p>
+                    <h2 className="text-base font-bold text-white mt-1">Doklady</h2>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Uložené {receiptFormat.toUpperCase()} potvrdenia k odchádzajúcim platbám.
+                    </p>
+                  </div>
+                  <div className="inline-flex rounded-lg bg-[#1b1b26] p-1 border border-slate-700/60 shrink-0">
+                    <button
+                      type="button"
+                      data-testid="receipt-format-toggle-pdf"
+                      onClick={() => updateReceiptFormat('pdf')}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
+                        receiptFormat === 'pdf'
+                          ? 'bg-[#327bf5] text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      PDF
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="receipt-format-toggle-html"
+                      onClick={() => updateReceiptFormat('html')}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${
+                        receiptFormat === 'html'
+                          ? 'bg-[#327bf5] text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      HTML
+                    </button>
+                  </div>
                 </div>
                 {(() => {
                   const receiptTxns = state.transactions.filter(
@@ -3028,7 +3101,8 @@ export function GeorgeDashboardClient({
                         : 'bg-[#327bf5] hover:bg-blue-600 text-white shadow-lg shadow-blue-900/30'
                     }`}
                   >
-                    {selectedTransaction.pdfUrl ? 'Regenerovať doklad' : 'Stiahnuť doklad'}
+                    <span>{selectedTransaction.pdfUrl ? 'Regenerovať doklad' : 'Stiahnuť doklad'}</span>
+                    <span className="text-[11px] font-normal opacity-80">({receiptFormat.toUpperCase()})</span>
                   </button>
                 </div>
               )}
@@ -3062,6 +3136,35 @@ export function GeorgeDashboardClient({
                     <div className="flex justify-between"><span className="text-[#7f8596]">George Kľúč:</span> <span className="text-emerald-400 font-bold">Aktívny</span></div>
                     <div className="flex justify-between"><span className="text-[#7f8596]">Verzia aplikácie:</span> <span className="text-slate-200">2026.4.2 (Prototyp)</span></div>
                     <div className="flex justify-between"><span className="text-[#7f8596]">Posledné prihlásenie:</span> <span className="text-slate-200">Dnes o 02:14</span></div>
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-800/60">
+                      <span className="text-[#7f8596]">Formát dokladov:</span>
+                      <div className="inline-flex rounded-lg bg-slate-900/80 p-0.5 border border-slate-700/60">
+                        <button
+                          type="button"
+                          data-testid="profile-receipt-format-pdf"
+                          onClick={() => updateReceiptFormat('pdf')}
+                          className={`px-2.5 py-0.5 text-[10px] font-bold rounded transition-all ${
+                            receiptFormat === 'pdf'
+                              ? 'bg-[#327bf5] text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          PDF
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="profile-receipt-format-html"
+                          onClick={() => updateReceiptFormat('html')}
+                          className={`px-2.5 py-0.5 text-[10px] font-bold rounded transition-all ${
+                            receiptFormat === 'html'
+                              ? 'bg-[#327bf5] text-white shadow-xs'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          HTML
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <button
                     type="button"
