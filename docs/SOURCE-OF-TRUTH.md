@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00010-jlm ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00011-g96 ✅ PRODUKCIA
 
 ---
 
@@ -274,7 +274,7 @@
 |:--------|:--------|:----:|
 | Projekt | `gggggg-510905` | ✅ |
 | Služba | `gro-kan` | ✅ |
-| Revízia | `gro-kan-00008-gpv` | ✅ **100% traffic** |
+| Revízia | `gro-kan-00011-g96` | ✅ **100% traffic** |
 | Stav | Nasadené | ✅ |
 
 ### 🌐 Produkčná URL
@@ -379,6 +379,7 @@
 | 2026-10-08 | 🍏 IPHONE MODEL MATRIX (14+, 17 PRO, 17 PRO MAX, 18 PRO) | Špecifická sada E2E a regresných testov pre iPhone 14 Plus (428x926, notch), iPhone 17 Pro (402x874, Dynamic Island), iPhone 17 Pro Max (440x956) a budúci iPhone 18 Pro (iOS 19+, 402x874). Overenie 100dvh nulového pretečenia, Apple Web Push PWA meta tagov, standalone režimu a Superadmin broadcastu. | `playwright test e2e/iphone-model-matrix.spec.ts (13/13 pass 100%), e2e/iphone/push-notifications.spec.ts (13/13 pass 100%), npm run test:all (19/19 pass 100%)` |
 | 2026-10-08 | 🚀 MERGE & DEPLOY gro-kan-00010-jlm | Vetva abonbranch po zelenom GitHub CI (205 Playwright + 19 Unit testov 100% PASS) zlúčená do main. Nasadená produkčná revízia gro-kan-00010-jlm na Cloud Run (100% traffic) s Horizon Dashboard v2, Web Push VAPID, iPhone 14+/17 Pro/17 Pro Max/18 Pro a overeným ACCESS_FLOW_ENABLED=true. | `GitHub CI Run 37822118273 (100% PASS exit 0), gcloud run services describe -> gro-kan-00010-jlm 100%, curl /api/health -> ok:true` |
 | 2026-10-08 | 📄 PREPNUTIE DOKLADOV NA PDF & PREPÍNAČ | Predvolené sťahovanie potvrdenia o platbe prerobené na čisté A4 PDF (.pdf) s binárnou hlavičkou %PDF namiesto HTML. Pridaný používateľský prepínač formátu (PDF vs HTML) v Nastaveniach (Horizon UserSettingsTab), v Profile modale a v Sandboxe dokladov (George Dashboard). Pridaná podpora pre transfer-form, nový test receipt-format.test.ts (20/20 testov PASS). | `npm run test:all (20/20 pass 100%), ESLint 0 errors, tsc --noEmit (exit 0), commit 20cac6e` |
+| 2026-10-08 | 🚀 DEPLOY gro-kan-00011-g96 | Nasadená nová revízia gro-kan-00011-g96 na Cloud Run (100% traffic) s predvoleným A4 PDF sťahovaním potvrdení a prepínačom formátov (PDF vs HTML). Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true), funkčnosť GCP Secret Manager a 8/8 testov živej produkcie. | `gcloud run services describe -> gro-kan-00011-g96 100%, verify-prod-live.ts (8/8 pass 100%), curl /api/health -> 200 OK` |
 
 
 ---
