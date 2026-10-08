@@ -1,5 +1,3 @@
-import { appendFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { db } from '@/lib/db'
@@ -8,136 +6,128 @@ import { eq } from 'drizzle-orm'
 
 const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim()
 const vapidPrivate = process.env.VAPID_PRIVATE_KEY?.trim()
+const vapidSubject = process.env.VAPID_SUBJECT?.trim() || 'mailto:admin@internetbank.sk'
 const vapidConfigured = Boolean(vapidPublic && vapidPrivate)
-const DEBUG_LOG = path.join(process.cwd(), '.cursor', 'debug-9365c0.log')
 
 if (vapidConfigured) {
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'mailto:admin@internetbank.sk',
-    vapidPublic!,
-    vapidPrivate!
-  )
+  webpush.setVapidDetails(vapidSubject, vapidPublic!, vapidPrivate!)
 }
 
-/** Soft-skip when push is off / misconfigured — never 500 the dashboard. */
-function skip(reason: string) {
-  console.warn('[Push API] Skipping send:', reason)
-  return new NextResponse(null, { status: 204 })
+export interface SendPushOptions {
+  title: string
+  message: string
+  userId?: string
+  url?: string
 }
 
-async function agentLog(
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown> = {}
-) {
-  // #region agent log
-  try {
-    await mkdir(path.dirname(DEBUG_LOG), { recursive: true })
-    await appendFile(
-      DEBUG_LOG,
-      `${JSON.stringify({
-        sessionId: '9365c0',
-        runId: 'push-debug',
-        hypothesisId,
-        location,
-        message,
-        data,
-        timestamp: Date.now(),
-      })}\n`,
-      'utf8'
-    )
-  } catch {
-    /* ignore */
+export interface SendPushResult {
+  success: boolean
+  sentCount: number
+  failedCount: number
+  totalSubscriptions: number
+  error?: string
+}
+
+/**
+ * Direct server-side helper to send Web Push notifications to subscriptions.
+ */
+export async function sendWebPushNotification({
+  title,
+  message,
+  userId,
+  url = '/dashboard-v2',
+}: SendPushOptions): Promise<SendPushResult> {
+  if (process.env.PUSH_NOTIFICATIONS_ENABLED !== 'true') {
+    return { success: false, sentCount: 0, failedCount: 0, totalSubscriptions: 0, error: 'Push notifikácie sú vypnuté.' }
   }
-  // #endregion
+
+  if (!vapidConfigured) {
+    return { success: false, sentCount: 0, failedCount: 0, totalSubscriptions: 0, error: 'VAPID kľúče nie sú nakonfigurované.' }
+  }
+
+  const payload = JSON.stringify({
+    title: title || 'George',
+    body: message || 'Máte novú notifikáciu v bankovom účte.',
+    url,
+    timestamp: Date.now(),
+  })
+
+  let subs: (typeof pushSubscription.$inferSelect)[] = []
+  try {
+    if (userId) {
+      subs = await db.select().from(pushSubscription).where(eq(pushSubscription.userId, userId))
+    } else {
+      subs = await db.select().from(pushSubscription)
+    }
+  } catch (dbErr) {
+    console.warn('[Push Service] Database lookup error:', dbErr)
+    return { success: false, sentCount: 0, failedCount: 0, totalSubscriptions: 0, error: 'Zlyhalo načítanie odberov z databázy.' }
+  }
+
+  let sentCount = 0
+  let failedCount = 0
+
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        },
+        payload
+      )
+      sentCount++
+    } catch (err) {
+      console.warn('[Push Service] Error sending to endpoint:', sub.endpoint, err)
+      failedCount++
+    }
+  }
+
+  return {
+    success: true,
+    sentCount,
+    failedCount,
+    totalSubscriptions: subs.length,
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    await agentLog('H1-H3', 'app/api/push/send/route.ts:POST', 'push send entered', {
-      pushEnabled: process.env.PUSH_NOTIFICATIONS_ENABLED ?? null,
-      vapidConfigured,
-      host: req.headers.get('host'),
-    })
-
-    // Opt-in only — default off so dashboards never spam /api/push/send.
     if (process.env.PUSH_NOTIFICATIONS_ENABLED !== 'true') {
-      await agentLog('H2', 'app/api/push/send/route.ts:skip-disabled', 'returning 204 push disabled')
-      return skip('PUSH_NOTIFICATIONS_ENABLED is not true')
+      return NextResponse.json({ ok: false, message: 'Push notifications disabled' }, { status: 200 })
     }
 
     if (!vapidConfigured) {
-      await agentLog('H3', 'app/api/push/send/route.ts:skip-vapid', 'returning 204 no vapid')
-      return skip('VAPID keys not configured')
+      return NextResponse.json({ ok: false, message: 'VAPID keys not configured' }, { status: 200 })
     }
 
     const body = await req.json().catch(() => ({}))
     const {
-      title = 'VELKÝ BRAT ŤA SLEDUJE !',
-      message = 'Zmeny v odchádzajúcich platbách boli úspešne aplikované.',
+      title = 'George Bank',
+      message = 'Zmena zostatku na účte.',
       userId,
+      url = '/dashboard-v2',
     } = body ?? {}
 
-    const payload = JSON.stringify({
+    const result = await sendWebPushNotification({
       title,
-      body: message,
-      url: '/dashboard2',
-      timestamp: Date.now(),
+      message,
+      userId,
+      url,
     })
-
-    console.log('[Push API] Sending broadcast/push notification:', title)
-
-    let subs: (typeof pushSubscription.$inferSelect)[] = []
-    try {
-      if (userId) {
-        subs = await db.select().from(pushSubscription).where(eq(pushSubscription.userId, userId))
-      } else {
-        subs = await db.select().from(pushSubscription)
-      }
-    } catch (dbErr) {
-      console.warn('[Push API] Subscription lookup failed (no DB):', dbErr)
-      await agentLog('H4', 'app/api/push/send/route.ts:db-catch', 'db lookup soft-skip', {
-        err: dbErr instanceof Error ? dbErr.message : String(dbErr),
-      })
-      return skip('subscription store unavailable')
-    }
-
-    let sentCount = 0
-    let failedCount = 0
-
-    for (const sub of subs) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh,
-              auth: sub.auth,
-            },
-          },
-          payload
-        )
-        sentCount++
-      } catch (err) {
-        console.warn('[Push API] Error sending push to endpoint:', sub.endpoint, err)
-        failedCount++
-      }
-    }
 
     return NextResponse.json({
-      success: true,
-      message: `Push notification sent. Delivered: ${sentCount}, Failed/Expired: ${failedCount}`,
-      sentCount,
-      failedCount,
-      totalSubscriptions: subs.length,
+      success: result.success,
+      sentCount: result.sentCount,
+      failedCount: result.failedCount,
+      totalSubscriptions: result.totalSubscriptions,
+      message: `Push správy odoslané: ${result.sentCount} doručených, ${result.failedCount} zlyhalo (celkovo odberov: ${result.totalSubscriptions}).`,
     })
-  } catch (error: unknown) {
+  } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
-    console.warn('[Push API] Soft-fail (no 500):', errMsg)
-    await agentLog('H5', 'app/api/push/send/route.ts:outer-catch', 'outer soft-fail 204', {
-      errMsg,
-    })
-    return skip(errMsg)
+    return NextResponse.json({ error: errMsg }, { status: 500 })
   }
 }

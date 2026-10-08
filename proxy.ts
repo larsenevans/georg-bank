@@ -19,6 +19,7 @@ function shouldSkipAuth(request: NextRequest) {
   return (
     pathname === '/welcome' ||
     pathname === '/robots.txt' ||
+    (process.env.NODE_ENV !== 'production' && pathname.startsWith('/dashboard-v2')) ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/pin') ||
     // Access-flow API (welcome gate): request/status/decide/session/logout authorize via the
@@ -42,7 +43,7 @@ function shouldSkipAuth(request: NextRequest) {
 function shouldSkipGuestRedirect(request: NextRequest) {
   const { pathname } = request.nextUrl
   return (
-    (pathname === '/dashboard2' || pathname === '/dashboard3') &&
+    (pathname === '/dashboard2' || pathname === '/dashboard3' || pathname === '/dashboard-v2') &&
     request.cookies.get(GUEST_BOOTSTRAP_SKIP_COOKIE)?.value === '1'
   )
 }
@@ -91,7 +92,9 @@ export function proxy(request: NextRequest) {
       pathname === '/welcome' ||
       pathname === '/robots.txt' ||
       pathname === '/gate' ||
+      (process.env.NODE_ENV !== 'production' && pathname.startsWith('/dashboard-v2')) ||
       pathname.startsWith('/api/access') ||
+      pathname.startsWith('/api/account') ||
       pathname.startsWith('/api/health') ||
       pathname.startsWith('/api/auth') ||
       pathname.startsWith('/api/pin') ||

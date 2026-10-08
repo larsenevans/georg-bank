@@ -2,6 +2,7 @@
 import { defineConfig, devices } from '@playwright/test'
 import { loadEnvConfig } from '@next/env'
 import { nothingPhone1 } from './e2e/devices/nothing-phone-1'
+import { iphone18Pro } from './e2e/devices/iphone-18-pro'
 import { E2E_DEFAULT_ACCESS_ADMIN_SECRET } from './e2e/helpers/access-session'
 
 // Load .env / .env.local so SITE_GATE_PASSWORD, TEST_USER_*, etc. work in E2E helpers.
@@ -135,10 +136,27 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
-    // Legacy – excluded from npm run test:iphone; still runnable via --project
+    {
+      name: 'iPhone 17 Pro Max',
+      testMatch: /iphone\/.*\.spec\.ts/,
+      use: {
+        ...devices['iPhone 17 Pro Max'],
+        storageState: 'playwright/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'iPhone 18 Pro',
+      testMatch: /iphone\/.*\.spec\.ts/,
+      use: {
+        ...iphone18Pro,
+        storageState: 'playwright/.auth/user.json',
+      },
+      dependencies: ['setup'],
+    },
     {
       name: 'iPhone 14 Plus',
-      testMatch: /iphone-14-plus\/.*\.spec\.ts/,
+      testMatch: /(iphone|iphone-14-plus)\/.*\.spec\.ts/,
       use: {
         ...devices['iPhone 14 Plus'],
         storageState: 'playwright/.auth/user.json',

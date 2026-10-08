@@ -20,6 +20,7 @@ const allUnitTests: TestItem[] = [
   { id: 'superadmin-regression', name: 'Superadmin God-Mode Bypass (1111111199999999)', category: 'Access & Session Contract', file: './superadmin.regression.test.ts' },
   { id: 'cron-gcs-retention', name: 'Cron Cleanup (6h vs 30d) & GCS PDF Retention', category: 'Access & Session Contract', file: './cron-cleanup-gcs-upload.test.ts' },
   { id: 'logout-redirect', name: 'Logout Redirection to Homepage (/) & Cookie Reset', category: 'Access & Session Contract', file: './logout-redirect.test.ts' },
+  { id: 'push-notifications', name: 'Web Push Notifications & VAPID Regression (Android & iOS)', category: 'Access & Session Contract', file: './push-notifications.regression.test.ts' },
 
   // 3. Banking & Limits
   { id: 'daily-limit', name: 'Daily Payment Limit & Velocity Rules', category: 'Banking & Limits', file: './daily-payment-limit.test.ts' },

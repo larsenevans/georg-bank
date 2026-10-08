@@ -13,7 +13,7 @@ export interface MobileDeviceSpec {
 export const MOBILE_DEVICE_MATRIX: MobileDeviceSpec[] = [
   // --- APPLE iOS (iPhone 13 Pro Max a vyššie) ---
   {
-    name: 'iPhone 14 Plus / 13 Pro Max',
+    name: 'iPhone 14 Plus',
     os: 'ios',
     width: 428,
     height: 926,
@@ -46,7 +46,7 @@ export const MOBILE_DEVICE_MATRIX: MobileDeviceSpec[] = [
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
   },
   {
-    name: 'iPhone 16 Pro / 17 Pro',
+    name: 'iPhone 17 Pro',
     os: 'ios',
     width: 402,
     height: 874,
@@ -57,7 +57,7 @@ export const MOBILE_DEVICE_MATRIX: MobileDeviceSpec[] = [
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
   },
   {
-    name: 'iPhone 16 Pro Max / 17 Pro Max',
+    name: 'iPhone 17 Pro Max',
     os: 'ios',
     width: 440,
     height: 956,
@@ -77,6 +77,17 @@ export const MOBILE_DEVICE_MATRIX: MobileDeviceSpec[] = [
     safeBottom: 34,
     cutoutType: 'dynamic-island',
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+  },
+  {
+    name: 'iPhone 18 Pro',
+    os: 'ios',
+    width: 402,
+    height: 874,
+    dpr: 3,
+    safeTop: 59,
+    safeBottom: 34,
+    cutoutType: 'dynamic-island',
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Mobile/15E148 Safari/604.1',
   },
 
   // --- GOOGLE ANDROID (Top vlajkové lode) ---
