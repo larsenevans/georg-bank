@@ -19,7 +19,7 @@
     "test:iphone-all-modern": "npm run test:iphone",
     "test:generate-iphone": "npx tsx scripts/generate-iphone-tests.ts",
     "test:generate-iphone-14-plus": "npx tsx scripts/generate-iphone-14-plus-tests.ts",
-    "test:generate-iphone-17-air": "npx tsx scripts/generate-iphone-17-air-tests.ts",
+    "test:all": "npx tsx scripts/run-all-tests.ts",
     "test:unit": "npx tsx scripts/guest-auth.test.ts && npx tsx scripts/app-pin.test.ts && npx tsx scripts/access-flow.test.ts && npx tsx scripts/access-flow.regression.test.ts && npx tsx scripts/health-readiness.test.ts && npx tsx scripts/statement-generator.test.ts && npx tsx scripts/pdf-generator.test.ts && npx tsx scripts/dashboard2-assets.test.ts && npx tsx scripts/payment-html.test.ts && npx tsx scripts/daily-payment-limit.test.ts && npx tsx scripts/topup-rules.test.ts && npx tsx scripts/transactions-balance-refresh.test.ts && npx tsx scripts/random-balance.test.ts",
     "test:dashboard2": "playwright test e2e/dashboard2-face-id.spec.ts e2e/dashboard2-george-key.spec.ts e2e/dashboard2-payment-html.spec.ts e2e/dashboard2-payment-history.spec.ts e2e/dashboard2-payment-refresh.spec.ts e2e/dashboard3-*.spec.ts --project=chromium",
     "test:dashboard3": "playwright test e2e/dashboard3-light.spec.ts e2e/dashboard3-pin.spec.ts e2e/dashboard3-payment-sheet.spec.ts e2e/dashboard3-payment-history.spec.ts e2e/dashboard3-payment-refresh.spec.ts e2e/dashboard3-tabs.spec.ts e2e/dashboard3-proxy-skip.spec.ts --project=chromium",
