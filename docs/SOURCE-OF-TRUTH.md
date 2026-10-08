@@ -370,6 +370,8 @@
 | 2026-10-08 | 🛡️ RETENCIA 30D & LOCK | Implementovaná 30-dňová retencia transakcií a PDF pre Superadmina v DB a GCS, dvojúrovňový cron cleanup (/api/cron/cleanup), prísne uzamknutý kontrakt CONTRACT-1+1 pre bežných hostí (6h cleanup), nasadená revízia gro-kan-00006-rpc | `npm run test:all (15/15 pass 100%), verify-prod-live.ts (7/7 pass 100%), gcloud run revisions list -> gro-kan-00006-rpc 100%` |
 | 2026-10-08 | 📱 NATIVE APP & TESTY 17/17 | Pridaných 58 QR testovacích scenárov, integračný test Cron Cleanup + GCS, E2E Playwright test (Guest vs Superadmin), Native Mobile Viewport Lock, Anti-Selection a Friction Scroll | `npm run test:all (17/17 pass 100%), ESLint 0 errors, git push origin abonbranch` |
 | 2026-10-08 | 🚀 DEPLOY gro-kan-00007-tq6 | Nasadená nová revízia gro-kan-00007-tq6 na Cloud Run (100% traffic), overený kompletný env výpis (ACCESS_FLOW_ENABLED=true), live health probe a 7/7 testov produkcie | `gcloud run revisions list -> gro-kan-00007-tq6 100%, verify-prod-live.ts (7/7 pass 100%), curl /api/health -> 200 OK` |
+| 2026-10-08 | 📱 MOBILE DEVICE MATRIX | Integrovaný testovací balík npm run test:mobile-devices pokrývajúci 11 zariadení (iPhone 13 Pro Max+, iPhone 14 Plus, iPhone 15/16/17, Samsung S24 Ultra, Pixel 9 Pro, Nothing Phone, Xiaomi) s overením Safe Area, nulového horizontálneho scrollu a dotykovej ergonómie | `npm run test:mobile-devices (12/12 pass 100%), npm run test:all (17/17 pass 100%)` |
+
 
 
 ---

@@ -17,6 +17,7 @@
     "test:iphone-17-air": "playwright test --project=\"iPhone Air\"",
     "test:iphone": "playwright test --project=\"iPhone 15\" --project=\"iPhone 15 Pro\" --project=\"iPhone 17\" --project=\"iPhone 17 Pro\" --project=\"iPhone Air\"",
     "test:iphone-all-modern": "npm run test:iphone",
+    "test:mobile-devices": "playwright test e2e/mobile-devices.spec.ts --project=chromium",
     "test:generate-iphone": "npx tsx scripts/generate-iphone-tests.ts",
     "test:generate-iphone-14-plus": "npx tsx scripts/generate-iphone-14-plus-tests.ts",
     "test:all": "npx tsx scripts/run-all-tests.ts",
