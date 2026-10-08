@@ -864,7 +864,7 @@ export function GeorgeDashboardClient({
       if (!res.ok || data.success === false) {
         if (res.status === 403) {
           if (data.error === 'transaction_already_used') {
-            showToast('Platbu ste už využili, môžete si stiahnuť PDF.')
+            showToast('Platbu ste už využili. Môžete si stiahnuť PDF výpis.')
             return
           }
           if (data.error === 'pdf_already_generated') {
@@ -923,10 +923,11 @@ export function GeorgeDashboardClient({
 
     closePaymentSheet()
     setTransactionFilter('all')
+    showToast(`Platba ${amount.toFixed(2)} € bola úspešne zapísaná.`)
 
     // PDF/HTML potvrdenie o platbe (download do browsera)
     const createdAtLabel = new Date().toLocaleString('sk-SK')
-    void generateAndDeliverReceipt({
+    void downloadPaymentConfirmationHtml({
       transactionId: txnId,
       createdAt: createdAtLabel,
       status: 'Štandardný platobný príkaz',

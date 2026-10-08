@@ -209,7 +209,7 @@ export async function POST(req: Request) {
           transaction: remote.transaction,
           source: 'supabase',
         })
-        return accessSessionRow ? clearAccessCookie(response) : response
+        return response
       }
     }
 
@@ -463,7 +463,7 @@ export async function POST(req: Request) {
         category,
       },
     })
-    return accessSessionRow ? clearAccessCookie(response) : response
+    return response
   } catch (error) {
     console.error('[API /api/transactions POST] Error:', error)
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
