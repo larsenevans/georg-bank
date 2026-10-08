@@ -25,13 +25,13 @@ test.describe('access-flow regression', () => {
     expect(body).toHaveProperty('pdfGenerated')
   })
 
-  test('POST /api/access/logout clears toward welcome', async ({ request }) => {
+  test('POST /api/access/logout clears toward homepage', async ({ request }) => {
     const res = await request.post('/api/access/logout', {
       headers: { Accept: 'application/json', 'x-requested-with': 'XMLHttpRequest' },
     })
     expect(res.ok()).toBeTruthy()
     const body = await res.json()
-    expect(body.redirect).toBe('/welcome')
+    expect(body.redirect).toBe('/')
   })
 
   test('CONTRACT-1+1 E2E UI assertions (george-dashboard-client)', async () => {
@@ -41,8 +41,8 @@ test.describe('access-flow regression', () => {
     expect(src).toContain('Platbu ste už využili. Môžete si stiahnuť PDF výpis.')
     expect(src).toContain('transaction_already_used')
     
-    // E3: PDF stiahnutie -> relacia skoncila a redirect
+    // E3: PDF stiahnutie -> relacia skoncila a redirect na homepage
     expect(src).toContain('Relácia skončila')
-    expect(src).toContain("window.location.href = '/welcome'")
+    expect(src).toContain("window.location.href = '/'")
   })
 })

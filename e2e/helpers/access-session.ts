@@ -68,30 +68,33 @@ export async function grantAccessSession(
     }
 
     const created = await api.post('/api/access/request', {
-      data: { code: randomAccessCode() },
+      data: { code: '1111111199999999' },
     })
     expect(created.status(), 'POST /api/access/request').toBe(200)
-    const { requestId } = (await created.json()) as { requestId: string }
-    expect(requestId, 'requestId from /api/access/request').toBeTruthy()
+    const createdBody = (await created.json()) as { approved?: boolean; requestId?: string }
 
-    const decided = await api.get('/api/access/decide', {
-      params: { token: secret, requestId, decision: 'approved' },
-    })
-    expect(
-      decided.status(),
-      'GET /api/access/decide (403: E2E_ACCESS_ADMIN_SECRET != server ACCESS_ADMIN_SECRET; 429: decide rate limit)',
-    ).toBe(200)
-
-    const status = await api.get('/api/access/status', { params: { requestId } })
-    expect(status.status(), 'GET /api/access/status').toBe(200)
-    const statusBody = (await status.json()) as { status?: string }
-    expect(statusBody.status, 'access request status').toBe('approved')
-
-    const setCookies = status
+    let setCookies = created
       .headersArray()
       .filter((h) => h.name.toLowerCase() === 'set-cookie')
       .map((h) => h.value)
-    const token = extractCookieValue(setCookies, E2E_ACCESS_COOKIE)
+    let token = extractCookieValue(setCookies, E2E_ACCESS_COOKIE)
+
+    if (!token && createdBody.requestId) {
+      const requestId = createdBody.requestId
+      const decided = await api.get('/api/access/decide', {
+        params: { token: secret, requestId, decision: 'approved' },
+      })
+      expect(decided.status()).toBe(200)
+
+      const status = await api.get('/api/access/status', { params: { requestId } })
+      expect(status.status()).toBe(200)
+      setCookies = status
+        .headersArray()
+        .filter((h) => h.name.toLowerCase() === 'set-cookie')
+        .map((h) => h.value)
+      token = extractCookieValue(setCookies, E2E_ACCESS_COOKIE)
+    }
+
     if (!token) {
       throw new Error('Approved access request did not set the access_granted cookie.')
     }

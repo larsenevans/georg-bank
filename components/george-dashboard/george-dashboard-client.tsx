@@ -1076,7 +1076,7 @@ export function GeorgeDashboardClient({
   const finishSessionAfterPdf = () => {
     showToast('Relácia skončila. PDF bolo vygenerované.')
     window.setTimeout(() => {
-      window.location.href = '/welcome'
+      window.location.href = '/'
     }, 1200)
   }
 

@@ -13,7 +13,9 @@ function clearAccessCookie(res: NextResponse) {
 }
 
 export async function POST(request: NextRequest) {
-  const token = await readAccessCookieToken()
+  const token =
+    request.cookies?.get(ACCESS_COOKIE)?.value ||
+    (await readAccessCookieToken().catch(() => null))
   if (token) {
     try {
       await endSession(token)
@@ -29,15 +31,15 @@ export async function POST(request: NextRequest) {
 
   if (wantsJson) {
     const res = NextResponse.json(
-      { ok: true, redirect: '/welcome' },
+      { ok: true, redirect: '/' },
       { headers: { 'Cache-Control': 'no-store' } },
     )
     clearAccessCookie(res)
     return res
   }
 
-  const welcomeUrl = new URL('/welcome', request.url)
-  const res = NextResponse.redirect(welcomeUrl)
+  const homeUrl = new URL('/', request.url)
+  const res = NextResponse.redirect(homeUrl)
   clearAccessCookie(res)
   return res
 }

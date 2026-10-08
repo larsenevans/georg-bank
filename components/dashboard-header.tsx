@@ -71,9 +71,9 @@ export function DashboardHeader({ account }: DashboardHeaderProps) {
 
   const handleLogout = async () => {
     await fetch('/api/pin/logout', { method: 'POST' }).catch(() => {})
-    await authClient.signOut()
-    router.push('/dashboard2')
-    router.refresh()
+    await fetch('/api/access/logout', { method: 'POST' }).catch(() => {})
+    await authClient.signOut().catch(() => {})
+    window.location.href = '/'
   }
 
   const handleItemClick = (item: string) => {
