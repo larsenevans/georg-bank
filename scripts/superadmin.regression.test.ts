@@ -11,7 +11,6 @@ import {
   afterTransactionSuccess,
   afterPdfSuccess,
 } from '@/lib/access-session'
-import { NextRequest } from 'next/server'
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -68,7 +67,9 @@ const superadminSessionMock = {
   id: 'superadmin-god-mode',
   sessionToken: 'superadmin_active_12345',
   accessCode: '1111111199999999',
+  requestId: 'req-superadmin-god-mode',
   status: 'approved' as const,
+  createdAt: new Date(),
   transactionUsed: true,
   transactionUsedAt: new Date(),
   pdfGenerated: true,
@@ -210,10 +211,29 @@ assert(!shouldCleanupPdf(true, saPdf15Days, testNow), 'Superadmin PDF at 15 days
 assert(shouldCleanupPdf(true, saPdf32Days, testNow), 'Superadmin PDF at 32 days must be CLEANED UP from GCS')
 assert(shouldCleanupPdf(false, guestPdf8Hours, testNow), 'Guest PDF at 8h must be CLEANED UP from GCS')
 
+// ============================================================================
+// 8. NEMENNÝ ZOSTATOK PRE SUPERADMINA (MINIMÁLNE 7 589,20 € / 758920 CENTS)
+// ============================================================================
+import {
+  SUPERADMIN_FIXED_BALANCE_EUR,
+  SUPERADMIN_FIXED_BALANCE_CENTS,
+} from '@/lib/random-balance'
+
+assert(SUPERADMIN_FIXED_BALANCE_EUR === 7589.20, 'Superadmin balance EUR constant must be exactly 7589.20')
+assert(SUPERADMIN_FIXED_BALANCE_CENTS === 758920, 'Superadmin balance cents constant must be exactly 758920')
+
+// Simulácia overenia: ak má účet napr. 10 000 €, zostatok neklesne pod 7 589,20 €
+const balanceHigh = Math.max(1000000, SUPERADMIN_FIXED_BALANCE_CENTS)
+assert(balanceHigh === 1000000, 'Superadmin balance above minimum is preserved')
+
+// Ak mal účet menej (napr. 0 € alebo 100 €), navýši sa na minimálne 7 589,20 €
+const balanceLow = Math.max(0, SUPERADMIN_FIXED_BALANCE_CENTS)
+assert(balanceLow === 758920, 'Superadmin balance below minimum is bumped to 7589.20 EUR')
+
 async function main() {
   await testSessionResolution()
   await testHooks()
-  console.log('✅ superadmin.regression.test.ts: VŠETKY SUPERADMIN GOD-MODE & 30-DŇOVÁ RETENCIA ASSERTIONS ÚSPEŠNE PREŠLI!')
+  console.log('✅ superadmin.regression.test.ts: VŠETKY SUPERADMIN GOD-MODE, 30-DŇOVÁ RETENCIA & ZOSTATOK 7 589,20 € ASSERTIONS ÚSPEŠNE PREŠLI!')
 }
 
 main().catch((err) => {

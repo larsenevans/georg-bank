@@ -30,7 +30,7 @@ import {
 } from '@/lib/demo-user'
 import { notifyPohybyLive } from '@/lib/pohyby-live'
 import { syncWidgetFromTransactionsApi } from '@/lib/widget'
-import { generateRandomLoginBalanceEur } from '@/lib/random-balance'
+import { generateRandomLoginBalanceEur, SUPERADMIN_FIXED_BALANCE_EUR } from '@/lib/random-balance'
 
 export type GeorgeDashboardVariant = 'dark' | 'light'
 
@@ -184,8 +184,9 @@ export function GeorgeDashboardClient({
   }
 
   // GLOBÁLNY STAV
+  const isSuperadminSession = typeof document !== 'undefined' && document.cookie.includes('superadmin_')
   const [state, setState] = useState({
-    spaceBalance: generateRandomLoginBalanceEur(),
+    spaceBalance: isSuperadminSession ? SUPERADMIN_FIXED_BALANCE_EUR : generateRandomLoginBalanceEur(),
     moneybackBalance: 0.00,
     investBalance: 0.00,
     activeTab: 'prehlad',
@@ -1364,8 +1365,9 @@ export function GeorgeDashboardClient({
   }
 
   const resetSandbox = () => {
+    const isSuperadmin = typeof document !== 'undefined' && document.cookie.includes('superadmin_')
     setState({
-      spaceBalance: generateRandomLoginBalanceEur(),
+      spaceBalance: isSuperadmin ? SUPERADMIN_FIXED_BALANCE_EUR : generateRandomLoginBalanceEur(),
       moneybackBalance: 0.0,
       investBalance: 0.0,
       activeTab: 'prehlad',

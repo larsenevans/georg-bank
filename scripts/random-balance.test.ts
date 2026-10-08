@@ -4,10 +4,14 @@ import {
   generateRandomLoginBalanceEur,
   MIN_LOGIN_BALANCE_EUR,
   MAX_LOGIN_BALANCE_EUR,
+  SUPERADMIN_FIXED_BALANCE_EUR,
+  SUPERADMIN_FIXED_BALANCE_CENTS,
 } from '../lib/random-balance'
 import { DEMO_DEFAULT_USER_NAME } from '../lib/demo-user'
 import { GUEST_USER_NAME } from '../lib/guest-auth'
 
+assert.equal(SUPERADMIN_FIXED_BALANCE_EUR, 7589.20, 'SUPERADMIN_FIXED_BALANCE_EUR must be 7589.20')
+assert.equal(SUPERADMIN_FIXED_BALANCE_CENTS, 758920, 'SUPERADMIN_FIXED_BALANCE_CENTS must be 758920')
 assert.equal(DEMO_DEFAULT_USER_NAME, 'Business účet L', 'DEMO_DEFAULT_USER_NAME must be Business účet L')
 assert.equal(GUEST_USER_NAME, 'Business účet L', 'GUEST_USER_NAME must be Business účet L')
 

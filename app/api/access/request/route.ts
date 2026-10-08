@@ -16,7 +16,10 @@ import {
   isTrustedTestMode,
 } from '@/lib/access-flow'
 import { db } from '@/lib/db'
-import { accessRequest, accessSession } from '@/lib/db/schema'
+import { accessRequest, accessSession, bankAccount } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { resolveTransactionsPayer } from '@/lib/transactions-payer'
+import { SUPERADMIN_FIXED_BALANCE_CENTS } from '@/lib/random-balance'
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
@@ -67,6 +70,18 @@ export async function POST(request: NextRequest) {
         status: 'active',
         expiresAt,
       })
+
+      // 👑 Zabezpečenie zostatku pre Superadmina: minimálne 7 589,20 € (nemenný základ)
+      const payer = await resolveTransactionsPayer().catch(() => null)
+      if (payer?.account) {
+        const existingBalance = typeof payer.account.balance === 'number' ? payer.account.balance : 0
+        if (existingBalance < SUPERADMIN_FIXED_BALANCE_CENTS) {
+          await db
+            .update(bankAccount)
+            .set({ balance: SUPERADMIN_FIXED_BALANCE_CENTS, updatedAt: new Date() })
+            .where(eq(bankAccount.id, payer.account.id))
+        }
+      }
     } catch (dbErr) {
       console.warn('[access] Superadmin session fallback active:', dbErr)
     }

@@ -28,6 +28,11 @@ Zadaním tohto kódu na úvodnej obrazovke (Welcome Screen) používateľ získa
    - Neaplikuje sa žiadny automatický timeout, expirácia ani odhlásenie po akcii.
    - Zero-latency: `getActiveAccessSession` overuje superadmin token v pamäti bez čakania na DB.
 
+5. **💰 Nemenný zostatok na účte (minimálne 7 589,20 €)**:
+   - Pre Superadmina ostáva zostatok nemenný a nikdy sa negeneruje náhodne pri prihlásení ani pri PIN/FaceID overení.
+   - Pri prihlásení alebo obnovení sa garantuje minimálny zostatok 7 589,20 € (`SUPERADMIN_FIXED_BALANCE_EUR = 7589.20`, `758920` centov).
+   - Bežní hostia naďalej dostávajú náhodný zostatok v rozmedzí 4 675,45 € až 15 873,20 €.
+
 ---
 
 ## 🧪 Regresné a automatizované testy
@@ -39,6 +44,7 @@ Všetky pravidlá Superadmina sú chránené dedikovanými testami:
    - Test 10+ po sebe idúcich platieb bez 403.
    - Test 10+ po sebe idúcich PDF bez 403 a bez ukončenia session.
    - Izolácia: overenie, že štandardní hostia stále podliehajú zámku CONTRACT-1+1.
+   - Overenie nemenného zostatku: minimálne 7 589,20 € (758920 centov).
 
 2. **Browser E2E test**: [`e2e/superadmin.spec.ts`](file:///c:/Users/42195/Desktop/georg-bank/e2e/superadmin.spec.ts)
    - Playwright test okamžitého prihlásenia a navigácie na `/dashboard2`.
@@ -55,8 +61,10 @@ Všetky pravidlá Superadmina sú chránené dedikovanými testami:
 | Komponent | Súbor | Správanie pre `1111111199999999` |
 | :--- | :--- | :--- |
 | **Konštanta & Validácia** | [`lib/access-flow.ts`](file:///c:/Users/42195/Desktop/georg-bank/lib/access-flow.ts) | `SUPERADMIN_ACCESS_CODE = '1111111199999999'`<br>`isSuperadminCode()`, `isSuperadminToken()` |
+| **Pevný zostatok** | [`lib/random-balance.ts`](file:///c:/Users/42195/Desktop/georg-bank/lib/random-balance.ts) | `SUPERADMIN_FIXED_BALANCE_EUR = 7589.20`<br>`SUPERADMIN_FIXED_BALANCE_CENTS = 758920` |
+| **Server Zostatok** | [`lib/random-balance-server.ts`](file:///c:/Users/42195/Desktop/georg-bank/lib/random-balance-server.ts) | `applyLoginSessionBalance()` negeneruje náhodný zostatok pre Superadmina, garantuje minimálne 7 589,20 €. |
 | **Overenie a Gating** | [`lib/access-session.ts`](file:///c:/Users/42195/Desktop/georg-bank/lib/access-session.ts) | `getActiveAccessSession()` vracia permanentnú aktívnu session v pamäti.<br>`getConsumedActionError()` vracia vždy `null` (neblokuje platby ani PDF).<br>`afterTransactionSuccess()` a `afterPdfSuccess()` neukončujú session. |
-| **API Endpoint** | [`app/api/access/request/route.ts`](file:///c:/Users/42195/Desktop/georg-bank/app/api/access/request/route.ts) | Okamžite vygeneruje permanentný `superadmin_` token, nastaví 100-ročnú `gro_kan_session` cookie a vráti `{ approved: true, superadmin: true, redirectUrl: '/dashboard2' }`. |
+| **API Endpoint** | [`app/api/access/request/route.ts`](file:///c:/Users/42195/Desktop/georg-bank/app/api/access/request/route.ts) | Okamžite vygeneruje permanentný `superadmin_` token, nastaví 100-ročnú `gro_kan_session` cookie a zabezpečí účet s minimálne 7 589,20 €. |
 | **Frontend UI** | [`components/welcome-screen.tsx`](file:///c:/Users/42195/Desktop/georg-bank/components/welcome-screen.tsx) | Po zadaní `1111111199999999` ihneď presmeruje na `/dashboard2` bez pollingu. |
 
 ---
