@@ -3,9 +3,11 @@ node_modules/
 .pnp
 .pnp.js
 
-# Next.js
+# Next.js & Turbo
 .next/
 out/
+.turbo/
+.cache/
 
 # Production
 build/
@@ -15,8 +17,9 @@ dist/
 .env
 .env.*
 !.env.example
+*.local
 
-# IDE
+# IDE & Editor
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -24,10 +27,14 @@ dist/
 *.swp
 *.swo
 *~
+*.bak
+*.tmp
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Logs
 logs/
@@ -35,52 +42,53 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Testing
+# Testing & Coverage
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+playwright/.auth/
 
-# TypeScript
+# TypeScript Build Info
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Prisma
 prisma/dev.db
 prisma/dev.db-journal
 
-# Playwright
-playwright-report/
-test-results/
-playwright/.auth/
-
 # Mobile / tooling binaries (never commit)
 *.apk
+*.aab
 George-release.apk
 tailscale.apk
 
-# Temp files
+# Temp & Generated PDFs / Receipts
 tmp/
 temp/
-public/pdfs/txn-*.pdf
+public/pdfs/*.pdf
+public/pdfs/*.html
+!public/pdfs/.gitkeep
 
-# Vercel
+# Vercel & Deployment
 .vercel/
 .vercel*
 !.vercelignore
 .vercel_backup*
 .vercel_old/
 
-# Supabase
+# Supabase & Cloud
 .supabase/
 
-# Android signing keys
+# Android signing keys & Gradle
 android-apk/*.keystore
 android-apk/*.jks
+**/.gradle/
+**/build/
 
 # Secrets
 env-abon-SETUP.txt
 dokumenty/secrets/
 secrets/
-
-# Gradle & Build caches
-**/.gradle/
-**/build/
