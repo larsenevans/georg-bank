@@ -3512,7 +3512,7 @@ export function GeorgeDashboardClient({
 
           {/* QR Code Preview Modal (Top-Level Portal) */}
           {showQrPreview && scannedDraft && (
-            <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-250 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
               <div className="w-full max-w-md bg-[#12131b] rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
                 <QrPaymentPreview
                   draft={scannedDraft}
