@@ -154,6 +154,29 @@ async function runVerification() {
     failed++
   }
 
+  // 8. Test: Zostatok pre Superadmina (minimálne 7 589,20 € / 758920 centov, nemenný)
+  try {
+    const res = await fetch(`${PROD_URL}/api/pin/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: superadminCookie,
+      },
+      body: JSON.stringify({ biometrics: true }),
+    })
+    const data = await res.json()
+    if (res.status === 200 && data.ok === true && data.balanceEur >= 7589.20 && data.balanceCents >= 758920) {
+      console.log(`✅ 8. Superadmin Zostatok (/api/pin/verify) -> ${data.balanceEur.toFixed(2)} € (>= 7 589,20 € garantované)`)
+      passed++
+    } else {
+      console.error('❌ 8. Superadmin balance failed:', res.status, data)
+      failed++
+    }
+  } catch (err) {
+    console.error('❌ 8. Superadmin balance exception:', err)
+    failed++
+  }
+
   console.log('\n==================================================================')
   console.log(`📊 VÝSLEDOK PRODUKČNÉHO TESTU: ${passed} / ${passed + failed} ÚSPEŠNÝCH`)
   console.log('==================================================================')
