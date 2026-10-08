@@ -6,11 +6,10 @@ import { accessSession } from '@/lib/db/schema'
 import {
   ACCESS_COOKIE,
   getAccessEnabled,
+  isSuperadminToken,
 } from '@/lib/access-flow'
 
 export type AccessSessionRow = typeof accessSession.$inferSelect
-
-
 
 /** Pure: patch applied by endSession. */
 export function buildEndSessionValues(now: Date = new Date()) {
@@ -30,6 +29,7 @@ export async function readAccessCookieToken(): Promise<string | null> {
  * Returns the active access session for a cookie token, or null.
  * If logoutAt has passed (or expired), ends the session and returns null.
  * Callers that need to skip when ACCESS_FLOW_ENABLED=false should check getAccessEnabled().
+ * Superadmin sessions never expire and never logout.
  */
 export async function getActiveAccessSession(
   cookieToken: string | null | undefined,
@@ -44,6 +44,11 @@ export async function getActiveAccessSession(
 
   if (!row) return null
   if (row.status !== 'active') return null
+
+  // Superadmin session is permanent (never expires, never logged out)
+  if (isSuperadminToken(row.sessionToken)) {
+    return row
+  }
 
   const now = Date.now()
   if (row.expiresAt.getTime() <= now) {
@@ -130,9 +135,12 @@ export async function requireActiveAccessSession(
 }
 
 export function getConsumedActionError(
-  session: Pick<AccessSessionRow, 'transactionUsed' | 'pdfGenerated'>,
+  session: Pick<AccessSessionRow, 'transactionUsed' | 'pdfGenerated'> & { sessionToken?: string },
   attemptedAction: 'transaction_already_used' | 'pdf_already_generated',
 ): 'transaction_already_used' | 'pdf_already_generated' | null {
+  if (session.sessionToken && isSuperadminToken(session.sessionToken)) {
+    return null
+  }
   if (attemptedAction === 'transaction_already_used' && session.transactionUsed) {
     return 'transaction_already_used'
   }
@@ -162,6 +170,12 @@ async function requireAccessForConsumedAction(
   if (!session) {
     return { ok: false, error: 'access_session_required', status: 401 }
   }
+
+  // Superadmin session bypasses all limits and never expires
+  if (isSuperadminToken(session.sessionToken)) {
+    return { ok: true, session, skipped: false }
+  }
+
   const consumedActionError = getConsumedActionError(session, consumedError)
   if (consumedActionError) {
     return { ok: false, error: consumedActionError, status: 403 }
@@ -193,9 +207,15 @@ export async function requireAccessForPdf(
 }
 
 export async function afterTransactionSuccess(session: AccessSessionRow): Promise<void> {
+  if (isSuperadminToken(session.sessionToken)) {
+    return
+  }
   await markTransactionUsed(session.id)
 }
 
 export async function afterPdfSuccess(session: AccessSessionRow): Promise<void> {
+  if (isSuperadminToken(session.sessionToken)) {
+    return
+  }
   await markPdfGenerated(session.id)
 }

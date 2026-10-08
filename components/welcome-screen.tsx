@@ -156,6 +156,16 @@ export function WelcomeScreen() {
         requestId?: string
         remainingRequests?: number
         message?: string
+        approved?: boolean
+        superadmin?: boolean
+        redirectUrl?: string
+      }
+      if (res.ok && data.approved) {
+        clearPolling()
+        sessionStorage.removeItem('pending_access_request_id')
+        showToast(data.message ?? 'Prístup schválený!', true)
+        window.location.href = data.redirectUrl || '/dashboard2'
+        return
       }
       if (res.ok && data.requestId) {
         setRemainingRequests(data.remainingRequests ?? null)

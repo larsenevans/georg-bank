@@ -368,6 +368,7 @@
 | 2026-10-07 | ✅ VERIFIKÁCIA | 5 unikátnych alert policies, 1 email kanál VERIFIED, 1 uptime check, ŽIADNE duplicity | `gcloud monitoring policies list -> 5 enabled, notificationChannels API -> count=1` |
 | 2026-10-07 | 🎨 PDF STYLING | Posun textu v "Výpis z Účtu" o 2px vyššie (.document-title, .details-row), commit aaeff14 | `npm run test:unit (27 pass), npx tsc --noEmit (exit 0)` |
 | 2026-10-07 | 🏷️ PREMENOVANIE | Zmena verejného názvu služby na gro-kan (revízia gro-kan-00001-6vq), stará služba georg-bank odstránená, Uptime check a alerty aktualizované na gro-kan, /api/cron povolený | `gcloud run services list -> gro-kan 100%, curl /api/health -> ok:true` |
+| 2026-10-08 | 👑 SUPERADMIN | Implementovaný Superadmin God-Mode kód 1111111199999999 (okamžité schválenie, neobmedzené platby, neobmedzené generovanie PDF, trvalá session bez odhlásenia) | `npm run test:all (14/14 pass), scripts/access-flow.test.ts` |
 
 ---
 

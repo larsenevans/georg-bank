@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAccessRequestWithinLimit } from '@/lib/access-request-store'
 import {
   isValidAccessCode,
+  isSuperadminCode,
+  SUPERADMIN_TOKEN_PREFIX,
+  ACCESS_COOKIE,
   getClientIp,
   hashIp,
   simplifyUserAgent,
@@ -12,6 +15,8 @@ import {
   getAccessBaseUrl,
   isTrustedTestMode,
 } from '@/lib/access-flow'
+import { db } from '@/lib/db'
+import { accessRequest, accessSession } from '@/lib/db/schema'
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
@@ -33,11 +38,58 @@ export async function POST(request: NextRequest) {
 
   const ip = getClientIp(request.headers)
   const ipHash = hashIp(ip)
-
   const userAgent = request.headers.get('user-agent') ?? ''
-
   const requestId = randomUUID()
   const deviceHint = simplifyUserAgent(userAgent)
+
+  // 👑 SUPERADMIN "GOD MODE" KÓD: 1111111199999999
+  // Automatické okamžité schválenie, nekonečne veľa platieb, generovania a trvalé prihlásenie bez odhlásenia
+  if (isSuperadminCode(code)) {
+    const sessionToken = `${SUPERADMIN_TOKEN_PREFIX}${randomUUID()}`
+    const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000) // 100 rokov
+
+    try {
+      await db.insert(accessRequest).values({
+        id: requestId,
+        code,
+        status: 'approved',
+        decidedAt: new Date(),
+        sessionToken,
+        deviceHint,
+        userAgent,
+        ipHash,
+      })
+
+      await db.insert(accessSession).values({
+        id: randomUUID(),
+        sessionToken,
+        requestId,
+        status: 'active',
+        expiresAt,
+      })
+    } catch (dbErr) {
+      console.warn('[access] Superadmin session fallback active:', dbErr)
+    }
+
+    const response = NextResponse.json({
+      approved: true,
+      superadmin: true,
+      requestId,
+      redirectUrl: '/dashboard2',
+      message: 'Superadmin prístup aktivovaný. Neobmedzené platby a generovanie.',
+    })
+
+    response.cookies.set(ACCESS_COOKIE, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 100 * 365 * 24 * 60 * 60,
+    })
+
+    return response
+  }
+
   const token = getAccessAdminSecret() || randomUUID()
   let requestQuota: Awaited<ReturnType<typeof createAccessRequestWithinLimit>>
   try {

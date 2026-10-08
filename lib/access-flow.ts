@@ -6,9 +6,19 @@ export const ACCESS_COOKIE = 'access_granted'
 export const ACCESS_REQUEST_MAX_PER_HOUR = 15
 export const ACCESS_REQUEST_EXPIRY_HOURS = 24
 export const ACCESS_SESSION_EXPIRY_DAYS = 30
+export const SUPERADMIN_ACCESS_CODE = '1111111199999999'
+export const SUPERADMIN_TOKEN_PREFIX = 'superadmin_'
 
 export function isValidAccessCode(code: string): boolean {
   return /^[0-9]{16}$/.test(code)
+}
+
+export function isSuperadminCode(code: string | null | undefined): boolean {
+  return typeof code === 'string' && code.trim() === SUPERADMIN_ACCESS_CODE
+}
+
+export function isSuperadminToken(token: string | null | undefined): boolean {
+  return typeof token === 'string' && (token.startsWith(SUPERADMIN_TOKEN_PREFIX) || token === SUPERADMIN_ACCESS_CODE)
 }
 
 export function getAccessAdminSecret(): string | null {

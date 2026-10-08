@@ -9,7 +9,11 @@ import {
   ACCESS_REQUEST_MAX_PER_HOUR,
   getAccessRequestQuota,
   isTrustedTestMode,
+  SUPERADMIN_ACCESS_CODE,
+  isSuperadminCode,
+  isSuperadminToken,
 } from '@/lib/access-flow'
+import { getConsumedActionError } from '@/lib/access-session'
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message)
@@ -112,5 +116,29 @@ const extractedIp2 = getClientIp(headers2)
 assert(extractedIp1 === realClientIp, 'must extract trusted rightmost client IP from x-forwarded-for')
 assert(extractedIp2 === realClientIp, 'must extract trusted rightmost client IP regardless of prepended spoofed IPs')
 assert(hashIp(extractedIp1) === hashIp(extractedIp2), 'spoofed X-Forwarded-For must map to same IP hash and share same rate-limit budget')
+
+// --- Contract: Superadmin code 1111111199999999 -------------------------------
+assert(isSuperadminCode('1111111199999999') === true, 'superadmin code matches')
+assert(isSuperadminCode('1111111199999998') === false, 'other code is not superadmin')
+assert(isSuperadminCode('') === false, 'empty code is not superadmin')
+assert(isSuperadminToken('superadmin_123456') === true, 'superadmin token detected')
+assert(isSuperadminToken(SUPERADMIN_ACCESS_CODE) === true, 'superadmin access code detected as token')
+assert(isSuperadminToken('regular-uuid-token') === false, 'regular token is not superadmin')
+
+// Superadmin bypasses consumed action limits (unlimited payments & PDFs)
+assert(
+  getConsumedActionError(
+    { transactionUsed: true, pdfGenerated: true, sessionToken: 'superadmin_test' },
+    'transaction_already_used',
+  ) === null,
+  'superadmin can make unlimited transactions',
+)
+assert(
+  getConsumedActionError(
+    { transactionUsed: true, pdfGenerated: true, sessionToken: 'superadmin_test' },
+    'pdf_already_generated',
+  ) === null,
+  'superadmin can generate unlimited PDFs',
+)
 
 console.log('access-flow.test.ts: all assertions passed')
