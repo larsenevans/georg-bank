@@ -923,6 +923,31 @@ export function GeorgeDashboardClient({
 
     closePaymentSheet()
     setTransactionFilter('all')
+
+    // PDF/HTML potvrdenie o platbe (download do browsera)
+    const createdAtLabel = new Date().toLocaleString('sk-SK')
+    void generateAndDeliverReceipt({
+      transactionId: txnId,
+      createdAt: createdAtLabel,
+      status: 'Štandardný platobný príkaz',
+      transferType: 'external',
+      fromAccountNumber: generateMaskedSenderIban(),
+      recipientName: recipient,
+      recipientAccountOrEmail: iban,
+      amount: amount.toFixed(2),
+      currency: 'EUR',
+      variableSymbol: vs,
+      constantSymbol: '0308',
+      specificSymbol: '',
+      note: note || 'Platba cez mobilnú verziu George',
+      payerReference: '',
+      dueDate: 'Dnes',
+      repeatDays: '0',
+      createTemplate: false,
+      emailConfirmation: false,
+      balanceBefore: (newTxn.balanceBefore ?? balanceBefore).toFixed(2),
+      balanceAfter: (newTxn.balanceAfter ?? balanceAfter).toFixed(2),
+    })
   }
 
   const uploadReceiptPdf = async (transactionId: string, blob: Blob) => {
@@ -937,9 +962,6 @@ export function GeorgeDashboardClient({
         error?: string
       }
       if (!res.ok) {
-        if (res.status === 403 && json.error === 'pdf_already_generated') {
-          finishSessionAfterPdf()
-        }
         return false
       }
       if (json.success && json.pdfUrl) {
@@ -961,22 +983,6 @@ export function GeorgeDashboardClient({
   }
 
   const generateAndDeliverReceipt = async (data: PaymentConfirmationPdfData) => {
-    try {
-      const sessionRes = await fetch('/api/access/session', { cache: 'no-store' })
-      if (sessionRes.ok) {
-        const sessionData = (await sessionRes.json()) as {
-          pdfGenerated?: boolean
-          disabled?: boolean
-        }
-        if (!sessionData.disabled && sessionData.pdfGenerated) {
-          setToastMessage('PDF už bolo v tejto session vygenerované.')
-          setIsToastVisible(true)
-          return
-        }
-      }
-    } catch {
-      // continue; server upload gate remains authoritative
-    }
     setPdfOverlayPhase('preparing')
     setPdfOverlayOpen(true)
     let closedEarly = false
@@ -984,10 +990,9 @@ export function GeorgeDashboardClient({
       const result = await downloadPaymentConfirmationAsPdf(data)
       if (result.ok && result.blob) {
         setPdfOverlayPhase('done')
-        const uploaded = await uploadReceiptPdf(data.transactionId, result.blob)
+        void uploadReceiptPdf(data.transactionId, result.blob)
         closedEarly = true
         window.setTimeout(() => setPdfOverlayOpen(false), 600)
-        if (uploaded) finishSessionAfterPdf()
         return
       }
       if (result.usedHtmlFallback) {

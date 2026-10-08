@@ -10,8 +10,6 @@ import { DEMO_DEFAULT_USER_ID } from '@/lib/demo-user'
 import { isOutgoingPaymentType } from '@/lib/daily-payment-limit'
 import { createServiceSupabase } from '@/lib/demo-transactions-supabase'
 import {
-  afterPdfSuccess,
-  clearAccessCookie,
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
@@ -184,12 +182,7 @@ export async function POST(req: Request) {
 
     await setPdfUrl(transactionId, pdfUrl)
 
-    if (accessSessionRow) {
-      await afterPdfSuccess(accessSessionRow)
-    }
-
-    const response = NextResponse.json({ success: true, pdfUrl, transactionId })
-    return accessSessionRow ? clearAccessCookie(response) : response
+    return NextResponse.json({ success: true, pdfUrl, transactionId })
   } catch (error) {
     console.error('[receipts/upload] Error:', error)
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
