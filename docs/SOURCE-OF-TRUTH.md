@@ -368,6 +368,7 @@
 | 2026-10-07 | ✅ VERIFIKÁCIA | 5 unikátnych alert policies, 1 email kanál VERIFIED, 1 uptime check, ŽIADNE duplicity | `gcloud monitoring policies list -> 5 enabled, notificationChannels API -> count=1` |
 | 2026-10-07 | 🎨 PDF STYLING | Posun textu v "Výpis z Účtu" o 2px vyššie (.document-title, .details-row), commit aaeff14 | `npm run test:unit (27 pass), npx tsc --noEmit (exit 0)` |
 | 2026-10-08 | 👑 SUPERADMIN & DEPLOY | Implementovaný Superadmin God-Mode kód 1111111199999999 (okamžité schválenie, neobmedzené platby, neobmedzené generovanie PDF, trvalá session), nasadená revízia gro-kan-00003-zdd na Cloud Run, live overenie health probe a superadmin prihlásenia | `npm run test:all (14/14 pass), gcloud run revisions list -> gro-kan-00003-zdd 100%, curl /api/health -> ok:true` |
+| 2026-10-08 | 🛡️ RETENCIA 30D & LOCK | Implementovaná 30-dňová retencia transakcií a PDF pre Superadmina v DB a GCS, dvojúrovňový cron cleanup (/api/cron/cleanup), prísne uzamknutý kontrakt CONTRACT-1+1 pre bežných hostí (6h cleanup), nasadená revízia gro-kan-00006-rpc | `npm run test:all (15/15 pass 100%), verify-prod-live.ts (7/7 pass 100%), gcloud run revisions list -> gro-kan-00006-rpc 100%` |
 
 ---
 
