@@ -13,8 +13,11 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3030'
 // Access flow: the local web server and auth.setup share one admin secret so e2e can
 // approve a test access session via /api/access/decide (e2e/helpers/access-session.ts).
 // Remote BASE_URL runs must provide E2E_ACCESS_ADMIN_SECRET explicitly.
-if (!isProduction && !process.env.ACCESS_ADMIN_SECRET) {
-  process.env.ACCESS_ADMIN_SECRET = E2E_DEFAULT_ACCESS_ADMIN_SECRET
+if (!isProduction) {
+  process.env.E2E_TEST_MODE = 'true'
+  if (!process.env.ACCESS_ADMIN_SECRET) {
+    process.env.ACCESS_ADMIN_SECRET = E2E_DEFAULT_ACCESS_ADMIN_SECRET
+  }
 }
 
 const mobileFolderIgnore = [
