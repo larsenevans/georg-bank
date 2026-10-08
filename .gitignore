@@ -62,6 +62,7 @@ prisma/dev.db-journal
 # Mobile / tooling binaries (never commit)
 *.apk
 *.aab
+*.zip
 George-release.apk
 tailscale.apk
 
