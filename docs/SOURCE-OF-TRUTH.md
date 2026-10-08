@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00008-gpv ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00009-rrh ✅ PRODUKCIA
 
 ---
 
