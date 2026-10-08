@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Bot, CheckCircle2, Loader2, Send, Wifi, Users, MessageSquare } from 'lucide-react'
 import type { AssistantConfigStatus } from '@/lib/assistant/types'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface Message {
   id: string
@@ -30,12 +31,9 @@ interface AssistantDashboardClientProps {
 
 export function AssistantDashboardClient({
   config,
-  conversationCount: _conversationCount,
-  messageCount: _messageCount,
   lastError,
   currentUserId,
   currentUserDisplayName,
-  conversations: _conversations,
 }: AssistantDashboardClientProps) {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
@@ -46,7 +44,7 @@ export function AssistantDashboardClient({
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
   
   const chatEndRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<{ send: (args: Record<string, unknown>) => void } | null>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
   const isTypingRef = useRef(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -146,7 +144,7 @@ export function AssistantDashboardClient({
     typingTimeoutRef.current = setTimeout(() => {
       if (isTypingRef.current) {
         isTypingRef.current = false
-        channelRef.current.send({
+        channelRef.current?.send({
           type: 'broadcast',
           event: 'typing',
           payload: { senderId: currentUserId, senderName: currentUserDisplayName, isTyping: false },
@@ -261,7 +259,7 @@ export function AssistantDashboardClient({
       </div>
 
       {/* Main Chat Area */}
-      <section className="flex flex-col rounded-[18px] border border-[#2b3347] bg-[#181921] p-4 shadow-2xl flex-grow min-h-[350px] max-h-[500px]">
+      <section className="flex flex-col rounded-[18px] border border-[#2b3347] bg-[#181921] p-4 shadow-2xl grow min-h-87.5 max-h-125">
         <h2 className="text-sm font-black mb-3 border-b border-[#2b3347] pb-2 flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-[#8e9bb5]" />
           Konverzácia
@@ -373,7 +371,7 @@ function StatusCard({
         {icon}
       </div>
       <p className="text-[10px] font-black uppercase tracking-wider text-[#8e9bb5]">{label}</p>
-      <p className="mt-1 break-words text-sm font-black text-white">{value}</p>
+      <p className="mt-1 wrap-break-word text-sm font-black text-white">{value}</p>
     </div>
   )
 }

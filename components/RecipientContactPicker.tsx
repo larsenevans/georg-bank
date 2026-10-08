@@ -297,7 +297,7 @@ export function RecipientContactPicker({
             onClick={handleInputClick}
             className="p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg cursor-pointer"
           >
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center shrink-0">
               <span className="text-blue-600 dark:text-blue-400 font-medium text-sm">
                 {selectedContact.name.slice(0, 2)}
               </span>
@@ -352,7 +352,7 @@ export function RecipientContactPicker({
         {/* Dropdown menu */}
         {showDropdown && isOpen && hasResults && (
           <div
-            className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-[300px] overflow-y-auto"
+            className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-75 overflow-y-auto"
             style={{ maxHeight: `${maxHeight}px` }}
           >
             {filtered.length === 0 && !showNotInContacts && (
@@ -371,7 +371,7 @@ export function RecipientContactPicker({
                   highlightedIndex === index ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                 }`}
               >
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center shrink-0">
                   <span className="text-blue-600 dark:text-blue-400 font-medium text-sm">
                     {contact.name.slice(0, 2)}
                   </span>
@@ -402,7 +402,7 @@ export function RecipientContactPicker({
                     highlightedIndex === filtered.length ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                 >
-                  <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
@@ -428,7 +428,7 @@ export function RecipientContactPicker({
                   highlightedIndex === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                 }`}
               >
-                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>

@@ -65,7 +65,6 @@ export interface TransferFormProps {
  * - Form validation
  */
 export function TransferForm({
-  contacts: _contacts = [],
   accounts = [],
   selectedAccountId,
   onSubmit,
@@ -546,7 +545,7 @@ export function TransferForm({
             )}
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <label htmlFor="currency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Currency
             </label>
@@ -721,7 +720,7 @@ export function TransferForm({
           <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
             {validation.errors.map((error, index) => (
               <li key={index} className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>{error.field}: {error.message}</span>
@@ -740,7 +739,7 @@ export function TransferForm({
           <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
             {validation.warnings.map((warning, index) => (
               <li key={index} className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <span>{warning.field}: {warning.message}</span>
