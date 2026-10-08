@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00009-rrh ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00010-jlm ✅ PRODUKCIA
 
 ---
 
@@ -377,6 +377,7 @@
 | 2026-10-08 | 📱 HORIZON DASHBOARD V2 | Nový mobilný banking dashboard (/dashboard-v2) v štýle Horizon UI s prísnym 100dvh layoutom, oddelené dáta pre Superadmina (God-Mode badge) a klientov, radar aktívnych používateľov, odblokovanie 1-platobného limitu | `tsc --noEmit (exit 0), dev server :3030/dashboard-v2, Tailwind v4 kompatibilita` |
 | 2026-10-08 | 🔔 WEB PUSH NOTIFIKÁCIE (ANDROID & IPHONE) | Plná implementácia Web Push notifikácií cez VAPID: odber v Nastaveniach, Superadmin broadcast na všetky zariadenia, automatická push správa pri každej platbe/zmene zostatku, detekcia iOS PWA standalone režimu, 11/11 Playwright testov Android + 4/4 iPhone PASS | `e2e/push-notifications.spec.ts (11/11 pass 100%), e2e/iphone/push-notifications.spec.ts (4/4 pass 100%), tsc --noEmit (exit 0)` |
 | 2026-10-08 | 🍏 IPHONE MODEL MATRIX (14+, 17 PRO, 17 PRO MAX, 18 PRO) | Špecifická sada E2E a regresných testov pre iPhone 14 Plus (428x926, notch), iPhone 17 Pro (402x874, Dynamic Island), iPhone 17 Pro Max (440x956) a budúci iPhone 18 Pro (iOS 19+, 402x874). Overenie 100dvh nulového pretečenia, Apple Web Push PWA meta tagov, standalone režimu a Superadmin broadcastu. | `playwright test e2e/iphone-model-matrix.spec.ts (13/13 pass 100%), e2e/iphone/push-notifications.spec.ts (13/13 pass 100%), npm run test:all (19/19 pass 100%)` |
+| 2026-10-08 | 🚀 MERGE & DEPLOY gro-kan-00010-jlm | Vetva abonbranch po zelenom GitHub CI (205 Playwright + 19 Unit testov 100% PASS) zlúčená do main. Nasadená produkčná revízia gro-kan-00010-jlm na Cloud Run (100% traffic) s Horizon Dashboard v2, Web Push VAPID, iPhone 14+/17 Pro/17 Pro Max/18 Pro a overeným ACCESS_FLOW_ENABLED=true. | `GitHub CI Run 37822118273 (100% PASS exit 0), gcloud run services describe -> gro-kan-00010-jlm 100%, curl /api/health -> ok:true` |
 
 
 ---
