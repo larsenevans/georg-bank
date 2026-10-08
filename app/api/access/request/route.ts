@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   } | null
 
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
-  const code = typeof body?.code === 'string' ? body.code.trim() : ''
+  const code = typeof body?.code === 'string' ? body.code.replace(/\s+/g, '') : ''
 
   if (!email && !isValidAccessCode(code)) {
     return NextResponse.json(
