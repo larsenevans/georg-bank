@@ -386,6 +386,15 @@ async function ensureGuestBankAccount(pool: Pool) {
   console.log(`[ensure-db] Guest account balance preserved (${current} cents).`)
 }
 
+async function ensureTransactionSuperadminColumn(pool: Pool) {
+  if (!(await tableExists(pool, 'transaction'))) return
+  try {
+    await pool.query('ALTER TABLE "transaction" ADD COLUMN IF NOT EXISTS "isSuperadmin" boolean NOT NULL DEFAULT false;')
+  } catch (err) {
+    console.warn('[ensure-db] Warning adding isSuperadmin column:', err)
+  }
+}
+
 export async function ensureDatabase() {
   const pool = buildPool()
   if (!pool) return
@@ -395,6 +404,7 @@ export async function ensureDatabase() {
     await ensureSchema(pool)
     await ensureStatementProfileColumns(pool)
     await ensureAccessFlowTables(pool)
+    await ensureTransactionSuperadminColumn(pool)
     await ensureGuestUser(pool)
     await migrateLegacyDemoUserIds(pool)
     await ensureDemoAccountBalance(pool)

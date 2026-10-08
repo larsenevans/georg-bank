@@ -35,7 +35,11 @@ import {
   readAccessCookieToken,
   requireAccessForTransaction,
 } from '@/lib/access-session'
-import { isTrustedTestMode } from '@/lib/access-flow'
+import {
+  isTrustedTestMode,
+  isSuperadminCode,
+  isSuperadminToken,
+} from '@/lib/access-flow'
 
 async function getTodayOutgoingUsedCents(userId: string) {
   const todayStart = startOfLocalDay()
@@ -407,6 +411,13 @@ export async function POST(req: Request) {
           .where(eq(bankAccount.id, accountRecord.id))
       }
 
+      const cookieToken = await readAccessCookieToken()
+      const isSuperadminTx = Boolean(
+        isSuperadminToken(cookieToken) ||
+        isSuperadminCode(cookieToken) ||
+        isSuperadminToken(accessSessionRow?.sessionToken)
+      )
+
       await tx.insert(transaction).values({
         id: newTxnId,
         userId: defaultUserId,
@@ -416,6 +427,7 @@ export async function POST(req: Request) {
         balanceAfter: newBalanceCents,
         type: type,
         description: fullDescription,
+        isSuperadmin: isSuperadminTx,
         status: 'completed',
         createdAt: new Date(),
         updatedAt: new Date(),

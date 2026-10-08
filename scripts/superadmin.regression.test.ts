@@ -160,13 +160,64 @@ assert(
   'Standard guest: 2nd PDF strictly blocked with pdf_already_generated',
 )
 
+// ============================================================================
+// 7. 30-DŇOVÁ RETENCIA TRANSAKCIÍ A PDF (SUPERADMIN vs GUEST)
+// ============================================================================
+function shouldCleanupTransaction(isSuperadmin: boolean, createdAt: Date, now: Date = new Date()): boolean {
+  const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  if (isSuperadmin) {
+    return createdAt.getTime() < thirtyDaysAgo.getTime()
+  }
+  return createdAt.getTime() < sixHoursAgo.getTime()
+}
+
+function shouldCleanupPdf(isSuperadmin: boolean, fileCreatedTime: Date, now: Date = new Date()): boolean {
+  const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  if (isSuperadmin) {
+    return fileCreatedTime.getTime() < thirtyDaysAgo.getTime()
+  }
+  return fileCreatedTime.getTime() < sixHoursAgo.getTime()
+}
+
+const testNow = new Date()
+
+// A. Superadmin transakcie
+const saTx10Days = new Date(testNow.getTime() - 10 * 24 * 60 * 60 * 1000)
+const saTx29Days = new Date(testNow.getTime() - 29 * 24 * 60 * 60 * 1000)
+const saTx31Days = new Date(testNow.getTime() - 31 * 24 * 60 * 60 * 1000)
+
+assert(!shouldCleanupTransaction(true, saTx10Days, testNow), 'Superadmin transaction at 10 days must be RETAINED')
+assert(!shouldCleanupTransaction(true, saTx29Days, testNow), 'Superadmin transaction at 29 days must be RETAINED')
+assert(shouldCleanupTransaction(true, saTx31Days, testNow), 'Superadmin transaction at 31 days must be CLEANED UP')
+
+// B. Hosťovské transakcie (6h TTL)
+const guestTx2Hours = new Date(testNow.getTime() - 2 * 60 * 60 * 1000)
+const guestTx7Hours = new Date(testNow.getTime() - 7 * 60 * 60 * 1000)
+
+assert(!shouldCleanupTransaction(false, guestTx2Hours, testNow), 'Guest transaction at 2h must be RETAINED')
+assert(shouldCleanupTransaction(false, guestTx7Hours, testNow), 'Guest transaction at 7h must be CLEANED UP')
+
+// C. Superadmin PDF vs Guest PDF
+const saPdf15Days = new Date(testNow.getTime() - 15 * 24 * 60 * 60 * 1000)
+const saPdf32Days = new Date(testNow.getTime() - 32 * 24 * 60 * 60 * 1000)
+const guestPdf8Hours = new Date(testNow.getTime() - 8 * 60 * 60 * 1000)
+
+assert(!shouldCleanupPdf(true, saPdf15Days, testNow), 'Superadmin PDF at 15 days must be RETAINED in GCS')
+assert(shouldCleanupPdf(true, saPdf32Days, testNow), 'Superadmin PDF at 32 days must be CLEANED UP from GCS')
+assert(shouldCleanupPdf(false, guestPdf8Hours, testNow), 'Guest PDF at 8h must be CLEANED UP from GCS')
+
 async function main() {
   await testSessionResolution()
   await testHooks()
-  console.log('✅ superadmin.regression.test.ts: VŠETKY SUPERADMIN GOD-MODE ASSERTIONS ÚSPEŠNE PREŠLI!')
+  console.log('✅ superadmin.regression.test.ts: VŠETKY SUPERADMIN GOD-MODE & 30-DŇOVÁ RETENCIA ASSERTIONS ÚSPEŠNE PREŠLI!')
 }
 
 main().catch((err) => {
   console.error('❌ Test failed:', err)
   process.exit(1)
 })
+

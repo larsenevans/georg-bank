@@ -160,6 +160,7 @@ export const transaction = pgTable(
     type: text('type').notNull(), // 'transfer', 'deposit', 'withdrawal'
     description: text('description'),
     pdfUrl: text('pdfUrl'),
+    isSuperadmin: boolean('isSuperadmin').notNull().default(false),
     status: text('status').notNull().default('completed'), // 'pending', 'completed', 'failed'
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt').notNull().defaultNow(),

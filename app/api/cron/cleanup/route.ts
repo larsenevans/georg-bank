@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { transaction, accessSession, accessRequest } from '@/lib/db/schema'
-import { lt } from 'drizzle-orm'
+import { and, eq, lt, not, like } from 'drizzle-orm'
 import { Storage } from '@google-cloud/storage'
+import { SUPERADMIN_TOKEN_PREFIX } from '@/lib/access-flow'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,19 +15,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 1. Čas pred 6 hodinami
+    // 1. Časové prahy pre dvojúrovňovú retenciu:
+    // - Bežní hostia (CONTRACT-1+1): 6 hodín
+    // - Superadmin (God-Mode): 30 dní
     const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-    // 2. Zmazať staré platby z databázy
-    const deletedTransactions = await db
+    // 2. Zmazať staré bežné hosťovské platby (staršie ako 6 hodín)
+    const deletedGuestTransactions = await db
       .delete(transaction)
-      .where(lt(transaction.createdAt, sixHoursAgo))
+      .where(and(eq(transaction.isSuperadmin, false), lt(transaction.createdAt, sixHoursAgo)))
       .returning({ id: transaction.id })
 
-    // 3. Zmazať staré relácie (sessions) a požiadavky (requests)
+    // 3. Zmazať staré Superadmin platby (IBA ak sú staršie ako 30 dní)
+    const deletedSuperadminTransactions = await db
+      .delete(transaction)
+      .where(and(eq(transaction.isSuperadmin, true), lt(transaction.createdAt, thirtyDaysAgo)))
+      .returning({ id: transaction.id })
+
+    // 4. Zmazať staré hosťovské relácie (sessions) a požiadavky (requests) staršie ako 6 hodín
+    // Superadmin sessions s prefixom superadmin_ sú permanentné a nemažú sa
     const deletedSessions = await db
       .delete(accessSession)
-      .where(lt(accessSession.createdAt, sixHoursAgo))
+      .where(and(not(like(accessSession.sessionToken, `${SUPERADMIN_TOKEN_PREFIX}%`)), lt(accessSession.createdAt, sixHoursAgo)))
       .returning({ id: accessSession.id })
 
     const deletedRequests = await db
@@ -34,7 +45,9 @@ export async function GET(request: Request) {
       .where(lt(accessRequest.createdAt, sixHoursAgo))
       .returning({ id: accessRequest.id })
 
-    // 4. Zmazať staré PDF súbory z Google Cloud Storage
+    // 5. Zmazať staré PDF súbory z Google Cloud Storage:
+    // - Hosťovské PDF: zmazať po 6 hodinách
+    // - Superadmin PDF: zmazať až po 30 dňoch
     const gcsBucketName = process.env.RECEIPTS_GCS_BUCKET
     let deletedPdfs = 0
     if (gcsBucketName) {
@@ -42,12 +55,15 @@ export async function GET(request: Request) {
         const storage = new Storage()
         const bucket = storage.bucket(gcsBucketName)
         const [files] = await bucket.getFiles()
-        
+
         for (const file of files) {
           const [metadata] = await file.getMetadata()
           if (metadata && metadata.timeCreated) {
             const fileTime = new Date(metadata.timeCreated)
-            if (fileTime < sixHoursAgo) {
+            const isSuperadminPdf = metadata.metadata?.isSuperadmin === 'true'
+            const threshold = isSuperadminPdf ? thirtyDaysAgo : sixHoursAgo
+
+            if (fileTime < threshold) {
               await file.delete()
               deletedPdfs++
             }
@@ -60,13 +76,15 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Cleanup completed successfully.',
+      message: 'Two-tier cleanup completed successfully (Guest: 6h, Superadmin: 30d).',
       deleted: {
-        transactions: deletedTransactions.length,
+        guestTransactions: deletedGuestTransactions.length,
+        superadminTransactions: deletedSuperadminTransactions.length,
+        totalTransactions: deletedGuestTransactions.length + deletedSuperadminTransactions.length,
         sessions: deletedSessions.length,
         requests: deletedRequests.length,
-        pdfs: deletedPdfs
-      }
+        pdfs: deletedPdfs,
+      },
     })
   } catch (error) {
     console.error('[cleanup] Error:', error)

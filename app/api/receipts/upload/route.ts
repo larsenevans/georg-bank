@@ -15,6 +15,7 @@ import {
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
+import { isSuperadminCode, isSuperadminToken } from '@/lib/access-flow'
 
 export const runtime = 'nodejs'
 
@@ -140,16 +141,32 @@ export async function POST(req: Request) {
       }
     }
 
+    const cookieToken = await readAccessCookieToken()
+    const isSuperadminPdf = Boolean(
+      isSuperadminToken(cookieToken) ||
+      isSuperadminCode(cookieToken) ||
+      isSuperadminToken(accessSessionRow?.sessionToken)
+    )
+
     const gcsBucketName = process.env.RECEIPTS_GCS_BUCKET
     if (!pdfUrl && gcsBucketName) {
       try {
         const bucket = getGcsStorage().bucket(gcsBucketName)
         const file = bucket.file(storagePath)
-        await file.save(buffer, { contentType: 'application/pdf' })
+        await file.save(buffer, {
+          contentType: 'application/pdf',
+          metadata: {
+            metadata: {
+              isSuperadmin: isSuperadminPdf ? 'true' : 'false',
+              retentionDays: isSuperadminPdf ? '30' : '0.25',
+              createdAt: new Date().toISOString(),
+            },
+          },
+        })
         const [signedUrl] = await file.getSignedUrl({
           version: 'v4',
           action: 'read',
-          expires: Date.now() + 24 * 60 * 60 * 1000,
+          expires: isSuperadminPdf ? Date.now() + 30 * 24 * 60 * 60 * 1000 : Date.now() + 24 * 60 * 60 * 1000,
         })
         pdfUrl = signedUrl
       } catch (err) {
