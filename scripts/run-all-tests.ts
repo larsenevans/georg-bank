@@ -18,12 +18,14 @@ const allUnitTests: TestItem[] = [
   { id: 'access-flow', name: 'Access Flow Logic, Token & Quotas', category: 'Access & Session Contract', file: './access-flow.test.ts' },
   { id: 'access-regression', name: 'CONTRACT-1+1 Regression Lock (1 Platba + 1 PDF = End)', category: 'Access & Session Contract', file: './access-flow.regression.test.ts' },
   { id: 'superadmin-regression', name: 'Superadmin God-Mode Bypass (1111111199999999)', category: 'Access & Session Contract', file: './superadmin.regression.test.ts' },
+  { id: 'cron-gcs-retention', name: 'Cron Cleanup (6h vs 30d) & GCS PDF Retention', category: 'Access & Session Contract', file: './cron-cleanup-gcs-upload.test.ts' },
 
   // 3. Banking & Limits
   { id: 'daily-limit', name: 'Daily Payment Limit & Velocity Rules', category: 'Banking & Limits', file: './daily-payment-limit.test.ts' },
   { id: 'topup-rules', name: 'Topup & Account Deposit Rules', category: 'Banking & Limits', file: './topup-rules.test.ts' },
   { id: 'transactions-balance', name: 'Transactions & Balance Refresh Stream', category: 'Banking & Limits', file: './transactions-balance-refresh.test.ts' },
   { id: 'random-balance', name: 'Random Balance & Slovak Names Generator (1000 vzoriek)', category: 'Banking & Limits', file: './random-balance.test.ts' },
+  { id: 'qr-50-scenarios', name: 'QR Scanner & Decoders (58 Scenárov SPAYD, EPC, PayBySquare)', category: 'Banking & Limits', file: './qr-50-scenarios.test.ts' },
 
   // 4. Receipts & PDFs
   { id: 'statement-generator', name: 'Monthly Statement Generator Engine', category: 'Receipts & PDFs', file: './statement-generator.test.ts' },

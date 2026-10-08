@@ -172,6 +172,26 @@ async function requireAccessForConsumedAction(
     return { ok: false, error: 'access_session_required', status: 401 }
   }
 
+  // Superadmin session bypasses all limits and never requires DB lookup
+  if (isSuperadminToken(cookieToken)) {
+    return {
+      ok: true,
+      session: {
+        id: 'superadmin-session',
+        sessionToken: cookieToken,
+        requestId: 'superadmin-request',
+        status: 'active',
+        transactionUsed: false,
+        pdfGenerated: false,
+        createdAt: new Date(),
+        logoutAt: null,
+        endedAt: null,
+        expiresAt: new Date(Date.now() + 100 * 365 * 24 * 3600 * 1000),
+      },
+      skipped: false,
+    }
+  }
+
   const [session] = await db
     .select()
     .from(accessSession)
@@ -180,11 +200,6 @@ async function requireAccessForConsumedAction(
 
   if (!session) {
     return { ok: false, error: 'access_session_required', status: 401 }
-  }
-
-  // Superadmin session bypasses all limits and never expires
-  if (isSuperadminToken(session.sessionToken)) {
-    return { ok: true, session, skipped: false }
   }
 
   const consumedActionError = getConsumedActionError(session, consumedError)

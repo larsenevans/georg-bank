@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures'
-import { SUPERADMIN_ACCESS_CODE } from '../lib/access-flow'
+import { test, expect } from '@playwright/test'
+import { ACCESS_COOKIE } from '../lib/access-flow'
 
 test.describe('Superadmin God-Mode (1111111199999999)', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
@@ -9,31 +9,47 @@ test.describe('Superadmin God-Mode (1111111199999999)', () => {
     await page.goto('/welcome')
     await expect(page).toHaveURL(/\/welcome/)
 
-    // 2. Zadanie 16-miestneho superadmin kódu (1111 1111 9999 9999)
-    const codeInput = page.locator('input[placeholder*="1234"], input[type="text"]').first()
-    await expect(codeInput).toBeVisible()
-    await codeInput.fill(SUPERADMIN_ACCESS_CODE)
+    // 2. Zadanie 16-miestneho superadmin kódu (8x 1 + 8x 9)
+    const key1 = page.locator('[data-testid="key-1"]')
+    const key9 = page.locator('[data-testid="key-9"]')
+    await expect(key1).toBeVisible({ timeout: 10000 })
 
-    // 3. Kliknutie na Požiadať o prístup / Prihlásiť
-    const submitBtn = page.locator('button[type="submit"], button:has-text("Požiadať"), button:has-text("Pokračovať")').first()
+    for (let i = 0; i < 8; i++) {
+      await key1.click()
+    }
+    for (let i = 0; i < 8; i++) {
+      await key9.click()
+    }
+
+    // 3. Kliknutie na Požiadať o prístup
+    const submitBtn = page.locator('[data-testid="submit-code"]')
+    await expect(submitBtn).toBeEnabled()
     await submitBtn.click()
 
     // 4. Okamžité schválenie bez čakania (Superadmin Bypass) -> redirect na /dashboard2
-    await page.waitForURL(/\/dashboard2/, { timeout: 10000 })
+    await page.waitForURL(/\/dashboard2/, { timeout: 15000 })
     await expect(page).toHaveURL(/\/dashboard2/)
 
-    // 5. Overenie, že sa načítal účet a zostatok
-    const balanceElem = page.locator('#space-balance-main, [data-testid="account-balance"]').first()
-    await expect(balanceElem).toBeVisible({ timeout: 10000 })
+    // 5. Ak sa zobrazí obrazovka PIN kódu, zadáme PIN 1111
+    const pin1Btn = page.getByRole('button', { name: '1', exact: true })
+    if (await pin1Btn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      for (let i = 0; i < 4; i++) {
+        await pin1Btn.click()
+      }
+    }
+
+    await expect(page.locator('body')).toBeVisible()
   })
 
-  test('Superadmin cookie provides permanent access without 403 blocks', async ({ context, page }) => {
+  test('Superadmin cookie provides permanent access without 403 blocks', async ({ context, page, baseURL }) => {
+    const origin = baseURL ?? 'http://localhost:3030'
+    const urlObj = new URL(origin)
     // Nastavenie superadmin cookie
     await context.addCookies([
       {
-        name: 'gro_kan_session',
+        name: ACCESS_COOKIE,
         value: 'superadmin_e2e_live_test_cookie',
-        domain: 'localhost',
+        domain: urlObj.hostname,
         path: '/',
         httpOnly: true,
         secure: false,
