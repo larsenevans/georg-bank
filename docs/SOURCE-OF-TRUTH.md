@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00001-6vq ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00007-tq6 ✅ PRODUKCIA
 
 ---
 
@@ -273,7 +273,7 @@
 |:--------|:--------|:----:|
 | Projekt | `gggggg-510905` | ✅ |
 | Služba | `gro-kan` | ✅ |
-| Revízia | `gro-kan-00001-6vq` | ✅ **100% traffic** |
+| Revízia | `gro-kan-00007-tq6` | ✅ **100% traffic** |
 | Stav | Nasadené | ✅ |
 
 ### 🌐 Produkčná URL
@@ -369,6 +369,8 @@
 | 2026-10-08 | 👑 SUPERADMIN & DEPLOY | Implementovaný Superadmin God-Mode kód 1111111199999999 (okamžité schválenie, neobmedzené platby, neobmedzené generovanie PDF, trvalá session), nasadená revízia gro-kan-00003-zdd na Cloud Run, live overenie health probe a superadmin prihlásenia | `npm run test:all (14/14 pass), gcloud run revisions list -> gro-kan-00003-zdd 100%, curl /api/health -> ok:true` |
 | 2026-10-08 | 🛡️ RETENCIA 30D & LOCK | Implementovaná 30-dňová retencia transakcií a PDF pre Superadmina v DB a GCS, dvojúrovňový cron cleanup (/api/cron/cleanup), prísne uzamknutý kontrakt CONTRACT-1+1 pre bežných hostí (6h cleanup), nasadená revízia gro-kan-00006-rpc | `npm run test:all (15/15 pass 100%), verify-prod-live.ts (7/7 pass 100%), gcloud run revisions list -> gro-kan-00006-rpc 100%` |
 | 2026-10-08 | 📱 NATIVE APP & TESTY 17/17 | Pridaných 58 QR testovacích scenárov, integračný test Cron Cleanup + GCS, E2E Playwright test (Guest vs Superadmin), Native Mobile Viewport Lock, Anti-Selection a Friction Scroll | `npm run test:all (17/17 pass 100%), ESLint 0 errors, git push origin abonbranch` |
+| 2026-10-08 | 🚀 DEPLOY gro-kan-00007-tq6 | Nasadená nová revízia gro-kan-00007-tq6 na Cloud Run (100% traffic), overený kompletný env výpis (ACCESS_FLOW_ENABLED=true), live health probe a 7/7 testov produkcie | `gcloud run revisions list -> gro-kan-00007-tq6 100%, verify-prod-live.ts (7/7 pass 100%), curl /api/health -> 200 OK` |
+
 
 ---
 
@@ -384,5 +386,5 @@
 
 ---
 
-*Dokument založený: 2025 | Správca: Erik (u0352652320@gmail.com) | Posledná úprava: 2026-10-08*
+*Dokument založený: 2025 | Správca: grok (u0352652320@gmail.com) | Posledná úprava: 2026-10-08*
 
