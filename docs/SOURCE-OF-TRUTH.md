@@ -1,7 +1,8 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00007-tq6 ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00008-gpv ✅ PRODUKCIA
 
 ---
+
 
 ## 🧭 RÝCHLA NAVIGÁCIA
 - [🎯 Produkcia](#-produkcia) → `https://gro-kan-1040062317673.europe-west3.run.app`
@@ -273,7 +274,7 @@
 |:--------|:--------|:----:|
 | Projekt | `gggggg-510905` | ✅ |
 | Služba | `gro-kan` | ✅ |
-| Revízia | `gro-kan-00007-tq6` | ✅ **100% traffic** |
+| Revízia | `gro-kan-00008-gpv` | ✅ **100% traffic** |
 | Stav | Nasadené | ✅ |
 
 ### 🌐 Produkčná URL
@@ -371,6 +372,8 @@
 | 2026-10-08 | 📱 NATIVE APP & TESTY 17/17 | Pridaných 58 QR testovacích scenárov, integračný test Cron Cleanup + GCS, E2E Playwright test (Guest vs Superadmin), Native Mobile Viewport Lock, Anti-Selection a Friction Scroll | `npm run test:all (17/17 pass 100%), ESLint 0 errors, git push origin abonbranch` |
 | 2026-10-08 | 🚀 DEPLOY gro-kan-00007-tq6 | Nasadená nová revízia gro-kan-00007-tq6 na Cloud Run (100% traffic), overený kompletný env výpis (ACCESS_FLOW_ENABLED=true), live health probe a 7/7 testov produkcie | `gcloud run revisions list -> gro-kan-00007-tq6 100%, verify-prod-live.ts (7/7 pass 100%), curl /api/health -> 200 OK` |
 | 2026-10-08 | 📱 MOBILE DEVICE MATRIX | Integrovaný testovací balík npm run test:mobile-devices pokrývajúci 11 zariadení (iPhone 13 Pro Max+, iPhone 14 Plus, iPhone 15/16/17, Samsung S24 Ultra, Pixel 9 Pro, Nothing Phone, Xiaomi) s overením Safe Area, nulového horizontálneho scrollu a dotykovej ergonómie | `npm run test:mobile-devices (12/12 pass 100%), npm run test:all (17/17 pass 100%)` |
+| 2026-10-08 | 🔄 LOGOUT REDIRECT & DEPLOY | Nastavené presmerovanie po odhlásení (/api/access/logout, dashboard-header, PDF dokončenie) na homepage (root /), pridaná unit + E2E testovacia sada, nasadená revízia gro-kan-00008-gpv na Cloud Run (100% traffic), overený env výpis a 7/7 testov produkcie | `gcloud run revisions list -> gro-kan-00008-gpv 100%, verify-prod-live.ts (7/7 pass 100%), npm run test:all (18/18 pass 100%)` |
+
 
 
 
