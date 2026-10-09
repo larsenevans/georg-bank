@@ -127,6 +127,90 @@ const SCANNER_PROBE_EXTENSIONS = [
   '.rar',
 ]
 
+const BLOCKED_USER_AGENTS = [
+  'sqlmap',
+  'nikto',
+  'wpscan',
+  'dirbuster',
+  'gobuster',
+  'masscan',
+  'python-requests',
+  'python-urllib',
+  'zgrab',
+  'nmap',
+  'nuclei',
+  'acunetix',
+  'nessus',
+  'openvas',
+  'whatweb',
+  'censys',
+  'shodan',
+  'project-discovery',
+  'ffuf',
+  'feroxbuster',
+]
+
+/**
+ * Detekcia automatizovaných scannerov a exploit nástrojov podľa User-Agent (Nápad 4)
+ */
+export function isBlockedUserAgent(userAgent: string | null | undefined): boolean {
+  if (!userAgent) return false
+  const lower = userAgent.toLowerCase()
+  return BLOCKED_USER_AGENTS.some((blocked) => lower.includes(blocked))
+}
+
+const KNOWN_ROUTE_PREFIXES = [
+  '/',
+  '/welcome',
+  '/gate',
+  '/dashboard',
+  '/dashboard2',
+  '/dashboard3',
+  '/dashboard-v2',
+  '/dashboardpayment',
+  '/horizon-preview',
+  '/pohyby',
+  '/sign-in',
+  '/sign-up',
+  '/test-pdf',
+  '/api/access',
+  '/api/account',
+  '/api/assistant',
+  '/api/auth',
+  '/api/cron',
+  '/api/debug-ingest',
+  '/api/export',
+  '/api/gate',
+  '/api/health',
+  '/api/pin',
+  '/api/push',
+  '/api/receipts',
+  '/api/statements',
+  '/api/sync',
+  '/api/test-db',
+  '/api/transactions',
+  '/api/webhooks',
+  '/robots.txt',
+  '/site.webmanifest',
+  '/landing.html',
+  '/login-clone.html',
+  '/offline.html',
+  '/images',
+  '/assets',
+  '/pdfs',
+  '/_next',
+]
+
+/**
+ * Overenie, či ide o legitímnu známu trasu aplikácie (Nápad 5: Total Blank Stealth Fallback)
+ */
+export function isKnownAppRoute(pathname: string): boolean {
+  if (pathname === '/') return true
+  return KNOWN_ROUTE_PREFIXES.some(
+    (prefix) => prefix !== '/' && (pathname === prefix || pathname.startsWith(prefix + '/'))
+  )
+}
+
 /**
  * Detekcia bežných scanner sond a exploit skenerov (Nápad 3: Scanner Trap)
  */
@@ -182,11 +266,24 @@ export function createScannerTrapResponse(): NextResponse {
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
+  const userAgent = request.headers.get('user-agent')
 
-  // 🛡️ SCANNER TRAP & SILENT DROP (Nápad 3)
+  // 🛡️ NÁPAD 4: BLOKOVANIE AUTOMATIZOVANÝCH USER-AGENTOV (Security Tool Scanners)
+  // Okamžité zahodenie požiadaviek od sqlmap, nikto, wpscan, dirbuster, gobuster, masscan, python-requests, zgrab atď.
+  if (isBlockedUserAgent(userAgent)) {
+    return createScannerTrapResponse()
+  }
+
+  // 🛡️ NÁPAD 3: SCANNER TRAP & SILENT DROP PRE COMMON PROBES
   // Okamžité zachytenie a eliminácia sond (wp-admin, .env, phpmyadmin, .git, xmlrpc, atď.)
   // Žiadny redirect, žiadne odhalenie George bankingu, žiadne JS bundles.
   if (isScannerProbe(pathname)) {
+    return createScannerTrapResponse()
+  }
+
+  // 🛡️ NÁPAD 5: TOTAL BLANK STEALTH FALLBACK (Zero Next.js Leaks na neznámych trasách)
+  // Každá neexistujúca URL adresa vráti čistú generickú 404 bez odhalenia Next.js stacku
+  if (!isKnownAppRoute(pathname)) {
     return createScannerTrapResponse()
   }
 
