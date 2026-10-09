@@ -72,17 +72,84 @@ export async function runSecurityStealthRegressionTest() {
     )
   }
 
-  const proxyPath = path.join(process.cwd(), 'proxy.ts')
-  const proxyContent = fs.readFileSync(proxyPath, 'utf-8')
+  console.log('--- [5/5] Testovanie Scanner Trap & Silent Drop pre Probes (Nápad 3) ---')
 
-  for (const dir of requiredDirectives) {
-    assert.ok(
-      proxyContent.includes(dir),
-      `proxy.ts X-Robots-Tag musí obsahovať direktívu: ${dir}`
+  const { isScannerProbe, proxy } = await import('../proxy')
+  const { NextRequest } = await import('next/server')
+
+  const sampleProbes = [
+    '/wp-admin',
+    '/wp-admin/index.php',
+    '/wp-login.php',
+    '/.env',
+    '/.env.local',
+    '/.env.production',
+    '/phpmyadmin',
+    '/phpMyAdmin/index.php',
+    '/.git',
+    '/.git/config',
+    '/.git/HEAD',
+    '/xmlrpc.php',
+    '/actuator/health',
+    '/.aws/credentials',
+    '/.ssh/id_rsa',
+    '/exploit.php',
+    '/test.asp',
+    '/dump.sql',
+    '/backup.tar.gz',
+    '/welcome/../.env',
+    '/%2e%2e/etc/passwd',
+  ]
+
+  for (const probe of sampleProbes) {
+    assert.strictEqual(
+      isScannerProbe(probe),
+      true,
+      `isScannerProbe('${probe}') musí vrátiť true`
+    )
+
+    const probeReq = new NextRequest(`https://george.test${probe}`)
+    const probeRes = proxy(probeReq)
+
+    assert.strictEqual(probeRes.status, 404, `Sonda '${probe}' musí dostať HTTP 404 (nie redirect ani 200)`)
+    
+    const bodyText = await probeRes.text()
+    assert.ok(bodyText.includes('404 Not Found'), `Odpoveď pre '${probe}' musí obsahovať '404 Not Found'`)
+    assert.ok(bodyText.includes('nginx'), `Odpoveď pre '${probe}' musí obsahovať anonymné 'nginx' maskovanie`)
+    assert.ok(!bodyText.includes('George'), `Odpoveď pre '${probe}' nesmie prezradiť brand 'George'`)
+    assert.ok(!bodyText.includes('Internetbanking'), `Odpoveď pre '${probe}' nesmie prezradiť 'Internetbanking'`)
+    assert.ok(!bodyText.includes('Next.js'), `Odpoveď pre '${probe}' nesmie prezradiť 'Next.js'`)
+
+    const robotsHeader = probeRes.headers.get('X-Robots-Tag')
+    assert.ok(robotsHeader?.includes('noindex'), `Odpoveď pre '${probe}' musí mať X-Robots-Tag noindex`)
+  }
+
+  // Overenie, že legitímne trasy George bankingu NIE SÚ blokované
+  const legitimateRoutes = [
+    '/',
+    '/welcome',
+    '/gate',
+    '/dashboard2',
+    '/dashboard3',
+    '/pohyby',
+    '/api/access/status',
+    '/api/auth/guest',
+    '/api/transactions',
+    '/api/receipts',
+    '/api/export/pdf',
+    '/api/health',
+    '/robots.txt',
+  ]
+
+  for (const route of legitimateRoutes) {
+    assert.strictEqual(
+      isScannerProbe(route),
+      false,
+      `Legitímna trasa '${route}' NESMIE byť vyhodnotená ako scanner probe`
     )
   }
 
-  console.log('✅ [Security-Stealth-Test] Všetky kontroly pre Anti-Fingerprinting a AI Bot Blokovanie úspešne prešli!')
+  console.log('✅ [Security-Stealth-Test] Všetky kontroly pre Anti-Fingerprinting, AI Bot Blokovanie aj Scanner Trap úspešne prešli!')
   return { success: true }
 }
 

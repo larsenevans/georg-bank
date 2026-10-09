@@ -78,6 +78,102 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+const SCANNER_PROBE_PREFIXES = [
+  '/wp-',
+  '/phpmyadmin',
+  '/pma',
+  '/adminer',
+  '/actuator',
+  '/cgi-bin',
+  '/cgi-sys',
+  '/.env',
+  '/.git',
+  '/.svn',
+  '/.hg',
+  '/.bzr',
+  '/.aws',
+  '/.ssh',
+  '/.docker',
+  '/.kube',
+  '/.config',
+]
+
+const SCANNER_PROBE_EXACT = [
+  '/xmlrpc.php',
+  '/server-status',
+  '/server-info',
+  '/web.config',
+  '/.htaccess',
+  '/.htpasswd',
+  '/composer.json',
+  '/composer.lock',
+  '/package.json',
+  '/package-lock.json',
+]
+
+const SCANNER_PROBE_EXTENSIONS = [
+  '.php',
+  '.asp',
+  '.aspx',
+  '.jsp',
+  '.cgi',
+  '.sql',
+  '.bak',
+  '.backup',
+  '.swp',
+  '.tar',
+  '.gz',
+  '.zip',
+  '.rar',
+]
+
+/**
+ * Detekcia bežných scanner sond a exploit skenerov (Nápad 3: Scanner Trap)
+ */
+export function isScannerProbe(pathname: string): boolean {
+  const lower = pathname.toLowerCase()
+  if (lower.includes('..') || lower.includes('%2e%2e') || lower.includes('/etc/passwd') || lower.includes('/proc/self')) {
+    return true
+  }
+  if (SCANNER_PROBE_PREFIXES.some((prefix) => lower.startsWith(prefix))) {
+    return true
+  }
+  if (SCANNER_PROBE_EXACT.some((exact) => lower === exact)) {
+    return true
+  }
+  if (SCANNER_PROBE_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Okamžitá odpoveď pre scanner trap: generická Nginx 404 bez odhalenia Next.js/Reactu
+ */
+export function createScannerTrapResponse(): NextResponse {
+  const genericNginxHtml =
+    '<!DOCTYPE html>\n' +
+    '<html>\n' +
+    '<head><title>404 Not Found</title></head>\n' +
+    '<body>\n' +
+    '<center><h1>404 Not Found</h1></center>\n' +
+    '<hr><center>nginx</center>\n' +
+    '</body>\n' +
+    '</html>\n'
+
+  return new NextResponse(genericNginxHtml, {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Robots-Tag':
+        'noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noodp, noydir',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Connection': 'close',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  })
+}
+
 /**
  * Next.js 16+: file convention is `proxy` (formerly `middleware`).
  * Site gate + guest session redirects.
@@ -86,6 +182,13 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
+
+  // 🛡️ SCANNER TRAP & SILENT DROP (Nápad 3)
+  // Okamžité zachytenie a eliminácia sond (wp-admin, .env, phpmyadmin, .git, xmlrpc, atď.)
+  // Žiadny redirect, žiadne odhalenie George bankingu, žiadne JS bundles.
+  if (isScannerProbe(pathname)) {
+    return createScannerTrapResponse()
+  }
 
   // Access flow welcome gate — runs BEFORE the legacy site gate.
   // Every visitor must hold a valid access session (approved by admin).
