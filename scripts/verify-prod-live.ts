@@ -177,6 +177,52 @@ async function runVerification() {
     failed++
   }
 
+  // 9. Test: Dátová izolácia transakcií - Bežný používateľ nesmie vidieť žiadne platby superadmina
+  try {
+    const res = await fetch(`${PROD_URL}/api/transactions`, {
+      headers: {
+        Cookie: 'access_granted=guest_session_live_test',
+      },
+    })
+    const data = await res.json()
+    if (res.status === 200 && Array.isArray(data.transactions)) {
+      const hasSuperadminTx = data.transactions.some((t: { isSuperadmin?: boolean }) => t.isSuperadmin === true)
+      if (!hasSuperadminTx) {
+        console.log(`✅ 9. Dátová izolácia transakcií (Guest) -> 200 OK (${data.transactions.length} platieb, 0 superadmin platieb pre bežného hosťa)`)
+        passed++
+      } else {
+        console.error('❌ 9. Dátová izolácia transakcií zlyhala: Bežný hosť vidí superadmin platby!')
+        failed++
+      }
+    } else {
+      console.error('❌ 9. Transactions endpoint failed:', res.status, data)
+      failed++
+    }
+  } catch (err) {
+    console.error('❌ 9. Transactions endpoint exception:', err)
+    failed++
+  }
+
+  // 10. Test: Superadmin transakcie - Superadmin má prístup k transakciám vrátane svojich
+  try {
+    const res = await fetch(`${PROD_URL}/api/transactions`, {
+      headers: {
+        Cookie: superadminCookie,
+      },
+    })
+    const data = await res.json()
+    if (res.status === 200 && Array.isArray(data.transactions)) {
+      console.log(`✅ 10. Superadmin transakcie -> 200 OK (${data.transactions.length} načítaných platieb s plným prístupom)`)
+      passed++
+    } else {
+      console.error('❌ 10. Superadmin transactions failed:', res.status, data)
+      failed++
+    }
+  } catch (err) {
+    console.error('❌ 10. Superadmin transactions exception:', err)
+    failed++
+  }
+
   console.log('\n==================================================================')
   console.log(`📊 VÝSLEDOK PRODUKČNÉHO TESTU: ${passed} / ${passed + failed} ÚSPEŠNÝCH`)
   console.log('==================================================================')

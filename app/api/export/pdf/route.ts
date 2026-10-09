@@ -1,23 +1,23 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { bankAccount, transaction } from '@/lib/db/schema'
-import { and, eq, or, desc, gte, lt } from 'drizzle-orm'
-import { generateTransactionsPdf, TransactionRow } from '@/lib/generate-transactions-pdf'
-import { getMonthUtcRange } from '@/lib/month-range'
-import { buildStatementAccountFields } from '@/lib/statement-pdf-profile'
-import {
-  formatSlspAccountingPeriod,
-  formatSlspStatementDate,
-  formatSlspStatementNumber,
-} from '@/lib/format-date'
+import { isSuperadminCode, isSuperadminToken } from '@/lib/access-flow'
 import {
   afterPdfSuccess,
   clearAccessCookie,
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
-import { isSuperadminCode, isSuperadminToken } from '@/lib/access-flow'
+import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { bankAccount, transaction } from '@/lib/db/schema'
+import {
+  formatSlspAccountingPeriod,
+  formatSlspStatementDate,
+  formatSlspStatementNumber,
+} from '@/lib/format-date'
+import { TransactionRow, generateTransactionsPdf } from '@/lib/generate-transactions-pdf'
+import { getMonthUtcRange } from '@/lib/month-range'
+import { buildStatementAccountFields } from '@/lib/statement-pdf-profile'
+import { and, desc, eq, gte, lt, or } from 'drizzle-orm'
+import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
   try {
@@ -86,9 +86,9 @@ export async function GET(req: Request) {
 
     const dateFilter = monthRange
       ? and(
-          gte(transaction.createdAt, monthRange.start),
-          lt(transaction.createdAt, monthRange.end)
-        )
+        gte(transaction.createdAt, monthRange.start),
+        lt(transaction.createdAt, monthRange.end)
+      )
       : undefined
 
     const transactions = await db
