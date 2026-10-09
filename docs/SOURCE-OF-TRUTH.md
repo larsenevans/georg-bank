@@ -136,7 +136,7 @@
 | Položka | Hodnota | Stav |
 |:--------|:--------|:----:|
 | Vetva | **abonbranch** | ✅ |
-| HEAD | `adeb6f1` (origin/abonbranch) | ✅ |
+| HEAD | `8d2c678` (origin/abonbranch) | ✅ |
 | Pracovný strom | Čistý | ✅ `git status --short` prázdny |
 | Remote | `https://github.com/larsenevans/georg-bank.git` | ✅ |
 
@@ -150,7 +150,8 @@
 ```
 ✅ access-flow          ✅ access-session        ✅ access-request-store
 ✅ welcome page + screen ✅ 5× access API routes  ✅ receipts upload (GCS)
-✅ proxy.ts              ✅ migrácie 0000–0004   ✅ Dockerfile
+✅ proxy.ts (stealth)   ✅ migrácie 0000–0004   ✅ Dockerfile
+✅ czechAccount.ts      ✅ qr/decoder.ts (SPAYD) ✅ Horizon Dashboard v2
 ```
 
 ---
@@ -228,9 +229,10 @@
 ### 🧪 Kvalita Kódu
 | Test | Výsledok | Stav |
 |:-----|:---------|:----:|
-| Unit testy | 7 súborov, 27 testov | ✅ **100% PASS** |
-| Typecheck | `npx tsc --noEmit` | ✅ **0 chýb** |
-| Build | `npm run build` | ✅ **exit code 0** |
+| Kompletná testovacia sada | 23 modulov (`npm run test:all`) | ✅ **100% PASS** |
+| Typecheck | `tsc --noEmit` | ✅ **0 chýb** |
+| Linter | `npm run lint` (ESLint) | ✅ **0 errors, 0 warnings** |
+| Build | `npm run build` (Next.js 16) | ✅ **exit code 0** |
 
 ---
 
@@ -340,15 +342,16 @@
 | ✅ DOKONČENÉ | **Všetky kľúčové požiadavky** | ✅ **100% FUNKČNÉ** |
 
 > **Detail:**
-> - Databáza ✅
-> - Migrácie ✅
-> - Access Gate ✅
-> - E-maily ✅
-> - Rate Limit ✅
-> - Secret Rotácia ✅
-> - GCS Signed Receipts ✅
-> - APP_PIN v2 ✅
-> - Monitoring & Alerty ✅
+> - Databáza & Migrácie ✅
+> - Access Gate & CONTRACT-1+1 Zámok ✅
+> - E-maily & Notifikácie ✅
+> - Rate Limit & Anti-Spoofing ✅
+> - Secret Rotácia (APP_PIN v2, ADMIN_SECRET v2) ✅
+> - GCS Signed Receipts (A4 PDF) ✅
+> - Dátová izolácia transakcií ✅
+> - Maximum Security Stealth No-Index Suite ✅
+> - Česká QR Platba (SPAYD v1.0, Modulo 11 ČNB, QR Faktúra) ✅
+> - Monitoring & Alerty (5/5 policy) ✅
 
 ---
 
