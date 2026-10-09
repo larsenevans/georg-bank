@@ -134,6 +134,10 @@ export function proxy(request: NextRequest) {
       pathname.startsWith('/api/transactions') ||
       pathname.startsWith('/api/receipts') ||
       pathname.startsWith('/api/push') ||
+      pathname.startsWith('/api/export') ||
+      pathname.startsWith('/api/cron') ||
+      pathname.startsWith('/api/pin') ||
+      pathname.startsWith('/api/account') ||
       pathname.startsWith('/api/debug-ingest') ||
       pathname.startsWith('/api/auth')
 
