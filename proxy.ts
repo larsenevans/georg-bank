@@ -52,7 +52,10 @@ function shouldSkipGuestRedirect(request: NextRequest) {
  * Security headers helper - adds camera permissions and security headers
  */
 function addSecurityHeaders(response: NextResponse): NextResponse {
-  response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  response.headers.set(
+    'X-Robots-Tag',
+    'noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noodp, noydir'
+  );
   response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');

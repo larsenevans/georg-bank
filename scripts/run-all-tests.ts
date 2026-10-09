@@ -13,6 +13,7 @@ const allUnitTests: TestItem[] = [
   // 1. Auth & Security
   { id: 'guest-auth', name: 'Guest Auth Token Contract & Expiry', category: 'Auth & Security', file: './guest-auth.test.ts' },
   { id: 'app-pin', name: 'App PIN & Biometrics FaceID State', category: 'Auth & Security', file: './app-pin.test.ts' },
+  { id: 'security-stealth', name: 'Anti-Fingerprinting, Robots & Stealth No-Index', category: 'Auth & Security', file: './security-stealth.regression.test.ts' },
 
   // 2. Access & Session Contract
   { id: 'access-flow', name: 'Access Flow Logic, Token & Quotas', category: 'Access & Session Contract', file: './access-flow.test.ts' },
