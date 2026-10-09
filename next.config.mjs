@@ -5,6 +5,8 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable X-Powered-By header to prevent fingerprinting
+  poweredByHeader: false,
   // Prevent Next from picking ~/package-lock.json as monorepo root (slow/wrong compiles).
   outputFileTracingRoot: projectRoot,
   turbopack: {
