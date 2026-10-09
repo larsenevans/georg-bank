@@ -312,35 +312,54 @@ async function runLiveSmokeTest() {
     })
     console.log(`  ${onWelcome ? '✅' : '❌'} B1. Uvítacia obrazovka načítaná (${welcomeTitle})`)
 
+    // Vyčistíme sessionStorage aby sme neboli v pending stave z predchádzajúceho testu
+    await page.evaluate(() => sessionStorage.clear())
+    const cancelBtn = page.locator('[data-testid="cancel-request"]')
+    if (await cancelBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+      await cancelBtn.click()
+      await page.waitForTimeout(300)
+    }
+
     // Krok B2: Zadávanie Superadmin kódu cez klávesnicu: 8× '1' a 8× '9'
-    console.log('  Klikám klávesnicu: 1111111199999999...')
-    await page.waitForSelector('[data-testid="key-1"]', { timeout: 15000 })
+    console.log('  Zadávam superadmin kód: 1111111199999999...')
+    const key1 = page.locator('[data-testid="key-1"]')
+    const key9 = page.locator('[data-testid="key-9"]')
+    const backspaceBtn = page.locator('[data-testid="key-backspace"]')
+    await key1.waitFor({ state: 'visible', timeout: 15000 })
 
-    // Počkáme na dokončenie React hydratácie
-    let currentDigits = ''
-    for (let retry = 0; retry < 15; retry++) {
-      await page.click('[data-testid="key-1"]')
-      currentDigits = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
-      if (currentDigits.length > 0) break
-      await page.waitForTimeout(400)
+    // Vyčistíme prípadný existujúci text
+    const clearBtn = page.locator('button[aria-label="Vymazať zadaný kód"]')
+    if (await clearBtn.isVisible().catch(() => false)) {
+      await clearBtn.click().catch(() => {})
+      await page.waitForTimeout(100)
     }
 
-    // Zadávanie zvyšných '1' do počtu 8
-    while (currentDigits.length < 8) {
-      await page.click('[data-testid="key-1"]')
-      currentDigits = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
+    // Hydratácia: čakáme kým kliknutie na key1 reálne zareaguje
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await key1.click()
+      await page.waitForTimeout(150)
+      const text = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
+      if (text.length > 0) {
+        // Hydratácia úspešná, vyčistíme zadaný znak
+        await backspaceBtn.click()
+        await page.waitForTimeout(100)
+        break
+      }
+      await page.waitForTimeout(250)
+    }
+
+    // Zadáme 8× 1 a 8× 9
+    for (let i = 0; i < 8; i++) {
+      await key1.click()
+      await page.waitForTimeout(50)
+    }
+    for (let i = 0; i < 8; i++) {
+      await key9.click()
       await page.waitForTimeout(50)
     }
 
-    // Zadávanie 8× '9' do počtu 16
-    while (currentDigits.length < 16) {
-      await page.click('[data-testid="key-9"]')
-      currentDigits = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
-      await page.waitForTimeout(50)
-    }
-
-    const digitsText = await page.locator('[data-testid="digits-text"]').textContent()
-    const codeEntered = digitsText?.replace(/\s/g, '') === '1111111199999999'
+    const digitsText = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
+    const codeEntered = digitsText === '1111111199999999'
     report.browserChecks.push({
       name: 'B2. Zadávanie 16-miestneho Superadmin kódu cez Keypad',
       passed: codeEntered,

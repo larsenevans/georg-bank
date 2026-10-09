@@ -30,6 +30,7 @@ const allUnitTests: TestItem[] = [
   { id: 'transactions-isolation', name: 'Transactions Isolation (Guest vs Superadmin)', category: 'Banking & Limits', file: './transactions-isolation.regression.test.ts' },
   { id: 'random-balance', name: 'Random Balance & Slovak Names Generator (1000 vzoriek)', category: 'Banking & Limits', file: './random-balance.test.ts' },
   { id: 'qr-50-scenarios', name: 'QR Scanner & Decoders (58 Scenárov SPAYD, EPC, PayBySquare)', category: 'Banking & Limits', file: './qr-50-scenarios.test.ts' },
+  { id: 'qr-czech-republic', name: 'Czech QR Platba (SPAYD v1.0, ČNB Modulo 11 & QR Faktúra)', category: 'Banking & Limits', file: './qr-czech-republic.test.ts' },
 
   // 4. Receipts & PDFs
   { id: 'statement-generator', name: 'Monthly Statement Generator Engine', category: 'Receipts & PDFs', file: './statement-generator.test.ts' },

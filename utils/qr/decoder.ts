@@ -15,6 +15,7 @@ import {
   normalizeDate,
   isUrl,
 } from './normalizer';
+import { czechIbanToNational } from './czechAccount';
 
 /**
  * Maximum allowed QR payload size in bytes
@@ -618,7 +619,30 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
     const recipientName = normalizeText(pairs['RN'] || pairs['NAME'] || '', SPAYD_MAX_RN) || '';
     const note = normalizeText(pairs['MSG'] || pairs['NOTE'] || null, SPAYD_MAX_MSG);
     const dueDate = pairs['DT'] ? normalizeDate(pairs['DT']) : null;
-    const immediatePayment = pairs['PT']?.trim().toUpperCase() === 'IP';
+    
+    // Payment type identification (ČBA SPAYD spec)
+    const ptRaw = pairs['PT']?.trim().toUpperCase();
+    let paymentType = 'STANDARD';
+    if (ptRaw === 'IP') paymentType = 'INSTANT';
+    else if (ptRaw === 'SO') paymentType = 'STANDING_ORDER';
+    else if (ptRaw === 'DD') paymentType = 'DIRECT_DEBIT';
+    else if (ptRaw) paymentType = ptRaw;
+
+    const immediatePayment = ptRaw === 'IP';
+
+    // Standing order details from X-PER
+    let standingOrder: { frequency?: string | null; dayOfMonth?: number | null } | null = null;
+    if (paymentType === 'STANDING_ORDER' || pairs['X-PER']) {
+      standingOrder = {
+        frequency: pairs['X-PER'] || null,
+        dayOfMonth: dueDate ? dueDate.getDate() : null,
+      };
+    }
+
+    // Invoice & VAT identifiers (QR Faktura CZ spec)
+    const invoiceNumber = normalizeText(pairs['X-INV'] || null, 35);
+    const taxId = normalizeText(pairs['X-VAT'] || null, 20);
+    const businessId = normalizeText(pairs['X-ID'] || null, 20);
 
     const sharedFields = {
       qrFormat: 'spayd' as const,
@@ -632,15 +656,36 @@ function tryDecodeSpayd(qrData: string): QrDecodingResult {
       paymentReference,
       dueDate,
       immediatePayment,
+      paymentType,
+      standingOrder,
+      invoiceNumber,
+      taxId,
+      businessId,
+      altAccounts: accounts.length > 1 ? accounts : undefined,
       rawQrData: qrData,
     };
 
     const drafts: PaymentDraft[] = [];
     for (const account of accounts) {
+      const normalizedIban = normalizeIban(account.iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || account.iban;
+      let bic = account.bic;
+      let czechNationalAccount: string | null = null;
+
+      if (normalizedIban.startsWith('CZ')) {
+        const national = czechIbanToNational(normalizedIban);
+        if (national) {
+          czechNationalAccount = national.formatted;
+          if (!bic && national.bic) {
+            bic = national.bic;
+          }
+        }
+      }
+
       drafts.push({
         ...sharedFields,
-        iban: normalizeIban(account.iban, { ...DEFAULT_NORMALIZE_IBAN_OPTIONS, validateChecksum: false }) || account.iban,
-        bic: account.bic,
+        iban: normalizedIban,
+        bic,
+        czechNationalAccount,
       });
     }
 

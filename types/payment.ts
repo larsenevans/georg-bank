@@ -45,6 +45,25 @@ export interface PaymentDraft {
   /** SPAYD PT:IP — request immediate payment when supported by bank */
   immediatePayment?: boolean;
   
+  // Czech SPAYD & domestic specific fields
+  /** Czech national account format: e.g. '1200361016/3030' or '19-2000145399/0800' */
+  czechNationalAccount?: string | null;
+  /** Payment type: STANDARD, INSTANT (PT:IP), STANDING_ORDER (PT:SO), DIRECT_DEBIT (PT:DD) */
+  paymentType?: 'STANDARD' | 'INSTANT' | 'STANDING_ORDER' | 'DIRECT_DEBIT' | string;
+  /** Standing order details if PT:SO is used */
+  standingOrder?: {
+    frequency?: string | null;
+    dayOfMonth?: number | null;
+  } | null;
+  /** Invoice number from QR Faktura (X-INV) */
+  invoiceNumber?: string | null;
+  /** VAT / Tax ID from QR Faktura (X-VAT) */
+  taxId?: string | null;
+  /** Business / Company ID from QR Faktura (X-ID) */
+  businessId?: string | null;
+  /** Alternative accounts from ALT-ACC */
+  altAccounts?: Array<{ iban: string; bic: string | null }>;
+
   // Source data for debugging and validation
   rawQrData: string | null; // Original QR data string
 }

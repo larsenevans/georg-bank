@@ -124,7 +124,7 @@ export function QrPaymentPreview({
         <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
           {validation.errors.map((error, index) => (
             <li key={`error-${index}`} className="flex items-start gap-2">
-              <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>{error.field}: {error.message}</span>
@@ -132,7 +132,7 @@ export function QrPaymentPreview({
           ))}
           {validation.warnings.map((warning, index) => (
             <li key={`warning-${index}`} className="flex items-start gap-2">
-              <svg className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <span>{warning.field}: {warning.message}</span>
@@ -203,7 +203,7 @@ export function QrPaymentPreview({
             
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
@@ -222,6 +222,11 @@ export function QrPaymentPreview({
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                     {formatIban(draft.iban)}
                   </p>
+                  {draft.czechNationalAccount && (
+                    <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
+                      Účet ČR: {draft.czechNationalAccount}
+                    </p>
+                  )}
                   {draft.bic && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       BIC: {draft.bic}
@@ -313,6 +318,46 @@ export function QrPaymentPreview({
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500 dark:text-gray-400">Due Date</span>
                     <span className="text-sm text-gray-900 dark:text-white">{formatDate(draft.dueDate)}</span>
+                  </div>
+                )}
+
+                {/* Czech National Account */}
+                {draft.czechNationalAccount && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Národný formát účtu (ČR)</span>
+                    <span className="text-sm font-mono text-gray-900 dark:text-white">{draft.czechNationalAccount}</span>
+                  </div>
+                )}
+
+                {/* Payment Type */}
+                {draft.paymentType && draft.paymentType !== 'STANDARD' && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Typ platby</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                      {draft.paymentType === 'INSTANT' ? '⚡ Okamžitá platba' :
+                       draft.paymentType === 'STANDING_ORDER' ? '📅 Trvalý príkaz' :
+                       draft.paymentType === 'DIRECT_DEBIT' ? '📥 Inkaso' : draft.paymentType}
+                    </span>
+                  </div>
+                )}
+
+                {/* QR Faktura Identifiers */}
+                {draft.invoiceNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Číslo faktúry (X-INV)</span>
+                    <span className="text-sm font-mono text-gray-900 dark:text-white">{draft.invoiceNumber}</span>
+                  </div>
+                )}
+                {draft.taxId && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">DIČ (X-VAT)</span>
+                    <span className="text-sm font-mono text-gray-900 dark:text-white">{draft.taxId}</span>
+                  </div>
+                )}
+                {draft.businessId && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">IČO (X-ID)</span>
+                    <span className="text-sm font-mono text-gray-900 dark:text-white">{draft.businessId}</span>
                   </div>
                 )}
 

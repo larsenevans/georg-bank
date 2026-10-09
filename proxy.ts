@@ -19,6 +19,7 @@ function shouldSkipAuth(request: NextRequest) {
   return (
     pathname === '/welcome' ||
     pathname === '/robots.txt' ||
+    pathname.startsWith('/_next') ||
     (process.env.NODE_ENV !== 'production' && pathname.startsWith('/dashboard-v2')) ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/pin') ||
@@ -65,7 +66,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "img-src 'self' data: blob: https://fonts.gstatic.com; " +
-    "connect-src 'self' https:; " +
+    "connect-src 'self' https: ws: wss:; " +
     "font-src 'self' https://fonts.gstatic.com; " +
     "object-src 'none'; " +
     "frame-ancestors 'none'; " +
@@ -295,6 +296,7 @@ export function proxy(request: NextRequest) {
       pathname === '/welcome' ||
       pathname === '/robots.txt' ||
       pathname === '/gate' ||
+      pathname.startsWith('/_next') ||
       (process.env.NODE_ENV !== 'production' && pathname.startsWith('/dashboard-v2')) ||
       pathname.startsWith('/api/access') ||
       pathname.startsWith('/api/account') ||
@@ -382,7 +384,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip static assets + face-api weights under /models (public/)
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|service-worker.js|models/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|json)$).*)',
+    // Skip all internal Next.js assets/HMR + face-api weights under /models (public/)
+    '/((?!_next|favicon.ico|manifest.json|service-worker.js|models/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|json)$).*)',
   ],
 }

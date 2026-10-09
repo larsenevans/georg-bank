@@ -490,6 +490,12 @@ export function TransferForm({
               {validation.errors.find(e => e.field === 'iban')?.message}
             </p>
           )}
+          {formData.czechNationalAccount && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-mono">
+              <span>🇨🇿 Účet ČR:</span>
+              <span className="font-semibold">{formData.czechNationalAccount}</span>
+            </div>
+          )}
         </div>
 
         <div>

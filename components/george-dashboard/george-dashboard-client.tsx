@@ -3554,12 +3554,33 @@ export function GeorgeDashboardClient({
                     onChange={(e) => setPayIban(e.target.value)}
                     className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors"
                   />
+                  {scannedDraft?.czechNationalAccount && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 font-mono">
+                      <span>🇨🇿 Účet ČR:</span>
+                      <span className="font-bold">{scannedDraft.czechNationalAccount}</span>
+                    </div>
+                  )}
+                  {scannedDraft?.immediatePayment && (
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2 py-0.5">
+                      <span>⚡ Okamžitá platba</span>
+                    </div>
+                  )}
+                  {scannedDraft?.invoiceNumber && (
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-slate-300 bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 ml-1.5">
+                      <span>📄 Faktúra: {scannedDraft.invoiceNumber}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
                       Suma v EUR (€)
                     </label>
+                    {scannedDraft?.currency === 'CZK' && scannedDraft?.amount && (
+                      <p className="text-[10px] text-emerald-400 font-semibold mb-1">
+                        Pôvodne: {scannedDraft.amount.toLocaleString('cs-CZ')} CZK
+                      </p>
+                    )}
                     <input
                       id="pay-amount"
                       type="number"

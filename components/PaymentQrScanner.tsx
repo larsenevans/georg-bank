@@ -61,6 +61,84 @@ export interface PaymentQrScannerProps {
 }
 
 /**
+ * Decodes QR code from an HTMLImageElement with smart cropping fallback.
+ * Solves detection failures caused by surrounding frames (such as the standard Czech "QR Platba"
+ * frame and bottom label) which disrupt ZXing finder patterns.
+ */
+async function decodeImageWithSmartCrop(
+  img: HTMLImageElement,
+  codeReader: BrowserMultiFormatReader
+): Promise<Result> {
+  // 1. Direct attempt without modifications
+  try {
+    return await codeReader.decodeFromImageElement(img);
+  } catch (initialErr) {
+    if (typeof document === 'undefined') throw initialErr;
+
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) throw initialErr;
+
+    // Strategies:
+    // A: 7% margin inset all around (trims outer border frame)
+    // B: 8% horizontal, 5% top, 16% bottom (trims outer border + bottom "QR Platba" text)
+    // C: 12% margin inset all around
+    // D: High contrast thresholding on Strategy B
+    const cropStrategies = [
+      { left: 0.07, top: 0.07, right: 0.07, bottom: 0.07, binarize: false },
+      { left: 0.08, top: 0.05, right: 0.08, bottom: 0.16, binarize: false },
+      { left: 0.12, top: 0.12, right: 0.12, bottom: 0.12, binarize: false },
+      { left: 0.08, top: 0.05, right: 0.08, bottom: 0.16, binarize: true },
+    ];
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw initialErr;
+
+    for (const strat of cropStrategies) {
+      const sx = Math.floor(w * strat.left);
+      const sy = Math.floor(h * strat.top);
+      const sw = Math.floor(w * (1 - strat.left - strat.right));
+      const sh = Math.floor(h * (1 - strat.top - strat.bottom));
+
+      if (sw <= 50 || sh <= 50) continue;
+
+      canvas.width = sw;
+      canvas.height = sh;
+      ctx.clearRect(0, 0, sw, sh);
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      if (strat.binarize) {
+        const imgData = ctx.getImageData(0, 0, sw, sh);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          const val = avg < 128 ? 0 : 255;
+          data[i] = val;
+          data[i + 1] = val;
+          data[i + 2] = val;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      try {
+        const croppedImg = new Image();
+        croppedImg.src = canvas.toDataURL('image/png');
+        await new Promise<void>((res) => {
+          croppedImg.onload = () => res();
+        });
+        const res = await codeReader.decodeFromImageElement(croppedImg);
+        return res;
+      } catch {
+        // Try next fallback strategy
+      }
+    }
+
+    throw initialErr;
+  }
+}
+
+/**
  * PaymentQrScanner Component
  *
  * A component that allows users to scan QR codes using their device camera
@@ -398,7 +476,7 @@ export function PaymentQrScanner({
         });
 
         const codeReader = new BrowserMultiFormatReader();
-        const result = await codeReader.decodeFromImageElement(img);
+        const result = await decodeImageWithSmartCrop(img, codeReader);
 
         await handleScanResult(result.getText());
       } catch (err) {
