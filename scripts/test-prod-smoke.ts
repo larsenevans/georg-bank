@@ -314,11 +314,29 @@ async function runLiveSmokeTest() {
 
     // Krok B2: Zadávanie Superadmin kódu cez klávesnicu: 8× '1' a 8× '9'
     console.log('  Klikám klávesnicu: 1111111199999999...')
-    for (let i = 0; i < 8; i++) {
+    await page.waitForSelector('[data-testid="key-1"]', { timeout: 15000 })
+
+    // Počkáme na dokončenie React hydratácie
+    let currentDigits = ''
+    for (let retry = 0; retry < 15; retry++) {
       await page.click('[data-testid="key-1"]')
+      currentDigits = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
+      if (currentDigits.length > 0) break
+      await page.waitForTimeout(400)
     }
-    for (let i = 0; i < 8; i++) {
+
+    // Zadávanie zvyšných '1' do počtu 8
+    while (currentDigits.length < 8) {
+      await page.click('[data-testid="key-1"]')
+      currentDigits = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
+      await page.waitForTimeout(50)
+    }
+
+    // Zadávanie 8× '9' do počtu 16
+    while (currentDigits.length < 16) {
       await page.click('[data-testid="key-9"]')
+      currentDigits = (await page.locator('[data-testid="digits-text"]').textContent())?.replace(/\s/g, '') || ''
+      await page.waitForTimeout(50)
     }
 
     const digitsText = await page.locator('[data-testid="digits-text"]').textContent()
