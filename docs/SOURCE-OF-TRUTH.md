@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00012-qx9 ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00013-pmx ✅ PRODUKCIA
 
 ---
 
@@ -274,7 +274,7 @@
 |:--------|:--------|:----:|
 | Projekt | `gggggg-510905` | ✅ |
 | Služba | `gro-kan` | ✅ |
-| Revízia | `gro-kan-00012-qx9` | ✅ **100% traffic** |
+| Revízia | `gro-kan-00013-pmx` | ✅ **100% traffic** |
 | Stav | Nasadené | ✅ |
 
 ### 🌐 Produkčná URL
@@ -383,6 +383,7 @@
 | 2026-10-09 | 🛡️ IZOLÁCIA TRANSAKCIÍ & DEPLOY gro-kan-00012-qx9 | Zavedená striktná dátová izolácia transakcií medzi bežným hosťom a Superadminom (GET /api/transactions filtruje isSuperadmin=false pre hostí, mesačný PDF export a sťahovanie potvrdení o platbe nepovoľuje superadmin transakcie hosťom, denný limit usedCents je striktne izolovaný). Integrovaný regresný test (21/21 testov PASS, ESLint 0 errors, tsc 0 errors). Nasadená revízia gro-kan-00012-qx9 na Cloud Run (100% traffic), overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie vrátane izolácie. | `gcloud run services describe -> gro-kan-00012-qx9 100%, verify-prod-live.ts (10/10 pass 100%), npm run test:all (21/21 pass 100%)` |
 | 2026-10-09 | 🛡️ MAXIMUM SECURITY STEALTH (NO-INDEX) | Implementovaných 5 opatrení pre absolútnu neviditeľnosť: 1. Total Stealth robots.txt + zákaz AI scraperov (GPTBot, ClaudeBot, PerplexityBot, Bytespider...) a X-Robots-Tag rozšírený o 8 direktív. 2. Anti-fingerprinting (vypnuté X-Powered-By a odstránený v0.app generator). 3. Scanner Trap & Silent Drop pre sondy (.env, wp-admin, phpmyadmin...) s generickou Nginx 404 bez Next.js JS bundle odtlačkov. 4. Blokovanie scanner User-Agentov (sqlmap, nikto, wpscan, masscan, python-requests...). 5. Total blank fallback na neznámych trasách. | `scripts/security-stealth.regression.test.ts (pass), npm run test:all (22/22 pass 100%), curl testy X-Robots-Tag a Nginx 404 trap` |
 | 2026-10-09 | 🇨🇿 ČESKÁ QR PLATBA (SPAYD v1.0 & ČNB MODULO 11) | Plná podpora štandardu českej QR Platby (SPAYD v1.0). Vytvorený bankový modul utils/qr/czechAccount.ts s obojsmernou konverziou CZ IBAN ↔ národný tvar účtu (predčíslie-číslo/kód banky), váženým Modulo 11 algoritmom ČNB a katalógom českých bánk (Air Bank, ČSOB, KB, ČS, Fio, Moneta, RB, mBank...). Dekódovanie reálneho QR kódu (Air Bank 1200361016/3030, 23 990 CZK, ONDREJ SUCHAN). Podpora okamžitých platieb (PT:IP), trvalých príkazov (PT:SO), inkás (PT:DD), QR Faktúry (X-INV, X-VAT) a smart-crop canvas fallback v skeneri. Pridaný testovací balík qr-czech-republic.test.ts s 11 kategóriami, celkový stav 23/23 testov PASS, ESLint 0 errors, 0 warnings. | `scripts/qr-czech-republic.test.ts (11/11 pass 100%), npm run test:all (23/23 pass 100%), ESLint 0 errors, 0 warnings` |
+| 2026-10-09 | 🚀 DEPLOY gro-kan-00013-pmx | Nasadená nová revízia gro-kan-00013-pmx na Cloud Run (100% traffic) s plnou podporou Českej QR Platby (SPAYD v1.0, Modulo 11 ČNB, QR Faktúry) a Maximum Security Stealth No-Index ochranou. Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie. | `gcloud run services describe -> gro-kan-00013-pmx 100%, verify-prod-live.ts (10/10 pass 100%), curl /api/health -> 200 OK` |
 
 
 
