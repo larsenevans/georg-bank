@@ -180,45 +180,47 @@ export function OverviewTab({
           <span className="text-xs text-muted-foreground">{filteredTransactions.length} zobrazených</span>
         </div>
 
-        {/* Prepínač filtrov: Všetky vs Bežní používatelia vs Superadmin */}
-        <div className="mb-3 flex items-center gap-1.5 rounded-xl border border-border bg-card/60 p-1 text-xs">
-          <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            className={cn(
-              'flex-1 rounded-lg py-1.5 px-2 text-center font-medium transition',
-              filterMode === 'all'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            Všetky ({transactions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode('users')}
-            className={cn(
-              'flex-1 rounded-lg py-1.5 px-2 text-center font-medium transition',
-              filterMode === 'users'
-                ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            👤 Klienti ({transactions.filter((t) => !t.isSuperadmin).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode('admin')}
-            className={cn(
-              'flex-1 rounded-lg py-1.5 px-2 text-center font-medium transition',
-              filterMode === 'admin'
-                ? 'bg-amber-500 text-black shadow-sm font-bold'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            👑 Admin ({transactions.filter((t) => t.isSuperadmin).length})
-          </button>
-        </div>
+        {/* Prepínač filtrov: Všetky vs Bežní používatelia vs Superadmin (iba ak existujú admin transakcie) */}
+        {transactions.some((t) => t.isSuperadmin) && (
+          <div className="mb-3 flex items-center gap-1.5 rounded-xl border border-border bg-card/60 p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setFilterMode('all')}
+              className={cn(
+                'flex-1 rounded-lg py-1.5 px-2 text-center font-medium transition',
+                filterMode === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Všetky ({transactions.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterMode('users')}
+              className={cn(
+                'flex-1 rounded-lg py-1.5 px-2 text-center font-medium transition',
+                filterMode === 'users'
+                  ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              👤 Klienti ({transactions.filter((t) => !t.isSuperadmin).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterMode('admin')}
+              className={cn(
+                'flex-1 rounded-lg py-1.5 px-2 text-center font-medium transition',
+                filterMode === 'admin'
+                  ? 'bg-amber-500 text-black shadow-sm font-bold'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              👑 Admin ({transactions.filter((t) => t.isSuperadmin).length})
+            </button>
+          </div>
+        )}
 
         {filteredTransactions.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">

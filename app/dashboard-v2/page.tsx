@@ -28,8 +28,7 @@ export default async function HorizonDashboardV2Page() {
   const jar = await cookies()
   const token = jar.get('access_granted')?.value ?? null
 
-  const isSuperadmin =
-    isSuperadminToken(token) || process.env.NODE_ENV !== 'production'
+  const isSuperadmin = isSuperadminToken(token)
 
   // Guest users must have an active access session; otherwise protect (only in production).
   if (getAccessEnabled() && !isSuperadmin) {
@@ -62,11 +61,14 @@ export default async function HorizonDashboardV2Page() {
     console.error('[dashboard-v2] bank account lookup failed:', error)
   }
 
-  // Load recent transactions: all transactions for superadmin, or own for guest.
+  // Load recent transactions: all transactions for superadmin, or own non-admin for guest.
   let transactions: HorizonTransaction[] = []
   try {
     const rows = await db.query.transaction.findMany({
-      where: isSuperadmin ? undefined : (fields, { eq: eqFn }) => eqFn(fields.userId, userId),
+      where: isSuperadmin
+        ? undefined
+        : (fields, { and: andFn, eq: eqFn }) =>
+            andFn(eqFn(fields.userId, userId), eqFn(fields.isSuperadmin, false)),
       orderBy: [desc(transaction.createdAt)],
       limit: 150,
     })

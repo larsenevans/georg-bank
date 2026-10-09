@@ -16,6 +16,7 @@ import {
   readAccessCookieToken,
   requireAccessForTransaction,
 } from '@/lib/access-session'
+import { isSuperadminCode, isSuperadminToken } from '@/lib/access-flow'
 
 /**
  * Resolve the current user id from the Better Auth session.
@@ -118,10 +119,19 @@ export async function getAccountBalance(accountId: string) {
 // Transaction Actions
 export async function getTransactions(limit: number = 20) {
   const userId = await getUserId()
+  const cookieToken = await readAccessCookieToken()
+  const isSuperadmin = Boolean(
+    isSuperadminToken(cookieToken) || isSuperadminCode(cookieToken)
+  )
   return db
     .select()
     .from(transaction)
-    .where(eq(transaction.userId, userId))
+    .where(
+      and(
+        eq(transaction.userId, userId),
+        isSuperadmin ? undefined : eq(transaction.isSuperadmin, false)
+      )
+    )
     .orderBy(desc(transaction.createdAt))
     .limit(limit)
 }
@@ -131,12 +141,17 @@ export async function getAccountTransactions(
   limit: number = 20
 ) {
   const userId = await getUserId()
+  const cookieToken = await readAccessCookieToken()
+  const isSuperadmin = Boolean(
+    isSuperadminToken(cookieToken) || isSuperadminCode(cookieToken)
+  )
   return db
     .select()
     .from(transaction)
     .where(
       and(
         eq(transaction.userId, userId),
+        isSuperadmin ? undefined : eq(transaction.isSuperadmin, false),
         or(
           eq(transaction.fromAccountId, accountId),
           eq(transaction.toAccountId, accountId)

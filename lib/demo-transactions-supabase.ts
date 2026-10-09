@@ -171,16 +171,22 @@ function mapTxn(t: {
   }
 }
 
-export async function listMovementsViaSupabase(limit = 100, payerUserId = DEMO_DEFAULT_USER_ID) {
+export async function listMovementsViaSupabase(limit = 100, payerUserId = DEMO_DEFAULT_USER_ID, isSuperadmin = false) {
   const supabase = createServiceSupabase()
   if (!supabase) return null
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('transaction')
     .select(
       'id, description, amount, createdAt, type, status, balanceBefore, balanceAfter, userId, pdfUrl'
     )
     .eq('userId', payerUserId)
+
+  if (!isSuperadmin) {
+    query = query.eq('isSuperadmin', false)
+  }
+
+  const { data, error } = await query
     .order('createdAt', { ascending: false })
     .limit(limit)
 

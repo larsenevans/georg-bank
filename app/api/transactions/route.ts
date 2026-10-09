@@ -41,11 +41,13 @@ import {
   isSuperadminToken,
 } from '@/lib/access-flow'
 
-async function getTodayOutgoingUsedCents(userId: string) {
+async function getTodayOutgoingUsedCents(userId: string, isSuperadmin: boolean = false) {
   const todayStart = startOfLocalDay()
   const todayTxns = await db.query.transaction.findMany({
     where: (fields, { and: andFn, eq: eqFn, gte: gteFn }) =>
-      andFn(eqFn(fields.userId, userId), gteFn(fields.createdAt, todayStart)),
+      isSuperadmin
+        ? andFn(eqFn(fields.userId, userId), gteFn(fields.createdAt, todayStart))
+        : andFn(eqFn(fields.userId, userId), eqFn(fields.isSuperadmin, false), gteFn(fields.createdAt, todayStart)),
   })
   return todayTxns
     .filter((t) => isOutgoingPaymentType(t.type))
@@ -60,10 +62,15 @@ const USE_SUPABASE_TRANSACTIONS = process.env.USE_SUPABASE_TRANSACTIONS === 'tru
 export async function GET() {
   try {
     const payer = await resolveTransactionsPayer()
+    const cookieToken = await readAccessCookieToken()
+    const isSuperadmin = Boolean(
+      isSuperadminToken(cookieToken) ||
+      isSuperadminCode(cookieToken)
+    )
 
     if (USE_SUPABASE_TRANSACTIONS && createServiceSupabase()) {
       try {
-        const remote = await listMovementsViaSupabase(100, payer.userId)
+        const remote = await listMovementsViaSupabase(100, payer.userId, isSuperadmin)
         if (remote) {
           return NextResponse.json({
             success: true,
@@ -84,13 +91,16 @@ export async function GET() {
     }
 
     const records = await db.query.transaction.findMany({
-      where: (fields, { eq: eqFn }) => eqFn(fields.userId, payer.userId),
+      where: (fields, { and: andFn, eq: eqFn }) =>
+        isSuperadmin
+          ? eqFn(fields.userId, payer.userId)
+          : andFn(eqFn(fields.userId, payer.userId), eqFn(fields.isSuperadmin, false)),
       orderBy: [desc(transaction.createdAt)],
       limit: 100,
     })
 
     const accounts = payer.account ? [payer.account] : []
-    const usedCents = await getTodayOutgoingUsedCents(payer.userId)
+    const usedCents = await getTodayOutgoingUsedCents(payer.userId, isSuperadmin)
     const dailyLimit = dailyLimitSnapshot(usedCents)
 
     return NextResponse.json({
@@ -116,6 +126,7 @@ export async function GET() {
         balanceBefore: t.balanceBefore != null ? t.balanceBefore / 100 : undefined,
         balanceAfter: t.balanceAfter != null ? t.balanceAfter / 100 : undefined,
         pdfUrl: t.pdfUrl || null,
+        isSuperadmin: t.isSuperadmin ?? false,
       })),
       accounts,
       source: 'drizzle',
@@ -383,9 +394,16 @@ export async function POST(req: Request) {
       ? currentBalanceCents + amountInCents
       : currentBalanceCents - amountInCents
 
+    const cookieToken = await readAccessCookieToken()
+    const isSuperadminTx = Boolean(
+      isSuperadminToken(cookieToken) ||
+      isSuperadminCode(cookieToken) ||
+      isSuperadminToken(accessSessionRow?.sessionToken)
+    )
+
     let dailyLimit = dailyLimitSnapshot(0)
     if (isOutgoing) {
-      const usedCents = await getTodayOutgoingUsedCents(defaultUserId)
+      const usedCents = await getTodayOutgoingUsedCents(defaultUserId, isSuperadminTx)
       dailyLimit = dailyLimitSnapshot(usedCents)
       if (exceedsDailyPaymentLimit(usedCents, amountInCents)) {
         return NextResponse.json(
@@ -410,13 +428,6 @@ export async function POST(req: Request) {
           .set({ balance: newBalanceCents, updatedAt: new Date() })
           .where(eq(bankAccount.id, accountRecord.id))
       }
-
-      const cookieToken = await readAccessCookieToken()
-      const isSuperadminTx = Boolean(
-        isSuperadminToken(cookieToken) ||
-        isSuperadminCode(cookieToken) ||
-        isSuperadminToken(accessSessionRow?.sessionToken)
-      )
 
       await tx.insert(transaction).values({
         id: newTxnId,

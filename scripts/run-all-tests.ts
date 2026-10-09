@@ -26,6 +26,7 @@ const allUnitTests: TestItem[] = [
   { id: 'daily-limit', name: 'Daily Payment Limit & Velocity Rules', category: 'Banking & Limits', file: './daily-payment-limit.test.ts' },
   { id: 'topup-rules', name: 'Topup & Account Deposit Rules', category: 'Banking & Limits', file: './topup-rules.test.ts' },
   { id: 'transactions-balance', name: 'Transactions & Balance Refresh Stream', category: 'Banking & Limits', file: './transactions-balance-refresh.test.ts' },
+  { id: 'transactions-isolation', name: 'Transactions Isolation (Guest vs Superadmin)', category: 'Banking & Limits', file: './transactions-isolation.regression.test.ts' },
   { id: 'random-balance', name: 'Random Balance & Slovak Names Generator (1000 vzoriek)', category: 'Banking & Limits', file: './random-balance.test.ts' },
   { id: 'qr-50-scenarios', name: 'QR Scanner & Decoders (58 Scenárov SPAYD, EPC, PayBySquare)', category: 'Banking & Limits', file: './qr-50-scenarios.test.ts' },
 

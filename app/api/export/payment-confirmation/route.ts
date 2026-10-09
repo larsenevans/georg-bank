@@ -14,15 +14,23 @@ import {
   readAccessCookieToken,
   requireAccessForPdf,
 } from '@/lib/access-session'
+import { isSuperadminCode, isSuperadminToken } from '@/lib/access-flow'
 
 export async function GET(req: Request) {
   try {
-    const pdfGate = await requireAccessForPdf(await readAccessCookieToken())
+    const cookieToken = await readAccessCookieToken()
+    const pdfGate = await requireAccessForPdf(cookieToken)
     if (!pdfGate.ok) {
       const response = NextResponse.json({ error: pdfGate.error }, { status: pdfGate.status })
       return pdfGate.status === 403 ? clearAccessCookie(response) : response
     }
     const accessSessionRow = pdfGate.skipped ? null : pdfGate.session
+
+    const isSuperadmin = Boolean(
+      isSuperadminToken(cookieToken) ||
+      isSuperadminCode(cookieToken) ||
+      isSuperadminToken(accessSessionRow?.sessionToken)
+    )
 
     const url = new URL(req.url)
     const transactionId = url.searchParams.get('transactionId')
@@ -43,6 +51,7 @@ export async function GET(req: Request) {
         and(
           eq(transaction.id, transactionId),
           eq(transaction.userId, session.user.id),
+          isSuperadmin ? undefined : eq(transaction.isSuperadmin, false),
         ),
       )
       .limit(1)
