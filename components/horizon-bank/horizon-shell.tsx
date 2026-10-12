@@ -31,6 +31,28 @@ export function HorizonShell({ data }: HorizonShellProps) {
     }
   }, [])
 
+  // Switch to fiery George favicon in Horizon mode
+  useEffect(() => {
+    const existing = document.querySelector<HTMLLinkElement>("link[rel*='icon']")
+    const prevHref = existing?.href
+    if (existing) {
+      existing.href = '/favicon-horizon-fire.svg'
+      existing.type = 'image/svg+xml'
+    } else {
+      const link = document.createElement('link')
+      link.rel = 'icon'
+      link.type = 'image/svg+xml'
+      link.href = '/favicon-horizon-fire.svg'
+      document.head.appendChild(link)
+    }
+
+    return () => {
+      if (existing && prevHref) {
+        existing.href = prevHref
+      }
+    }
+  }, [])
+
   return (
     <HorizonBalanceProvider initialBalanceEur={data.balanceEur}>
       <HorizonShellInner data={data} />

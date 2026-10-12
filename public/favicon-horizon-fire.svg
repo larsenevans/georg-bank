@@ -1,0 +1,84 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Vulkanické pozadie s plamennou žiarou -->
+    <radialGradient id="fireBgAura" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#ff3b00" stop-opacity="0.55" />
+      <stop offset="35%" stop-color="#d01800" stop-opacity="0.30" />
+      <stop offset="70%" stop-color="#240702" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0d0201" stop-opacity="1" />
+    </radialGradient>
+
+    <!-- Horiaci lem rámu -->
+    <linearGradient id="fireRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb700" />
+      <stop offset="30%" stop-color="#ff4400" />
+      <stop offset="70%" stop-color="#b30000" />
+      <stop offset="100%" stop-color="#ff7700" />
+    </linearGradient>
+
+    <!-- Plamenný vertikálny gradient samotného George loga -->
+    <linearGradient id="blazingFire" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#800000" />
+      <stop offset="18%" stop-color="#cc1100" />
+      <stop offset="38%" stop-color="#ff3a00" />
+      <stop offset="62%" stop-color="#ff7b00" />
+      <stop offset="82%" stop-color="#ffbf00" />
+      <stop offset="96%" stop-color="#fff4b8" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+
+    <!-- Sekundárna žiara pre spodné jazyky plameňa -->
+    <linearGradient id="fireTongue" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ff1a00" stop-opacity="0.8" />
+      <stop offset="60%" stop-color="#ff9900" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#ffe680" stop-opacity="1" />
+    </linearGradient>
+
+    <!-- Filter pre plamennú aúru (Glow) -->
+    <filter id="fireGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur1" />
+      <feGaussianBlur stdDeviation="2" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <clipPath id="squircleClip">
+      <rect width="180" height="180" rx="38" />
+    </clipPath>
+  </defs>
+
+  <!-- Orezané telo ikony -->
+  <g clip-path="url(#squircleClip)">
+    <!-- 1. Horiaci základ -->
+    <rect width="180" height="180" fill="url(#fireBgAura)" />
+
+    <!-- 2. Plamenné iskry / častice na pozadí -->
+    <circle cx="35" cy="40" r="2.5" fill="#ffc400" opacity="0.85" filter="url(#fireGlow)" />
+    <circle cx="145" cy="38" r="2" fill="#ff7700" opacity="0.75" />
+    <circle cx="28" cy="115" r="1.8" fill="#ff5500" opacity="0.6" />
+    <circle cx="152" cy="120" r="2.2" fill="#ffaa00" opacity="0.7" />
+    <circle cx="90" cy="22" r="3" fill="#ffe066" opacity="0.9" filter="url(#fireGlow)" />
+
+    <!-- 3. Ohnivá žiara pod symbolom George (Aura) -->
+    <g style="transform: scale(95%); transform-origin: center" filter="url(#fireGlow)" opacity="0.9">
+      <path fill="url(#fireTongue)"
+        d="M101.141 53H136.632C151.023 53 162.689 64.6662 162.689 79.0573V112.904H148.112V79.0573C148.112 78.7105 148.098 78.3662 148.072 78.0251L112.581 112.898C112.701 112.902 112.821 112.904 112.941 112.904H148.112V126.672H112.941C98.5504 126.672 86.5638 114.891 86.5638 100.5V66.7434H101.141V100.5C101.141 101.15 101.191 101.792 101.289 102.422L137.56 66.7816C137.255 66.7563 136.945 66.7434 136.632 66.7434H101.141V53Z" />
+      <path fill="url(#fireTongue)"
+        d="M65.2926 124.136L14 66.7372H34.6355L64.7495 100.436V66.7372H80.1365V118.47C80.1365 126.278 70.4953 129.958 65.2926 124.136Z" />
+    </g>
+
+    <!-- 4. Hlavný symbol George v plamennej verzii (Blazing Fire) -->
+    <g style="transform: scale(95%); transform-origin: center">
+      <path fill="url(#blazingFire)"
+        d="M101.141 53H136.632C151.023 53 162.689 64.6662 162.689 79.0573V112.904H148.112V79.0573C148.112 78.7105 148.098 78.3662 148.072 78.0251L112.581 112.898C112.701 112.902 112.821 112.904 112.941 112.904H148.112V126.672H112.941C98.5504 126.672 86.5638 114.891 86.5638 100.5V66.7434H101.141V100.5C101.141 101.15 101.191 101.792 101.289 102.422L137.56 66.7816C137.255 66.7563 136.945 66.7434 136.632 66.7434H101.141V53Z" />
+      <path fill="url(#blazingFire)"
+        d="M65.2926 124.136L14 66.7372H34.6355L64.7495 100.436V66.7372H80.1365V118.47C80.1365 126.278 70.4953 129.958 65.2926 124.136Z" />
+    </g>
+  </g>
+
+  <!-- 5. Vonkajší horiaci orámovaný lem (Fire Border Stroke) -->
+  <rect x="1.5" y="1.5" width="177" height="177" rx="37" fill="none" stroke="url(#fireRim)" stroke-width="3" opacity="0.9" />
+</svg>
