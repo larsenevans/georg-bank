@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { WelcomeScreen } from '@/components/welcome-screen'
+import { StealthWhiteCloak } from '@/components/stealth-white-cloak'
 
 export const metadata = {
   title: 'George – prístupový kód',
@@ -19,17 +20,15 @@ export const metadata = {
 }
 
 function WelcomeFallback() {
-  return (
-    <div className="min-h-dvh bg-black flex items-center justify-center text-slate-400 text-sm">
-      Načítavam…
-    </div>
-  )
+  return <div className="min-h-dvh bg-white" />
 }
 
 export default function WelcomePage() {
   return (
-    <Suspense fallback={<WelcomeFallback />}>
-      <WelcomeScreen />
-    </Suspense>
+    <StealthWhiteCloak timeoutMs={30000}>
+      <Suspense fallback={<WelcomeFallback />}>
+        <WelcomeScreen />
+      </Suspense>
+    </StealthWhiteCloak>
   )
 }
