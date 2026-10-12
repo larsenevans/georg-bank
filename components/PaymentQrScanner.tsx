@@ -307,9 +307,9 @@ export function PaymentQrScanner({
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setHasCameraPermission(false);
         setErrorMessage('Prístup ku kamere bol zamietnutý. Povoľte prístup v nastaveniach prehliadača.');
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError' || error.message?.includes('Requested device not found')) {
         setIsCameraAvailable(false);
-        setErrorMessage('Na tomto zariadení sa nenašla žiadna kamera.');
+        setErrorMessage('Na tomto zariadení sa nenašla kamera. Vyberte fotku QR kódu zo zariadenia nižšie.');
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
         setErrorMessage('Kamera je už používaná inou aplikáciou.');
       } else {
@@ -318,7 +318,9 @@ export function PaymentQrScanner({
 
       setHasCameraPermission(false);
       setState('error');
-      onError(error);
+      if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError' && !error.message?.includes('Requested device not found')) {
+        onError(error);
+      }
     }
   }, [stopCameraResources, onError]);
 
@@ -635,7 +637,6 @@ export function PaymentQrScanner({
                 accept={allowedImageTypes.join(',')}
                 onChange={handleImageUpload}
                 className="hidden"
-                capture="environment"
               />
             </div>
           )}

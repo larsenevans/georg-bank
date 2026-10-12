@@ -811,6 +811,11 @@ export function GeorgeDashboardClient({
   }, [paymentOptions, applyDraftToPaymentForm])
 
   const handleScanError = useCallback((error: Error) => {
+    // Ak zariadenie nemá kameru (napr. desktop PC), je to očakávaný stav — používateľ nahrá fotku QR kódu
+    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError' || error.message?.includes('Requested device not found')) {
+      console.info('[QR Scanner] Kamera nie je k dispozícii — používateľ vyberie fotku QR kódu zo zariadenia.')
+      return
+    }
     console.error('QR scanning error:', error)
     showToast(`Chyba pri skenovaní: ${error.message}`)
   }, [])
