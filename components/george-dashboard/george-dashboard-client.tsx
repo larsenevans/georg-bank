@@ -3292,9 +3292,13 @@ export function GeorgeDashboardClient({
               </button>
             </div>
             <div className="relative">
+              <label htmlFor="search-input" className="sr-only">
+                Vyhľadávanie
+              </label>
               <input
                 type="text"
                 id="search-input"
+                name="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Zadajte meno príjemcu, IBAN alebo produkt..."
@@ -3459,7 +3463,13 @@ export function GeorgeDashboardClient({
               </div>
 
               <div className="flex gap-2">
+                <label htmlFor="add-money-amount-input" className="sr-only">
+                  Suma vkladu
+                </label>
                 <input
+                  id="add-money-amount-input"
+                  name="addMoneyAmount"
+                  aria-label="Suma vkladu"
                   data-testid="add-money-amount"
                   value={addMoneyAmount}
                   onChange={(event) => {
@@ -3585,11 +3595,15 @@ export function GeorgeDashboardClient({
                   </div>
                 )}
                 <div>
-                  <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
+                  <label
+                    htmlFor="pay-recipient"
+                    className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold"
+                  >
                     Meno príjemcu
                   </label>
                   <input
                     id="pay-recipient"
+                    name="recipient"
                     type="text"
                     placeholder="napr. Ján Kováč"
                     value={payRecipient}
@@ -3598,11 +3612,15 @@ export function GeorgeDashboardClient({
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
+                  <label
+                    htmlFor="pay-iban"
+                    className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold"
+                  >
                     IBAN príjemcu
                   </label>
                   <input
                     id="pay-iban"
+                    name="iban"
                     type="text"
                     placeholder="SK80 0900 0000 0012 3456 7890"
                     value={payIban}
@@ -3637,7 +3655,10 @@ export function GeorgeDashboardClient({
                     <>
                       <div className="bg-[#151621] border border-slate-800/80 rounded-2xl p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+                          <label
+                            htmlFor="pay-amount"
+                            className="text-[10px] text-slate-400 uppercase tracking-wider font-bold"
+                          >
                             Suma a mena platby
                           </label>
                           {/* Segmentovaný switcher EUR / CZK v George štýle */}
@@ -3670,6 +3691,7 @@ export function GeorgeDashboardClient({
                         <div className="relative">
                           <input
                             id="pay-amount"
+                            name="amount"
                             type="number"
                             step="0.01"
                             min="0.01"
@@ -3715,11 +3737,15 @@ export function GeorgeDashboardClient({
                       </div>
 
                       <div>
-                        <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
+                        <label
+                          htmlFor="pay-vs"
+                          className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold"
+                        >
                           Variabilný symbol
                         </label>
                         <input
                           id="pay-vs"
+                          name="variableSymbol"
                           type="text"
                           inputMode="numeric"
                           maxLength={10}
@@ -3734,11 +3760,15 @@ export function GeorgeDashboardClient({
                 })()}
 
                 <div>
-                  <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
+                  <label
+                    htmlFor="pay-note"
+                    className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold"
+                  >
                     Poznámka (max. 140 znakov)
                   </label>
                   <input
                     id="pay-note"
+                    name="note"
                     type="text"
                     maxLength={140}
                     placeholder="Nepovinné"

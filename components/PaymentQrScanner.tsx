@@ -631,8 +631,14 @@ export function PaymentQrScanner({
               </div>
 
               {/* Privacy-first explicit single image input */}
+              <label htmlFor="qr-image-upload-input" className="sr-only">
+                Nahrať obrázok s QR kódom
+              </label>
               <input
                 ref={fileInputRef}
+                id="qr-image-upload-input"
+                name="qrImageUpload"
+                aria-label="Nahrať obrázok s QR kódom"
                 type="file"
                 accept={allowedImageTypes.join(',')}
                 onChange={handleImageUpload}
