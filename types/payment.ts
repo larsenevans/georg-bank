@@ -179,3 +179,22 @@ export const DEFAULT_NORMALIZE_IBAN_OPTIONS: NormalizeIbanOptions = {
   toUpperCase: true,
   validateChecksum: true,
 };
+
+/**
+ * Referenčný kurz ČNB / ECB: 1 EUR = 25.20 CZK
+ */
+export const CZK_EXCHANGE_RATE = 25.20;
+
+/**
+ * Prepočet z CZK na EUR (zaokrúhlené na centy)
+ */
+export function convertCzkToEur(czkAmount: number, rate = CZK_EXCHANGE_RATE): number {
+  return Math.round((czkAmount / rate) * 100) / 100;
+}
+
+/**
+ * Prepočet z EUR na CZK (zaokrúhlené na haliere)
+ */
+export function convertEurToCzk(eurAmount: number, rate = CZK_EXCHANGE_RATE): number {
+  return Math.round((eurAmount * rate) * 100) / 100;
+}

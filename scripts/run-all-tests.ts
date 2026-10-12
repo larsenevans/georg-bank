@@ -31,6 +31,8 @@ const allUnitTests: TestItem[] = [
   { id: 'random-balance', name: 'Random Balance & Slovak Names Generator (1000 vzoriek)', category: 'Banking & Limits', file: './random-balance.test.ts' },
   { id: 'qr-50-scenarios', name: 'QR Scanner & Decoders (58 Scenárov SPAYD, EPC, PayBySquare)', category: 'Banking & Limits', file: './qr-50-scenarios.test.ts' },
   { id: 'qr-czech-republic', name: 'Czech QR Platba (SPAYD v1.0, ČNB Modulo 11 & QR Faktúra)', category: 'Banking & Limits', file: './qr-czech-republic.test.ts' },
+  { id: 'qr-czk-fx-converter', name: 'EUR ⇄ CZK Exchange Rate Converter & FX Engine', category: 'Banking & Limits', file: './qr-czk-fx-converter.test.ts' },
+  { id: 'payment-fx-smoke', name: 'Payment Smoke Test & Live Currency Conversion Flow', category: 'Banking & Limits', file: './payment-fx-conversion-smoke.test.ts' },
 
   // 4. Receipts & PDFs
   { id: 'statement-generator', name: 'Monthly Statement Generator Engine', category: 'Receipts & PDFs', file: './statement-generator.test.ts' },

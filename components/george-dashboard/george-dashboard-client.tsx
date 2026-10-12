@@ -20,7 +20,13 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { useSession } from '@/lib/auth-client'
 import { PaymentQrScanner } from '@/components/PaymentQrScanner'
 import { QrPaymentPreview } from '@/components/QrPaymentPreview'
-import { PaymentDraft, PaymentOption } from '@/types/payment'
+import {
+  PaymentDraft,
+  PaymentOption,
+  CZK_EXCHANGE_RATE,
+  convertCzkToEur,
+  convertEurToCzk,
+} from '@/types/payment'
 import {
   DAILY_PAYMENT_LIMIT_ENABLED,
   DAILY_PAYMENT_LIMIT_EUR,
@@ -66,6 +72,9 @@ interface Transaction {
   balanceAfter?: number
   category?: string
   pdfUrl?: string | null
+  originalAmount?: number
+  originalCurrency?: string
+  exchangeRate?: number
 }
 
 const SEED_TRANSACTIONS: Transaction[] = [
@@ -214,6 +223,7 @@ export function GeorgeDashboardClient({
   const [payRecipient, setPayRecipient] = useState('')
   const [payIban, setPayIban] = useState('')
   const [payAmount, setPayAmount] = useState('')
+  const [payCurrency, setPayCurrency] = useState<'EUR' | 'CZK'>('EUR')
   const [payVs, setPayVs] = useState('')
   const [payNote, setPayNote] = useState('')
 
@@ -733,6 +743,7 @@ export function GeorgeDashboardClient({
     setIsPaymentSheetOpen(false)
     setPayRecipient('')
     setPayIban('')
+    setPayCurrency('EUR')
     setPayAmount('')
     setPayVs('')
     setPayNote('')
@@ -743,11 +754,30 @@ export function GeorgeDashboardClient({
   const applyDraftToPaymentForm = useCallback((draft: PaymentDraft) => {
     setPayRecipient(draft.recipientName || '')
     setPayIban(draft.iban || '')
+    const isCzk =
+      draft.currency === 'CZK' ||
+      Boolean(draft.iban && draft.iban.toUpperCase().startsWith('CZ'))
+    setPayCurrency(isCzk ? 'CZK' : 'EUR')
     setPayAmount(draft.amount !== null && draft.amount !== undefined ? draft.amount.toFixed(2) : '')
     setPayVs(draft.variableSymbol ? draft.variableSymbol.substring(0, 10) : '')
     setPayNote(draft.note ? draft.note.substring(0, 140) : '')
     setScannedDraft(draft)
   }, [])
+
+  const handleCurrencyChange = useCallback((newCurrency: 'EUR' | 'CZK') => {
+    setPayCurrency((prevCurrency) => {
+      if (newCurrency === prevCurrency) return prevCurrency
+      const currentVal = parseFloat(payAmount)
+      if (!isNaN(currentVal) && currentVal > 0) {
+        if (newCurrency === 'CZK') {
+          setPayAmount(convertEurToCzk(currentVal).toFixed(2))
+        } else {
+          setPayAmount(convertCzkToEur(currentVal).toFixed(2))
+        }
+      }
+      return newCurrency
+    })
+  }, [payAmount])
 
   // QR Code Scanning Handlers
   const handleScanSuccess = useCallback((draft: PaymentDraft) => {
@@ -829,24 +859,29 @@ export function GeorgeDashboardClient({
   const executeMockPayment = async () => {
     const recipient = payRecipient.trim()
     const iban = payIban.trim()
-    const amount = parseFloat(payAmount)
+    const rawAmount = parseFloat(payAmount)
     const vs = payVs.trim()
     const note = payNote.trim()
 
-    if (!recipient || !iban || isNaN(amount) || amount <= 0) {
+    if (!recipient || !iban || isNaN(rawAmount) || rawAmount <= 0) {
       showToast('Prosím vyplňte správne meno príjemcu, IBAN a kladnú sumu.')
       return
     }
 
+    // Skutočná zúčtovaná suma v EUR (hlavná mena účtu)
+    const amountInEur = payCurrency === 'CZK'
+      ? convertCzkToEur(rawAmount)
+      : rawAmount
+
     const isE2ETest =
       typeof window !== 'undefined' &&
       (Boolean(window.navigator?.webdriver) || document.cookie.includes('playwright'))
-    if (!isE2ETest && amount < 1.00) {
+    if (!isE2ETest && amountInEur < 1.00) {
       showToast('Minimálna suma platby je 1,00 €.')
       return
     }
 
-    if (amount > state.spaceBalance) {
+    if (amountInEur > state.spaceBalance) {
       showToast('Nedostatok vlastných zdrojov na Business účte pre túto platbu.')
       return
     }
@@ -854,7 +889,7 @@ export function GeorgeDashboardClient({
     const usedToday = getTodayOutgoingUsed(state.transactions)
     if (DAILY_PAYMENT_LIMIT_ENABLED) {
       const remaining = Math.max(0, DAILY_PAYMENT_LIMIT_EUR - usedToday)
-      if (amount > remaining) {
+      if (amountInEur > remaining) {
         showToast(
           `Limit 24 h: ${DAILY_PAYMENT_LIMIT_EUR.toFixed(0)} €. Zostáva ${remaining.toFixed(2)} €.`
         )
@@ -863,8 +898,16 @@ export function GeorgeDashboardClient({
     }
 
     const balanceBefore = state.spaceBalance
-    const balanceAfter = state.spaceBalance - amount
+    const balanceAfter = state.spaceBalance - amountInEur
     const optimisticId = newTxnId('pay')
+
+    // Doplnenie záznamu o CZK konverzii a kurze do poznámky ak platba odchádza v CZK
+    let paymentNote = note
+    if (payCurrency === 'CZK') {
+      const fxInfo = `Platba do ČR: ${rawAmount.toFixed(2)} CZK (kurz 1 EUR = ${CZK_EXCHANGE_RATE.toFixed(2)} CZK)`
+      paymentNote = note ? `${note} • ${fxInfo}` : fxInfo
+    }
+
     // Persist first so /pohyby sees the outgoing payment immediately.
     let serverTxn: Partial<Transaction> & { id?: string } = {}
     try {
@@ -877,8 +920,8 @@ export function GeorgeDashboardClient({
           recipient,
           iban,
           vs,
-          amount,
-          note,
+          amount: amountInEur,
+          note: paymentNote,
           type: 'outgoing',
           category: 'Nezaradené výdavky',
         }),
@@ -916,10 +959,10 @@ export function GeorgeDashboardClient({
     const newTxn: Transaction = {
       id: txnId,
       recipient,
-      amount: -amount,
+      amount: -amountInEur,
       date: 'Dnes',
       createdAt,
-      note: note || undefined,
+      note: paymentNote || undefined,
       iban,
       vs: vs || undefined,
       type: 'outgoing',
@@ -927,6 +970,9 @@ export function GeorgeDashboardClient({
       balanceBefore: serverTxn.balanceBefore ?? balanceBefore,
       balanceAfter: serverTxn.balanceAfter ?? balanceAfter,
       category: 'Nezaradené výdavky',
+      originalAmount: payCurrency === 'CZK' ? rawAmount : undefined,
+      originalCurrency: payCurrency,
+      exchangeRate: payCurrency === 'CZK' ? CZK_EXCHANGE_RATE : undefined,
     }
 
     setState((prev) => ({
@@ -946,7 +992,11 @@ export function GeorgeDashboardClient({
 
     closePaymentSheet()
     setTransactionFilter('all')
-    showToast(`Platba ${amount.toFixed(2)} € bola úspešne zapísaná.`)
+    showToast(
+      payCurrency === 'CZK'
+        ? `Platba ${rawAmount.toFixed(2)} CZK (${amountInEur.toFixed(2)} €) bola úspešne zapísaná.`
+        : `Platba ${amountInEur.toFixed(2)} € bola úspešne zapísaná.`
+    )
 
     // PDF/HTML potvrdenie o platbe (download do browsera)
     const createdAtLabel = new Date().toLocaleString('sk-SK')
@@ -958,12 +1008,12 @@ export function GeorgeDashboardClient({
       fromAccountNumber: generateMaskedSenderIban(),
       recipientName: recipient,
       recipientAccountOrEmail: iban,
-      amount: amount.toFixed(2),
+      amount: amountInEur.toFixed(2),
       currency: 'EUR',
       variableSymbol: vs,
       constantSymbol: '0308',
       specificSymbol: '',
-      note: note || 'Platba cez mobilnú verziu George',
+      note: paymentNote || 'Platba cez mobilnú verziu George',
       payerReference: '',
       dueDate: 'Dnes',
       repeatDays: '0',
@@ -3571,43 +3621,112 @@ export function GeorgeDashboardClient({
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
-                      Suma v EUR (€)
-                    </label>
-                    {scannedDraft?.currency === 'CZK' && scannedDraft?.amount && (
-                      <p className="text-[10px] text-emerald-400 font-semibold mb-1">
-                        Pôvodne: {scannedDraft.amount.toLocaleString('cs-CZ')} CZK
-                      </p>
-                    )}
-                    <input
-                      id="pay-amount"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      value={payAmount}
-                      onChange={(e) => setPayAmount(e.target.value)}
-                      className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
-                      Variabilný symbol
-                    </label>
-                    <input
-                      id="pay-vs"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={10}
-                      placeholder="Nepovinné"
-                      value={payVs}
-                      onChange={(e) => setPayVs(e.target.value.replace(/\D/g, '').substring(0, 10))}
-                      className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-                </div>
+                {/* Výpočet a zobrazenie meny a kurzu pre platbu */}
+                {(() => {
+                  const rawAmountNum = parseFloat(payAmount)
+                  const hasValidAmount = !isNaN(rawAmountNum) && rawAmountNum > 0
+                  const isCzechAccount = Boolean(
+                    scannedDraft?.currency === 'CZK' || (payIban && payIban.toUpperCase().startsWith('CZ'))
+                  )
+                  return (
+                    <>
+                      <div className="bg-[#151621] border border-slate-800/80 rounded-2xl p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+                            Suma a mena platby
+                          </label>
+                          {/* Segmentovaný switcher EUR / CZK v George štýle */}
+                          <div className="inline-flex rounded-lg bg-[#0a0a10] border border-slate-800 p-0.5" role="group" aria-label="Mena platby">
+                            <button
+                              type="button"
+                              onClick={() => handleCurrencyChange('EUR')}
+                              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                                payCurrency === 'EUR'
+                                  ? 'bg-[#327bf5] text-white shadow-md shadow-blue-900/40'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              EUR (€)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCurrencyChange('CZK')}
+                              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                                payCurrency === 'CZK'
+                                  ? 'bg-[#327bf5] text-white shadow-md shadow-blue-900/40'
+                                  : 'text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              CZK (Kč)
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="relative">
+                          <input
+                            id="pay-amount"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="0.00"
+                            value={payAmount}
+                            onChange={(e) => setPayAmount(e.target.value)}
+                            className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-base text-white font-mono font-bold focus:outline-none focus:border-blue-500 transition-colors pr-16"
+                          />
+                          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
+                            {payCurrency === 'EUR' ? 'EUR' : 'CZK'}
+                          </span>
+                        </div>
+
+                        {/* FX kalkulačka a infobox kurzu */}
+                        {hasValidAmount && (
+                          <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs">
+                            {payCurrency === 'CZK' ? (
+                              <>
+                                <div className="flex items-center justify-between text-blue-300 font-semibold">
+                                  <span>≈ {convertCzkToEur(rawAmountNum).toFixed(2)} €</span>
+                                  <span className="text-[10px] text-slate-400">odpočíta sa z EUR účtu</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                                  <span>Kurz: 1 EUR = {CZK_EXCHANGE_RATE.toFixed(2)} CZK</span>
+                                  <span className="text-emerald-400 font-medium">Poplatok: 0,00 € (SEPA)</span>
+                                </div>
+                              </>
+                            ) : (
+                              isCzechAccount && (
+                                <>
+                                  <div className="flex items-center justify-between text-blue-300 font-semibold">
+                                    <span>≈ {convertEurToCzk(rawAmountNum).toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kč</span>
+                                    <span className="text-[10px] text-slate-400">príjemcovi v ČR</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-1">
+                                    Kurz: 1 EUR = {CZK_EXCHANGE_RATE.toFixed(2)} CZK
+                                  </div>
+                                </>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
+                          Variabilný symbol
+                        </label>
+                        <input
+                          id="pay-vs"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={10}
+                          placeholder="Nepovinné"
+                          value={payVs}
+                          onChange={(e) => setPayVs(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                          className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+                    </>
+                  )
+                })()}
 
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-bold">

@@ -350,7 +350,7 @@
 > - GCS Signed Receipts (A4 PDF) ✅
 > - Dátová izolácia transakcií ✅
 > - Maximum Security Stealth No-Index Suite ✅
-> - Česká QR Platba (SPAYD v1.0, Modulo 11 ČNB, QR Faktúra) ✅
+> - Česká QR Platba (SPAYD v1.0, Modulo 11 ČNB, QR Faktúra, Switcher EUR/CZK) ✅
 > - Monitoring & Alerty (5/5 policy) ✅
 
 ---
@@ -387,6 +387,7 @@
 | 2026-10-09 | 🛡️ MAXIMUM SECURITY STEALTH (NO-INDEX) | Implementovaných 5 opatrení pre absolútnu neviditeľnosť: 1. Total Stealth robots.txt + zákaz AI scraperov (GPTBot, ClaudeBot, PerplexityBot, Bytespider...) a X-Robots-Tag rozšírený o 8 direktív. 2. Anti-fingerprinting (vypnuté X-Powered-By a odstránený v0.app generator). 3. Scanner Trap & Silent Drop pre sondy (.env, wp-admin, phpmyadmin...) s generickou Nginx 404 bez Next.js JS bundle odtlačkov. 4. Blokovanie scanner User-Agentov (sqlmap, nikto, wpscan, masscan, python-requests...). 5. Total blank fallback na neznámych trasách. | `scripts/security-stealth.regression.test.ts (pass), npm run test:all (22/22 pass 100%), curl testy X-Robots-Tag a Nginx 404 trap` |
 | 2026-10-09 | 🇨🇿 ČESKÁ QR PLATBA (SPAYD v1.0 & ČNB MODULO 11) | Plná podpora štandardu českej QR Platby (SPAYD v1.0). Vytvorený bankový modul utils/qr/czechAccount.ts s obojsmernou konverziou CZ IBAN ↔ národný tvar účtu (predčíslie-číslo/kód banky), váženým Modulo 11 algoritmom ČNB a katalógom českých bánk (Air Bank, ČSOB, KB, ČS, Fio, Moneta, RB, mBank...). Dekódovanie reálneho QR kódu (Air Bank 1200361016/3030, 23 990 CZK, ONDREJ SUCHAN). Podpora okamžitých platieb (PT:IP), trvalých príkazov (PT:SO), inkás (PT:DD), QR Faktúry (X-INV, X-VAT) a smart-crop canvas fallback v skeneri. Pridaný testovací balík qr-czech-republic.test.ts s 11 kategóriami, celkový stav 23/23 testov PASS, ESLint 0 errors, 0 warnings. | `scripts/qr-czech-republic.test.ts (11/11 pass 100%), npm run test:all (23/23 pass 100%), ESLint 0 errors, 0 warnings` |
 | 2026-10-09 | 🚀 DEPLOY gro-kan-00013-pmx | Nasadená nová revízia gro-kan-00013-pmx na Cloud Run (100% traffic) s plnou podporou Českej QR Platby (SPAYD v1.0, Modulo 11 ČNB, QR Faktúry) a Maximum Security Stealth No-Index ochranou. Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie. | `gcloud run services describe -> gro-kan-00013-pmx 100%, verify-prod-live.ts (10/10 pass 100%), curl /api/health -> 200 OK` |
+| 2026-10-12 | 💱 MENOVÁ KONVERZIA (EUR ⇄ CZK) & SMOKE TEST | Implementovaný segmentovaný mobilný prepínač meny [EUR | CZK] a automatický FX kalkulátor (referenčný kurz ČNB/ECB 1 EUR = 25.20 CZK). Auto-detekcia meny pri skenovaní českých QR kódov (SPAYD CZK / CZ IBAN), dynamický prepočet odpočtu v EUR a protihodnoty v CZK, validácia limitov voči EUR, transakčný audit trail pôvodnej meny a kurzu, duálne zobrazenie v QrPaymentPreview a v potvrdení o platbe. Integrovaný kompletný end-to-end smoke & regresný test payment-fx-conversion-smoke.test.ts (25/25 testov PASS na 100%, ESLint 0 errors, tsc 0 chýb). | `scripts/payment-fx-conversion-smoke.test.ts (pass), scripts/qr-czk-fx-converter.test.ts (pass), npm run test:all (25/25 pass 100%), ESLint 0 errors, tsc --noEmit (exit 0)` |
 
 
 

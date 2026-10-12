@@ -54,8 +54,15 @@ export async function GET(request: Request) {
         .where(lt(accessRequest.createdAt, sixHoursAgo))
         .returning({ id: accessRequest.id })
       deletedRequestsCount = deletedRequests.length
-    } catch (dbError) {
-      console.warn('[cleanup] Database cleanup skipped/error (e.g. local test mode):', dbError)
+    } catch (dbError: unknown) {
+      const err = dbError as { code?: string; cause?: { code?: string }; message?: string }
+      const isConnRefused = err?.code === 'ECONNREFUSED' || err?.cause?.code === 'ECONNREFUSED'
+      if (isConnRefused) {
+        // V lokálnom testovacom režime bez bežiaceho Postgres kontajnera je to očakávané správanie
+        console.log('ℹ️  [cleanup] Lokálna DB nie je spustená (127.0.0.1:54322) — mazanie záznamov v DB preskočené (test mód).')
+      } else {
+        console.warn('[cleanup] Database cleanup error:', err?.message || dbError)
+      }
     }
 
     // 5. Zmazať staré PDF súbory z Google Cloud Storage:
