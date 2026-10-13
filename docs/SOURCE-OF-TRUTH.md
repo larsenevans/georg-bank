@@ -388,22 +388,26 @@
 | 2026-10-09 | 🇨🇿 ČESKÁ QR PLATBA (SPAYD v1.0 & ČNB MODULO 11) | Plná podpora štandardu českej QR Platby (SPAYD v1.0). Vytvorený bankový modul utils/qr/czechAccount.ts s obojsmernou konverziou CZ IBAN ↔ národný tvar účtu (predčíslie-číslo/kód banky), váženým Modulo 11 algoritmom ČNB a katalógom českých bánk (Air Bank, ČSOB, KB, ČS, Fio, Moneta, RB, mBank...). Dekódovanie reálneho QR kódu (Air Bank 1200361016/3030, 23 990 CZK, ONDREJ SUCHAN). Podpora okamžitých platieb (PT:IP), trvalých príkazov (PT:SO), inkás (PT:DD), QR Faktúry (X-INV, X-VAT) a smart-crop canvas fallback v skeneri. Pridaný testovací balík qr-czech-republic.test.ts s 11 kategóriami, celkový stav 23/23 testov PASS, ESLint 0 errors, 0 warnings. | `scripts/qr-czech-republic.test.ts (11/11 pass 100%), npm run test:all (23/23 pass 100%), ESLint 0 errors, 0 warnings` |
 | 2026-10-09 | 🚀 DEPLOY gro-kan-00013-pmx | Nasadená nová revízia gro-kan-00013-pmx na Cloud Run (100% traffic) s plnou podporou Českej QR Platby (SPAYD v1.0, Modulo 11 ČNB, QR Faktúry) a Maximum Security Stealth No-Index ochranou. Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie. | `gcloud run services describe -> gro-kan-00013-pmx 100%, verify-prod-live.ts (10/10 pass 100%), curl /api/health -> 200 OK` |
 | 2026-10-12 | 💱 MENOVÁ KONVERZIA (EUR ⇄ CZK) & SMOKE TEST | Implementovaný segmentovaný mobilný prepínač meny [EUR | CZK] a automatický FX kalkulátor (referenčný kurz ČNB/ECB 1 EUR = 25.20 CZK). Auto-detekcia meny pri skenovaní českých QR kódov (SPAYD CZK / CZ IBAN), dynamický prepočet odpočtu v EUR a protihodnoty v CZK, validácia limitov voči EUR, transakčný audit trail pôvodnej meny a kurzu, duálne zobrazenie v QrPaymentPreview a v potvrdení o platbe. Integrovaný kompletný end-to-end smoke & regresný test payment-fx-conversion-smoke.test.ts (25/25 testov PASS na 100%, ESLint 0 errors, tsc 0 chýb). | `scripts/payment-fx-conversion-smoke.test.ts (pass), scripts/qr-czk-fx-converter.test.ts (pass), npm run test:all (25/25 pass 100%), ESLint 0 errors, tsc --noEmit (exit 0)` |
-
-
+| 2026-10-13 | 🔥 BLAZING FIRE FAVICON & A11Y FIXES | Vytvorený špeciálny vektorový ohnivý SVG favicon (Blazing Fire Edition) pre Horizon Dashboard v2 (/dashboard-v2), nastavený v layout metadata aj klientskom dynamickom hooku. Opravené prístupnostné varovania v Chrome DevTools (doplnené htmlFor ku všetkým 5 labelom a name/id atribúty k formulárovým inputom platby a vkladu). | `public/favicon-horizon-fire.svg, app/dashboard-v2/layout.tsx, commit 4dba81b` |
+| 2026-10-13 | 🛡️ STEALTH WHITE CLOAK & 30s SCREENSAVER | Implementovaný maskovací komponent StealthWhiteCloak na /welcome s čistou bielou plochou (bg-white, z-99999). Odhalenie aplikácie po trojitom poklepaní (triple-tap do 500 ms). Automatický šetrič po 30 sekundách nečinnosti s okamžitým resetom pri akejkoľvek interakcii. Pridaný integračný test stealth-white-cloak.test.ts (25/25 testov PASS na 100%). | `components/stealth-white-cloak.tsx, scripts/stealth-white-cloak.test.ts, commit dd93131` |
+| 2026-10-13 | 🚀 DEPLOY gro-kan-00015-wbn | Nasadená nová revízia gro-kan-00015-wbn na Cloud Run (100% traffic) s plnou podporou Stealth White Cloak, Blazing Fire Faviconu, EUR ⇄ CZK menového konvertora a DevTools a11y opravami. Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie. | `gcloud run services describe -> gro-kan-00015-wbn 100%, verify-prod-live.ts (10/10 pass 100%), curl /api/health -> 200 OK` |
 
 ---
 
 ## 📌 ZÁVER
 
-> **🎯 Stav Projektu:** **100% DOKONČENÝ**
+> **🎯 Stav Projektu:** **100% DOKONČENÝ & PRODUKČNE AKTÍVNY**
 >
-> Všetky kritické komponenty sú nasadené, overené a monitorované.
+> Všetky kritické komponenty sú nasadené, overené a monitorované na Google Cloud Run.
 >
-> **🔒 Bezpečnosť:** Všade aplikované best practices (secrets v SM, IAM role, V4 signed URLs)
+> **🔒 Bezpečnosť:** Všade aplikované best practices (secrets v SM, IAM role, V4 signed URLs, Stealth White Cloak, CONTRACT-1+1 zámok)
 >
-> **✅ Kvalita:** Unit testy 100% PASS, TypeScript 0 chýb, Build úspešný
+> **✅ Kvalita:** Unit testy 100% PASS (25/25), TypeScript 0 chýb, Build úspešný
+>
+> **🌐 Produkčná URL:** https://gro-kan-1040062317673.europe-west3.run.app
 
 ---
 
-*Dokument založený: 2025 | Správca: grok (u0352652320@gmail.com) | Posledná úprava: 2026-10-09*
+*Dokument založený: 2025 | Správca: grok (u0352652320@gmail.com) | Posledná úprava: 2026-10-13*
+
 
