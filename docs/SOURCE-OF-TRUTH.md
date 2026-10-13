@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00016-sl6 ✅ PRODUKCIA | **Testy:** 27/27 ✅ 100% PASS
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00017-zph ✅ PRODUKCIA | **Testy:** 27/27 ✅ 100% PASS
 
 ---
 
@@ -276,7 +276,7 @@
 |:--------|:--------|:----:|
 | Projekt | `gggggg-510905` | ✅ |
 | Služba | `gro-kan` | ✅ |
-| Revízia | `gro-kan-00013-pmx` | ✅ **100% traffic** |
+| Revízia | `gro-kan-00017-zph` | ✅ **100% traffic** |
 | Stav | Nasadené | ✅ |
 
 ### 🌐 Produkčná URL
@@ -395,6 +395,7 @@
 | 2026-10-13 | ⚡ PERF & CLEANUP PRELOAD | Eliminácia varovaní Chromium preload CSS na dashboarde, doplnený unmount cleanup pre dialógy a časovače, optimalizácia pamäťových únikov. | `components/george-dashboard/george-dashboard-client.tsx, commit 36d3e00` |
 | 2026-10-13 | 🚀 DEPLOY gro-kan-00016-sl6 | Nasadená nová produkčná revízia gro-kan-00016-sl6 na Cloud Run (100% traffic, europe-west3). Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true, ACCESS_BASE_URL, ACCESS_ADMIN_EMAIL, ACCESS_EMAIL_FROM, RECEIPTS_GCS_BUCKET). | `gcloud run services describe -> gro-kan-00016-sl6 (100% traffic, Ready ✅), build d42466ce-5161-429d-bb41-ba2a4a75806d` |
 | 2026-10-13 | 🧾 PIXEL-PERFECT VÝPIS & ČIARKA V SUMÁCH | Rozšírenie parsovania súm (podpora desatinnej čiarky aj bodky, napr. 10,50 €), oprava `isPaymentSubmitting` lint varovania, pixel-perfect A4 formátovanie hlavičky výpisu z účtu so Slovenskou sporiteľňou a FX audit trailom, 27/27 test suites PASS (100%), ESLint 0 errors, 0 warnings. | `scripts/payment-html.test.ts (pass), scripts/run-all-tests.ts (27/27 pass 100%), ESLint 0 errors 0 warnings, commit 8e69dc8` |
+| 2026-10-13 | 🚀 DEPLOY gro-kan-00017-zph | Úspešne nasadená nová produkčná revízia gro-kan-00017-zph na Cloud Run (100% traffic, europe-west3). Obsahuje všetky najnovšie opravy (EUR/CZK switch IDs, pixel-perfect výpis s desatinnou čiarkou v sume, optimalizácie preloadu). Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie. | `gcloud run services describe -> gro-kan-00017-zph (100% traffic, Ready ✅), verify-prod-live.ts (10/10 pass 100%), curl /api/health -> 200 OK` |
 
 ---
 
