@@ -20,6 +20,7 @@ import { DashboardHeader } from '@/components/dashboard-header'
 import { useSession } from '@/lib/auth-client'
 import { PaymentQrScanner } from '@/components/PaymentQrScanner'
 import { QrPaymentPreview } from '@/components/QrPaymentPreview'
+import { validateIbanChecksum, czechIbanToNational } from '@/utils/qr'
 import {
   PaymentDraft,
   PaymentOption,
@@ -3627,12 +3628,31 @@ export function GeorgeDashboardClient({
                     onChange={(e) => setPayIban(e.target.value)}
                     className="w-full bg-[#1b1b26] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-blue-500 transition-colors"
                   />
-                  {scannedDraft?.czechNationalAccount && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 font-mono">
-                      <span>🇨🇿 Účet ČR:</span>
-                      <span className="font-bold">{scannedDraft.czechNationalAccount}</span>
-                    </div>
-                  )}
+                  {(() => {
+                    const cleanIban = payIban.trim().replace(/\s+/g, '').toUpperCase()
+                    const isValidIban = cleanIban.length >= 15 && validateIbanChecksum(cleanIban)
+                    const isCzech = cleanIban.startsWith('CZ')
+                    const czechNational = isCzech
+                      ? (czechIbanToNational(cleanIban)?.formatted || scannedDraft?.czechNationalAccount)
+                      : scannedDraft?.czechNationalAccount
+
+                    return (
+                      <>
+                        {isValidIban && (
+                          <div id="iban-validation-status" className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1 font-medium">
+                            <span className="font-bold">✓</span>
+                            <span>Platný overený IBAN</span>
+                          </div>
+                        )}
+                        {czechNational && (
+                          <div id="czech-national-account-badge" className="mt-1.5 flex items-center gap-1.5 text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1 font-mono">
+                            <span>🇨🇿 Účet ČR:</span>
+                            <span className="font-bold">{czechNational}</span>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                   {scannedDraft?.immediatePayment && (
                     <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2 py-0.5">
                       <span>⚡ Okamžitá platba</span>
