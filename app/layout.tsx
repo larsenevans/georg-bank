@@ -75,6 +75,20 @@ export default async function RootLayout({
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <Script id="css-preload-consume" strategy="beforeInteractive">
+          {`
+            if (typeof window !== 'undefined') {
+              window.addEventListener('DOMContentLoaded', function() {
+                var preloads = document.querySelectorAll('link[rel="preload"][as="style"]');
+                preloads.forEach(function(link) {
+                  if (!document.querySelector('link[rel="stylesheet"][href="' + link.href + '"]')) {
+                    link.rel = 'stylesheet';
+                  }
+                });
+              });
+            }
+          `}
+        </Script>
         <Script id="capacitor-fetch-redirect" strategy="beforeInteractive">
           {`
             if (typeof window !== 'undefined') {

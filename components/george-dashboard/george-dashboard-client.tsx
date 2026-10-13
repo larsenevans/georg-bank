@@ -1187,6 +1187,12 @@ export function GeorgeDashboardClient({
     setToastTimeoutId(id)
   }
 
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutId) clearTimeout(toastTimeoutId)
+    }
+  }, [toastTimeoutId])
+
   const finishSessionAfterPdf = () => {
     showToast('Relácia skončila. PDF bolo vygenerované.')
     window.setTimeout(() => {

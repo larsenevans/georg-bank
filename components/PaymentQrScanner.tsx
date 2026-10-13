@@ -211,6 +211,13 @@ export function PaymentQrScanner({
     setErrorMessage(null);
   }, [stopCameraResources]);
 
+  // Ensure full cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      stopCameraResources();
+    };
+  }, [stopCameraResources]);
+
   /**
    * Handle a single payment draft
    */
