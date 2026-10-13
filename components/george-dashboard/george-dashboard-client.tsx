@@ -233,6 +233,7 @@ export function GeorgeDashboardClient({
   const [showQrPreview, setShowQrPreview] = useState(false)
   const [scannedDraft, setScannedDraft] = useState<PaymentDraft | null>(null)
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([])
+  const [isPaymentSubmitting, setIsPaymentSubmitting] = useState(false)
 
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -863,14 +864,20 @@ export function GeorgeDashboardClient({
   }
 
   const executeMockPayment = async () => {
-    const recipient = payRecipient.trim()
-    const iban = payIban.trim()
-    const rawAmount = parseFloat(payAmount)
+    const cleanAmountStr = String(payAmount || '').trim().replace(/\s/g, '').replace(',', '.')
+    const rawAmount = parseFloat(cleanAmountStr)
+    const iban = payIban.trim().replace(/\s+/g, '').toUpperCase()
+    const recipient = payRecipient.trim() || (iban.startsWith('CZ') ? 'Príjemca v ČR' : 'Príjemca platby')
     const vs = payVs.trim()
     const note = payNote.trim()
 
-    if (!recipient || !iban || isNaN(rawAmount) || rawAmount <= 0) {
-      showToast('Prosím vyplňte správne meno príjemcu, IBAN a kladnú sumu.')
+    if (!iban) {
+      showToast('Prosím vyplňte IBAN účtu príjemcu.')
+      return
+    }
+
+    if (isNaN(rawAmount) || rawAmount <= 0) {
+      showToast('Prosím zadajte platnú kladnú sumu platby.')
       return
     }
 
@@ -917,6 +924,7 @@ export function GeorgeDashboardClient({
     // Persist first so /pohyby sees the outgoing payment immediately.
     let serverTxn: Partial<Transaction> & { id?: string } = {}
     try {
+      setIsPaymentSubmitting(true)
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: {
@@ -955,9 +963,9 @@ export function GeorgeDashboardClient({
       // Instant push to open /pohyby tabs
       notifyPohybyLive({ type: 'payment', transactionId: serverTxn.id || optimisticId })
     } catch (err) {
-      console.warn('[dashboard2] DB persist error:', err)
-      showToast('Chyba siete — platba nebola zapísaná do dashboardu.')
-      return
+      console.warn('[dashboard2] DB persist fallback to optimistic:', err)
+    } finally {
+      setIsPaymentSubmitting(false)
     }
 
     const txnId = serverTxn.id || optimisticId
@@ -3806,10 +3814,18 @@ export function GeorgeDashboardClient({
 
                 <button
                   type="button"
+                  disabled={isPaymentSubmitting}
                   onClick={executeMockPayment}
-                  className="w-full bg-[#327bf5] hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl text-sm mt-3.5 mb-2 transition-all active:scale-95 shadow-lg shadow-blue-900/30 touch-manipulation cursor-pointer"
+                  className="w-full bg-[#327bf5] hover:bg-blue-600 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl text-sm mt-3.5 mb-2 transition-all active:scale-95 shadow-lg shadow-blue-900/30 touch-manipulation cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Autorizovať cez George kľúč
+                  {isPaymentSubmitting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Spracovávam platbu...</span>
+                    </>
+                  ) : (
+                    <span>Autorizovať cez George kľúč</span>
+                  )}
                 </button>
               </div>
             </div>

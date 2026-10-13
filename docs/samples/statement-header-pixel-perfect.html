@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <title>Výpis z Účtu – Pixel Perfect Header</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+      background-color: #f7fafc;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .statement-container {
+      width: 100%;
+      max-width: 780px;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .document-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+
+    .details-box {
+      background-color: #d4e0e2;
+      border-radius: 8px;
+      padding: 12px 18px 14px;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 36px;
+    }
+
+    .details-col {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .details-row {
+      display: flex;
+      align-items: center;
+      border-bottom: 1.5px solid #8a9fac;
+      min-height: 22px;
+      padding-bottom: 3px;
+    }
+
+    .details-row.row-large {
+      min-height: 26px;
+    }
+
+    .marker {
+      width: 9px;
+      height: 9px;
+      background-color: #536f85;
+      border-radius: 50%;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #2b3b47;
+      white-space: nowrap;
+    }
+
+    .value {
+      margin-left: auto;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #1a202c;
+      text-align: right;
+    }
+
+    .value.value-large {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0b1523;
+      letter-spacing: -0.2px;
+    }
+
+    .value.font-mono {
+      font-family: "Courier New", Courier, monospace;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="statement-container">
+    <h2 class="document-title">Výpis z Účtu:</h2>
+
+    <div class="details-box">
+      <!-- Ľavý stĺpec -->
+      <div class="details-col">
+        <div class="details-row row-large">
+          <span class="marker"></span>
+          <span class="label">Názov Účtu</span>
+          <span class="value value-large">Business účet L</span>
+        </div>
+        <div class="details-row">
+          <span class="marker"></span>
+          <span class="label">Číslo Účtu</span>
+          <span class="value font-mono">SK31 0900 2165 8643 2276</span>
+        </div>
+        <div class="details-row">
+          <span class="marker"></span>
+          <span class="label">BIC</span>
+          <span class="value">GIBASKBX</span>
+        </div>
+        <div class="details-row">
+          <span class="marker"></span>
+          <span class="label">Mena</span>
+          <span class="value">EUR</span>
+        </div>
+      </div>
+
+      <!-- Pravý stĺpec -->
+      <div class="details-col">
+        <div class="details-row">
+          <span class="marker"></span>
+          <span class="label">Účtovné obdobie</span>
+          <span class="value">13.10.2026</span>
+        </div>
+        <div class="details-row">
+          <span class="marker"></span>
+          <span class="label">Vklady spolu</span>
+          <span class="value">0,00</span>
+        </div>
+        <div class="details-row">
+          <span class="marker"></span>
+          <span class="label">Výbery spolu</span>
+          <span class="value">- 1 051,59</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
