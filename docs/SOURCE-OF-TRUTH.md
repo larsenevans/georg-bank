@@ -1,5 +1,5 @@
 # 🏦 gro-kan | SOURCE-OF-TRUTH
-> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00013-pmx ✅ PRODUKCIA
+> **📌 Súhrn stavu:** Všetkých **8 core modulov** ✅ DOKONČENÉ | **Monitoring:** 5/5 policy ✅ AKTÍVNE | **Deployment:** gro-kan-00016-sl6 ✅ PRODUKCIA | **Testy:** 27/27 ✅ 100% PASS
 
 ---
 
@@ -391,6 +391,10 @@
 | 2026-10-13 | 🔥 BLAZING FIRE FAVICON & A11Y FIXES | Vytvorený špeciálny vektorový ohnivý SVG favicon (Blazing Fire Edition) pre Horizon Dashboard v2 (/dashboard-v2), nastavený v layout metadata aj klientskom dynamickom hooku. Opravené prístupnostné varovania v Chrome DevTools (doplnené htmlFor ku všetkým 5 labelom a name/id atribúty k formulárovým inputom platby a vkladu). | `public/favicon-horizon-fire.svg, app/dashboard-v2/layout.tsx, commit 4dba81b` |
 | 2026-10-13 | 🛡️ STEALTH WHITE CLOAK & 30s SCREENSAVER | Implementovaný maskovací komponent StealthWhiteCloak na /welcome s čistou bielou plochou (bg-white, z-99999). Odhalenie aplikácie po trojitom poklepaní (triple-tap do 500 ms). Automatický šetrič po 30 sekundách nečinnosti s okamžitým resetom pri akejkoľvek interakcii. Pridaný integračný test stealth-white-cloak.test.ts (25/25 testov PASS na 100%). | `components/stealth-white-cloak.tsx, scripts/stealth-white-cloak.test.ts, commit dd93131` |
 | 2026-10-13 | 🚀 DEPLOY gro-kan-00015-wbn | Nasadená nová revízia gro-kan-00015-wbn na Cloud Run (100% traffic) s plnou podporou Stealth White Cloak, Blazing Fire Faviconu, EUR ⇄ CZK menového konvertora a DevTools a11y opravami. Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true) a 10/10 testov živej produkcie. | `gcloud run services describe -> gro-kan-00015-wbn 100%, verify-prod-live.ts (10/10 pass 100%), curl /api/health -> 200 OK` |
+| 2026-10-13 | 🇨🇿 LIVE IBAN BADGE, CZ NÁRODNÝ ÚČET & DUAL QR PLATBA | Implementovaný live IBAN validation badge s dynamickou detekciou vlajky (🇸🇰 SK / 🇨🇿 CZ) a okamžitým zobrazením národného formátu účtu (predčíslie-číslo/kód banky) pre české účty. Pridaný QR multi-currency flow a regresný test pre platbu na 2 náhodné overené IBANy v EUR aj CZK s automatickým prepočtom a odpočtom zostatku. | `scripts/qr-multi-currency-flow.regression.test.ts (100% pass), e2e/qr-multi-currency-dual-payment.spec.ts, commit e1e6e74` |
+| 2026-10-13 | ⚡ PERF & CLEANUP PRELOAD | Eliminácia varovaní Chromium preload CSS na dashboarde, doplnený unmount cleanup pre dialógy a časovače, optimalizácia pamäťových únikov. | `components/george-dashboard/george-dashboard-client.tsx, commit 36d3e00` |
+| 2026-10-13 | 🚀 DEPLOY gro-kan-00016-sl6 | Nasadená nová produkčná revízia gro-kan-00016-sl6 na Cloud Run (100% traffic, europe-west3). Overený kompletný env výpis (ACCESS_FLOW_ENABLED=true, ACCESS_BASE_URL, ACCESS_ADMIN_EMAIL, ACCESS_EMAIL_FROM, RECEIPTS_GCS_BUCKET). | `gcloud run services describe -> gro-kan-00016-sl6 (100% traffic, Ready ✅), build d42466ce-5161-429d-bb41-ba2a4a75806d` |
+| 2026-10-13 | 🧾 PIXEL-PERFECT VÝPIS & ČIARKA V SUMÁCH | Rozšírenie parsovania súm (podpora desatinnej čiarky aj bodky, napr. 10,50 €), oprava `isPaymentSubmitting` lint varovania, pixel-perfect A4 formátovanie hlavičky výpisu z účtu so Slovenskou sporiteľňou a FX audit trailom, 27/27 test suites PASS (100%), ESLint 0 errors, 0 warnings. | `scripts/payment-html.test.ts (pass), scripts/run-all-tests.ts (27/27 pass 100%), ESLint 0 errors 0 warnings, commit 8e69dc8` |
 
 ---
 
@@ -402,7 +406,7 @@
 >
 > **🔒 Bezpečnosť:** Všade aplikované best practices (secrets v SM, IAM role, V4 signed URLs, Stealth White Cloak, CONTRACT-1+1 zámok)
 >
-> **✅ Kvalita:** Unit testy 100% PASS (25/25), TypeScript 0 chýb, Build úspešný
+> **✅ Kvalita:** Unit testy 100% PASS (27/27), TypeScript 0 chýb, ESLint 0 errors, 0 warnings, Build úspešný
 >
 > **🌐 Produkčná URL:** https://gro-kan-1040062317673.europe-west3.run.app
 

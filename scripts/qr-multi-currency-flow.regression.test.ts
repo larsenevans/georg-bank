@@ -243,12 +243,9 @@ export async function runQrMultiCurrencyPaymentRegressionTest() {
   console.log('========================================================================\n')
 }
 
-// Spustenie pri priamom volaní
-if (require.main === module) {
-  runQrMultiCurrencyPaymentRegressionTest()
-    .then(() => process.exit(0))
-    .catch((err) => {
-      console.error('❌ Test zlyhal:', err)
-      process.exit(1)
-    })
-}
+// Spustenie pri priamom volaní aj pri importovaní test runnerom
+runQrMultiCurrencyPaymentRegressionTest().catch((err) => {
+  console.error('❌ Test zlyhal:', err)
+  process.exit(1)
+})
+

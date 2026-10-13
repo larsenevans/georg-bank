@@ -3530,8 +3530,8 @@ export function GeorgeDashboardClient({
             data-testid="payment-sheet"
             className={`fixed inset-0 z-200 bg-black/75 backdrop-blur-sm transition-opacity duration-300 ${
               isPaymentSheetOpen
-                ? 'opacity-100 pointer-events-auto'
-                : 'opacity-0 pointer-events-none'
+                ? 'opacity-100 pointer-events-auto visible'
+                : 'opacity-0 pointer-events-none invisible'
             }`}
             aria-hidden={!isPaymentSheetOpen}
           >
@@ -3544,7 +3544,7 @@ export function GeorgeDashboardClient({
             <div
               data-testid="payment-sheet-panel"
               className={`absolute inset-0 z-10 flex h-dvh max-h-dvh w-full flex-col overflow-hidden pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out ${
-                isPaymentSheetOpen ? 'translate-y-0' : 'translate-y-full'
+                isPaymentSheetOpen ? 'translate-y-0 visible' : 'translate-y-full invisible pointer-events-none'
               } ${isLight ? 'bg-white' : 'bg-[#12131b]'}`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -3698,6 +3698,7 @@ export function GeorgeDashboardClient({
                           {/* Segmentovaný switcher EUR / CZK v George štýle */}
                           <div className="inline-flex rounded-lg bg-[#0a0a10] border border-slate-800 p-0.5" role="group" aria-label="Mena platby">
                             <button
+                              id="pay-currency-eur"
                               type="button"
                               onClick={() => handleCurrencyChange('EUR')}
                               className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
@@ -3709,6 +3710,7 @@ export function GeorgeDashboardClient({
                               EUR (€)
                             </button>
                             <button
+                              id="pay-currency-czk"
                               type="button"
                               onClick={() => handleCurrencyChange('CZK')}
                               className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${

@@ -67,8 +67,8 @@ assert(
 
 if (failed > 0) {
   console.error(`\n❌ ${failed} checks failed.`)
-  process.exit(1)
+  throw new Error(`${failed} checks failed in stealth-white-cloak.test.ts`)
 } else {
   console.log('\n🎉 Všetky testy Stealth White Cloak úspešne prešli na 100%!')
-  process.exit(0)
 }
+

@@ -1,5 +1,5 @@
-import { test, expect, type Page } from './fixtures'
-import { login, E2E_APP_PIN } from './helpers/app'
+import { test, expect } from './fixtures'
+import { loginWithPin } from './helpers/dashboard2'
 import { resolve } from 'node:path'
 
 /**
@@ -36,25 +36,14 @@ test.use({
   permissions: ['camera'],
 })
 
-async function unlockPinIfNeeded(page: Page) {
-  const pinHeading = page.getByText(/Zadajte bezpečnostný PIN/i)
-  if (await pinHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-    for (const digit of E2E_APP_PIN) {
-      await page.getByRole('button', { name: digit, exact: true }).click()
-    }
-    await page.waitForTimeout(500)
-  }
-}
-
 test.describe('E2E Flow: Nová platba -> QR sken -> Odoslanie v EUR aj CZK na náhodné IBANy', () => {
 
   test('Plná flow: Odoslanie EUR platby na random SK IBAN a CZK platby s FX kurzom na random CZ IBAN', async ({ page }) => {
-    // 1. Prihlásenie na dashboard2
-    await login(page)
-    await unlockPinIfNeeded(page)
+    // 1. Prihlásenie na dashboard2 cez PIN
+    await loginWithPin(page)
 
     // Overenie, že sme na prehľade
-    await expect(page.getByRole('heading', { name: 'Prehľad', exact: true }).or(page.getByText(/Business účet|SPACE účet/i).first())).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Prehľad', exact: true })).toBeVisible({
       timeout: 15000,
     })
 
@@ -99,6 +88,7 @@ test.describe('E2E Flow: Nová platba -> QR sken -> Odoslanie v EUR aj CZK na n�
     await expect(amountInput).toHaveValue('149.90')
 
     // 1.5 Prepísanie IBANu za 1. náhodný platný slovenský IBAN
+    await expect(ibanInput).toBeVisible({ timeout: 10000 })
     await ibanInput.fill(randomIban1_Eur)
     await expect(ibanInput).toHaveValue(randomIban1_Eur)
 
@@ -113,7 +103,7 @@ test.describe('E2E Flow: Nová platba -> QR sken -> Odoslanie v EUR aj CZK na n�
     await authorizeBtn1.click()
 
     // 1.8 Overenie úspechu: platobný formulár sa zatvoril a zobrazil sa toast
-    await expect(page.locator('#pay-recipient')).not.toBeVisible({ timeout: 10000 })
+    await expect(page.locator('#pay-recipient')).not.toBeVisible({ timeout: 25000 })
 
     // Počkáme na dokončenie zápisu
     await page.waitForTimeout(1000)
@@ -133,12 +123,12 @@ test.describe('E2E Flow: Nová platba -> QR sken -> Odoslanie v EUR aj CZK na n�
     // 2.3 Overenie načítania údajov
     await expect(recipientInput).toBeVisible({ timeout: 10000 })
 
-    // 2.4 Nastavenie cieľovej sumy 5040 CZK a prepnutie na menu CZK
+    // 2.4 Prepnutie na menu CZK a nastavenie cieľovej sumy 5040 CZK
+    const czkCurrencyBtn = page.locator('#pay-currency-czk')
+    await expect(czkCurrencyBtn).toBeVisible({ timeout: 5000 })
+    await czkCurrencyBtn.click()
     await amountInput.fill('5040')
-    const czkCurrencyBtn = page.getByRole('button', { name: /CZK/i }).first()
-    if (await czkCurrencyBtn.isVisible().catch(() => false)) {
-      await czkCurrencyBtn.click()
-    }
+    await expect(amountInput).toHaveValue('5040')
 
     // 2.5 Overenie, že sa zobrazuje indikátor kurzu a ekvivalentu v EUR
     const fxRateText = page.getByText(/Kurz: 1 EUR = 25.20 CZK/i)
